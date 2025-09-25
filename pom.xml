@@ -15,6 +15,7 @@
 
     <modules>
         <module>auth-service</module>
+        <module>tweet-service</module>
     </modules>
 
     <properties>
