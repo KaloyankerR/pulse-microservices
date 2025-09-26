@@ -194,48 +194,6 @@ const options = {
             },
           },
         },
-        LinkGoogleAccountRequest: {
-          type: 'object',
-          required: ['googleProfile'],
-          properties: {
-            googleProfile: {
-              type: 'object',
-              properties: {
-                id: {
-                  type: 'string',
-                  description: 'Google user ID',
-                },
-                emails: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      value: {
-                        type: 'string',
-                        format: 'email',
-                      },
-                    },
-                  },
-                },
-                displayName: {
-                  type: 'string',
-                },
-                photos: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      value: {
-                        type: 'string',
-                        format: 'uri',
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
         PaginationQuery: {
           type: 'object',
           properties: {

@@ -24,19 +24,14 @@ class AuthService {
         throw new AppError(`User with this ${field} already exists`, 409, 'USER_EXISTS');
       }
 
-      // Validate password strength (skip for OAuth users)
-      if (userData.provider !== 'GOOGLE') {
-        const passwordValidation = BcryptUtil.validatePasswordStrength(password);
-        if (!passwordValidation.isValid) {
-          throw new AppError(`Password validation failed: ${passwordValidation.errors.join(', ')}`, 400, 'WEAK_PASSWORD');
-        }
+      // Validate password strength
+      const passwordValidation = BcryptUtil.validatePasswordStrength(password);
+      if (!passwordValidation.isValid) {
+        throw new AppError(`Password validation failed: ${passwordValidation.errors.join(', ')}`, 400, 'WEAK_PASSWORD');
       }
 
-      // Hash password (skip for OAuth users)
-      let hashedPassword = null;
-      if (password && userData.provider !== 'GOOGLE') {
-        hashedPassword = await BcryptUtil.hashPassword(password);
-      }
+      // Hash password
+      const hashedPassword = await BcryptUtil.hashPassword(password);
 
       // Create user
       const user = await prisma.user.create({
@@ -45,8 +40,6 @@ class AuthService {
           username,
           password: hashedPassword,
           displayName: displayName || username,
-          provider: userData.provider || 'LOCAL',
-          providerId: userData.providerId || null,
         },
         select: {
           id: true,
@@ -57,8 +50,6 @@ class AuthService {
           avatarUrl: true,
           verified: true,
           status: true,
-          provider: true,
-          providerId: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -89,10 +80,6 @@ class AuthService {
         throw new AppError('Account is not active', 403, 'ACCOUNT_INACTIVE');
       }
 
-      // Check if user has a password (OAuth users might not have one)
-      if (!user.password) {
-        throw new AppError('Please use Google sign-in for this account', 401, 'USE_OAUTH_LOGIN');
-      }
 
       // Verify password
       const isPasswordValid = await BcryptUtil.comparePassword(password, user.password);
@@ -174,8 +161,6 @@ class AuthService {
           avatarUrl: true,
           verified: true,
           status: true,
-          provider: true,
-          providerId: true,
           createdAt: true,
           updatedAt: true,
         },

@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# Pulse Microservices Startup Script
+# Pulse Microservices Docker Startup Script
 # This script starts all services (User Service + Post Service) using Docker Compose
+# For local development with local databases, use: ./start-local-services.sh
 
 set -e
 
-echo "🚀 Starting Pulse Microservices Platform..."
+echo "🚀 Starting Pulse Microservices Platform (Docker)..."
+echo "   This will start all services in Docker containers"
+echo "   For local development, use: ./start-local-services.sh"
 
 # Check if Docker is running
 if ! docker info &> /dev/null; then
@@ -27,6 +30,33 @@ fi
 
 echo "✅ Using: $COMPOSE_CMD"
 
+# Function to wait for services with cross-platform compatibility
+wait_for_service() {
+    local command="$1"
+    local service_name="$2"
+    local timeout_seconds="${3:-60}"
+    local start_time=$(date +%s)
+    
+    echo -n "      Waiting for $service_name... "
+    
+    while true; do
+        if eval "$command" &> /dev/null; then
+            echo "✅ Ready"
+            return 0
+        fi
+        
+        local current_time=$(date +%s)
+        local elapsed=$((current_time - start_time))
+        
+        if [ $elapsed -ge $timeout_seconds ]; then
+            echo "❌ Timeout after ${timeout_seconds}s"
+            return 1
+        fi
+        
+        sleep 2
+    done
+}
+
 # Create the pulse-network if it doesn't exist
 echo "🌐 Creating network..."
 docker network create pulse-network 2>/dev/null || echo "Network already exists"
@@ -45,19 +75,20 @@ echo "⏳ Waiting for services to be ready..."
 
 # Wait for services to be healthy
 echo "   - Waiting for User Service database..."
-timeout 60 bash -c 'until docker exec pulse-users-db pg_isready -U pulse_user -d pulse_users; do sleep 2; done'
+wait_for_service "docker exec pulse-users-db pg_isready -U pulse_user -d pulse_users" "User Service database" 60
 
 echo "   - Waiting for Post Service database..."
-timeout 60 bash -c 'until docker exec pulse-posts-db pg_isready -U pulse_user -d pulse_posts_service_db; do sleep 2; done'
+wait_for_service "docker exec pulse-posts-db pg_isready -U pulse_user -d pulse_posts_service_db" "Post Service database" 60
 
 echo "   - Waiting for Redis..."
-timeout 60 bash -c 'until docker exec pulse-users-redis redis-cli ping; do sleep 2; done'
+wait_for_service "docker exec pulse-users-redis redis-cli ping" "Redis" 60
 
 echo "   - Waiting for User Service..."
-timeout 120 bash -c 'until curl -f http://localhost:8080/health &> /dev/null; do sleep 5; done'
+wait_for_service "curl -f http://localhost:8080/health" "User Service" 120
 
 echo "   - Waiting for Post Service..."
-timeout 120 bash -c 'until curl -f http://localhost:8082/actuator/health &> /dev/null; do sleep 5; done'
+wait_for_service "curl -f http://localhost:8082/actuator/health" "Post Service" 120
+
 
 echo ""
 echo "🎉 All services are now running!"
@@ -65,7 +96,6 @@ echo ""
 echo "📋 Service URLs:"
 echo "   👤 User Service:        http://localhost:8080"
 echo "   📝 Post Service:        http://localhost:8082"
-echo "   📚 Post Service API:    http://localhost:8082/swagger-ui.html"
 echo "   🏥 User Service Health: http://localhost:8080/health"
 echo "   🏥 Post Service Health: http://localhost:8082/actuator/health"
 echo ""

@@ -1,5 +1,4 @@
 const authService = require('../services/authService');
-const oauthService = require('../services/oauthService');
 const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 
@@ -129,100 +128,6 @@ class AuthController {
     }
   }
 
-  // Google OAuth endpoints
-  async googleAuth(req, res, next) {
-    // Passport will handle the OAuth flow
-    // This is just a placeholder - the actual logic is in passport strategy
-  }
-
-  async googleCallback(req, res, next) {
-    try {
-      if (req.user) {
-        // Generate tokens for the authenticated user
-        const result = await oauthService.generateTokensForOAuthUser(req.user);
-
-        // In a real application, you might want to redirect to a frontend page
-        // For now, we'll return the tokens in JSON format
-        res.status(200).json({
-          success: true,
-          data: {
-            user: result.user,
-            accessToken: result.accessToken,
-            refreshToken: result.refreshToken,
-            expiresIn: result.expiresIn,
-            message: 'Google authentication successful',
-          },
-          meta: {
-            timestamp: new Date().toISOString(),
-            version: 'v1',
-          },
-        });
-      } else {
-        throw new AppError('Google authentication failed', 401, 'GOOGLE_AUTH_FAILED');
-      }
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async linkGoogleAccount(req, res, next) {
-    try {
-      const result = await oauthService.linkGoogleAccount(req.user.id, req.body.googleProfile);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          user: result,
-          message: 'Google account linked successfully',
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          version: 'v1',
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async unlinkGoogleAccount(req, res, next) {
-    try {
-      const result = await oauthService.unlinkGoogleAccount(req.user.id);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          user: result,
-          message: 'Google account unlinked successfully',
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          version: 'v1',
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async getOAuthProviders(req, res, next) {
-    try {
-      const providers = await oauthService.getOAuthProviders(req.user.id);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          providers,
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          version: 'v1',
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
 }
 
 module.exports = new AuthController();

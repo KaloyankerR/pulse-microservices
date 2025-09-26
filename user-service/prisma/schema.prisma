@@ -14,14 +14,12 @@ model User {
   id          String     @id @default(uuid())
   email       String     @unique
   username    String     @unique
-  password    String?    // Hashed password (optional for OAuth users)
+  password    String    // Hashed password
   displayName String?
   bio         String?
   avatarUrl   String?
   verified    Boolean    @default(false)
   status      UserStatus @default(ACTIVE)
-  provider    AuthProvider @default(LOCAL)
-  providerId  String?    // OAuth provider user ID
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   
@@ -51,9 +49,3 @@ enum UserStatus {
   INACTIVE
 }
 
-enum AuthProvider {
-  LOCAL
-  GOOGLE
-  FACEBOOK
-  TWITTER
-}

@@ -73,6 +73,11 @@ const errorHandler = (err, req, res, next) => {
     error = new AppError('Invalid ID format', 400, 'INVALID_ID');
   }
 
+  // Handle JSON parsing errors
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    error = new AppError('Invalid JSON format in request body', 400, 'INVALID_JSON');
+  }
+
   // Default error
   if (!error.isOperational) {
     error = new AppError('Internal server error', 500, 'INTERNAL_ERROR');

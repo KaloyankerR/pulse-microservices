@@ -8,7 +8,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/pulse_posts_service_db
     username: pulse_user
-    password: pulse_password
+    password: pulse_user
     driver-class-name: org.postgresql.Driver
   
   jpa:

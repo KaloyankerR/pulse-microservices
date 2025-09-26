@@ -4,255 +4,225 @@ A multi-service monorepo containing microservices for the Pulse application.
 
 ## Services
 
-### Auth Service (Port 8080)
-Authentication and authorization microservice that handles user registration, login, and JWT token management.
+### User Service (Port 8080)
+Node.js microservice that handles user authentication, registration, login, and user management with OAuth2 support.
 
-### Tweet Service (Port 8081)
-Tweet management microservice that handles tweets, comments, and likes with full CRUD operations.
+### Post Service (Port 8082)
+Spring Boot microservice that handles posts, comments, and likes with full CRUD operations.
+
 
 ## Prerequisites
 
-- Java 17 or higher
-- Maven 3.6 or higher
-- PostgreSQL 12 or higher
-- Docker (optional, for containerized services)
+- Docker and Docker Compose
+- Node.js 18+ (for local development)
+- Java 17+ (for local development)
+- Maven 3.6+ (for local development)
+- PostgreSQL (for local development)
 
 ## Quick Start
 
-### 1. Database Setup
+### Option 1: Local Development (Recommended)
 
-#### Option A: Local PostgreSQL Installation
-1. Install PostgreSQL on your system
-2. Create databases and users:
-```sql
--- For Auth Service
-CREATE DATABASE pulse_auth;
-CREATE USER pulse_user WITH PASSWORD 'pulse_password';
-GRANT ALL PRIVILEGES ON DATABASE pulse_auth TO pulse_user;
+For development with your local PostgreSQL databases:
 
--- For Tweet Service
-CREATE DATABASE pulse_tweets;
-GRANT ALL PRIVILEGES ON DATABASE pulse_tweets TO pulse_user;
+```bash
+# 1. Set up databases (first time only)
+./setup-databases.sh
+
+# 2. Start services locally (simple version)
+./start-services.sh
+
+# 3. Stop services when done
+./stop-services.sh
 ```
 
-#### Option B: Docker PostgreSQL
+**Alternative (advanced)**: Use `./start-local-services.sh` for more detailed logging and error handling.
+
+### Option 2: Docker Development
+
+For development with Docker containers:
+
 ```bash
 # Start all services with Docker Compose
-docker-compose up
+./start-all-services.sh
 ```
 
-### 2. Build and Run
+This will start:
+- User Service (Node.js) on port 8080
+- Post Service (Spring Boot) on port 8082
+- PostgreSQL databases in Docker
+- Redis cache in Docker
 
-```bash
-# Build the entire project
-mvn clean install
+### Access Points
 
-# Run auth service
-cd auth-service
-mvn spring-boot:run
+- **User Service**: http://localhost:8080
+- **Post Service**: http://localhost:8082
 
-# Run tweet service (in another terminal)
-cd tweet-service
-mvn spring-boot:run
-```
-
-Services will be available at:
-- Auth Service: `http://localhost:8080`
-- Tweet Service: `http://localhost:8081`
-
-### 3. API Documentation
+### API Documentation
 
 Access interactive API documentation:
-- Auth Service Swagger UI: `http://localhost:8080/swagger-ui.html`
-- Tweet Service Swagger UI: `http://localhost:8081/swagger-ui.html`
+- User Service API Docs: `http://localhost:8080/api-docs`
+- Post Service Swagger UI: `http://localhost:8082/swagger-ui.html`
 
 ## API Endpoints
 
-### Authentication Endpoints (Auth Service)
+### User Service Endpoints
 
 #### Register User
 ```http
-POST /api/auth/register
+POST /api/v1/auth/register
 Content-Type: application/json
 
 {
-  "username": "john_doe",
   "email": "john@example.com",
-  "password": "password123"
+  "password": "password123",
+  "firstName": "John",
+  "lastName": "Doe"
 }
 ```
 
 #### Login User
 ```http
-POST /api/auth/login
+POST /api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "john_doe",
+  "email": "john@example.com",
   "password": "password123"
 }
 ```
 
-### Tweet Endpoints (Tweet Service)
+### Post Service Endpoints
 
-#### Create Tweet
+#### Create Post
 ```http
-POST /api/tweets
+POST /api/posts
 Authorization: Bearer <JWT_TOKEN>
 Content-Type: application/json
 
 {
-  "content": "Hello, world! This is my first tweet."
+  "content": "Hello, world! This is my first post."
 }
 ```
 
-#### Get All Tweets
+#### Get All Posts
 ```http
-GET /api/tweets?page=0&size=10&sortBy=createdAt&sortDir=desc
+GET /api/posts?page=0&size=10&sortBy=createdAt&sortDir=desc
 ```
 
-#### Get Tweet by ID
+#### Get Post by ID
 ```http
-GET /api/tweets/1
+GET /api/posts/1
 ```
 
-#### Get Tweet with Details (Comments & Likes)
+#### Update Post
 ```http
-GET /api/tweets/1/details
-```
-
-#### Update Tweet
-```http
-PUT /api/tweets/1
+PUT /api/posts/1
 Authorization: Bearer <JWT_TOKEN>
 Content-Type: application/json
 
 {
-  "content": "Updated tweet content"
+  "content": "Updated post content"
 }
 ```
 
-#### Delete Tweet
+#### Delete Post
 ```http
-DELETE /api/tweets/1
+DELETE /api/posts/1
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-#### Search Tweets
+#### Get Posts by Author
 ```http
-GET /api/tweets/search?keyword=hello&page=0&size=10
+GET /api/posts/author/{userId}?page=0&size=10
 ```
 
-#### Get Tweets by Author
-```http
-GET /api/tweets/author/john_doe?page=0&size=10
-```
+### Comment Endpoints (Post Service)
 
-### Comment Endpoints (Tweet Service)
-
-#### Add Comment to Tweet
+#### Add Comment to Post
 ```http
-POST /api/tweets/1/comments
+POST /api/posts/1/comments
 Authorization: Bearer <JWT_TOKEN>
 Content-Type: application/json
 
 {
-  "content": "Great tweet!"
+  "content": "Great post!"
 }
 ```
 
-#### Get Comments for Tweet
+#### Get Comments for Post
 ```http
-GET /api/tweets/1/comments
+GET /api/posts/1/comments
 ```
 
 #### Delete Comment
 ```http
-DELETE /api/tweets/comments/1
+DELETE /api/posts/comments/1
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-### Like Endpoints (Tweet Service)
+### Like Endpoints (Post Service)
 
-#### Like a Tweet
+#### Like a Post
 ```http
-POST /api/tweets/1/like
+POST /api/posts/1/like
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-#### Unlike a Tweet
+#### Unlike a Post
 ```http
-DELETE /api/tweets/1/like
+DELETE /api/posts/1/like
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-#### Get Likes for Tweet
+#### Get Likes for Post
 ```http
-GET /api/tweets/1/likes
+GET /api/posts/1/likes
 ```
 
 ### Health Check Endpoints
 
 ```http
-GET /api/auth/health
-GET /api/tweets/health
+GET /health                    # User Service health
+GET /actuator/health          # Post Service health
 ```
 
 ## Configuration
 
-### Environment Variables
+### Database Setup
 
-You can override the default configuration using environment variables:
+For local development, you need to set up PostgreSQL databases. Use the provided setup script:
 
 ```bash
-# Auth Service
-export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/pulse_auth
-export SPRING_DATASOURCE_USERNAME=pulse_user
-export SPRING_DATASOURCE_PASSWORD=pulse_password
-export JWT_SECRET=your-secret-key-here
-export JWT_EXPIRATION=86400000
-
-# Tweet Service
-export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/pulse_tweets
-export SPRING_DATASOURCE_USERNAME=pulse_user
-export SPRING_DATASOURCE_PASSWORD=pulse_password
-export JWT_SECRET=your-secret-key-here
-export JWT_EXPIRATION=86400000
+# Run the database setup script
+./setup-databases.sh
 ```
 
-### Application Properties
+For detailed database configuration, see [database-config.md](./database-config.md).
 
-#### Auth Service (`auth-service/src/main/resources/application.yml`)
-```yaml
-server:
-  port: 8080
+### Environment Variables
 
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/pulse_auth
-    username: pulse_user
-    password: pulse_password
+The services are configured via environment variables in `docker-compose.yml`:
 
-jwt:
-  secret: mySecretKey123456789012345678901234567890
-  expiration: 86400000 # 24 hours
-```
+#### User Service
+- `JWT_SECRET`: Shared secret for JWT tokens
+- `DATABASE_URL`: PostgreSQL connection string
+- `REDIS_URL`: Redis connection string
+- `GOOGLE_CLIENT_ID`: Google OAuth2 client ID
+- `GOOGLE_CLIENT_SECRET`: Google OAuth2 client secret
 
-#### Tweet Service (`tweet-service/src/main/resources/application.yml`)
-```yaml
-server:
-  port: 8081
+#### Post Service
+- `JWT_SECRET`: Same as User Service (for token validation)
+- `SPRING_DATASOURCE_URL`: PostgreSQL connection string
+- `USER_SERVICE_BASE_URL`: URL to reach User Service
 
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/pulse_tweets
-    username: pulse_user
-    password: pulse_password
+### Docker Compose Configuration
 
-jwt:
-  secret: mySecretKey123456789012345678901234567890
-  expiration: 86400000 # 24 hours
-```
+The services are orchestrated using Docker Compose with the following configuration:
+- **User Service**: Node.js application with PostgreSQL and Redis
+- **Post Service**: Spring Boot application with PostgreSQL
+- **Databases**: Separate PostgreSQL instances for each service
+- **Cache**: Redis for session management and caching
 
 ## Security
 
@@ -264,42 +234,33 @@ jwt:
 
 ## Database Schema
 
-### Auth Service Database (`pulse_auth`)
-- **users**: User accounts with username, email, and hashed password
+### User Service Database (`pulse_users`)
+- **users**: User accounts with email, password, and profile information
+- **sessions**: User session management
+- **oauth_accounts**: OAuth provider accounts
 
-### Tweet Service Database (`pulse_tweets`)
-- **tweets**: Tweet content, author, and timestamps
-- **comments**: Comments on tweets with author and tweet reference
-- **likes**: Tweet likes with user and tweet reference
+### Post Service Database (`pulse_posts_service_db`)
+- **posts**: Post content, author, and timestamps
+- **comments**: Comments on posts with author and post reference
+- **likes**: Post likes with user and post reference
 
 ## Development
 
 ### Project Structure
 ```
 pulse-microservices/
-├── pom.xml                    # Parent POM
-├── auth-service/              # Authentication service
-│   ├── pom.xml
-│   └── src/main/java/com/pulse/auth/
-│       ├── AuthServiceApplication.java
-│       ├── config/            # Configuration classes
-│       ├── controller/        # REST controllers
-│       ├── dto/              # Data Transfer Objects
-│       ├── entity/           # JPA entities
-│       ├── repository/       # Data repositories
-│       ├── service/          # Business logic
-│       └── util/             # Utility classes
-├── tweet-service/             # Tweet management service
-│   ├── pom.xml
-│   └── src/main/java/com/pulse/tweet/
-│       ├── TweetServiceApplication.java
-│       ├── config/            # Configuration classes
-│       ├── controller/        # REST controllers
-│       ├── dto/              # Data Transfer Objects
-│       ├── entity/           # JPA entities
-│       ├── repository/       # Data repositories
-│       ├── service/          # Business logic
-│       └── util/             # Utility classes
+├── docker-compose.yml         # Main Docker Compose configuration
+├── start-all-services.sh      # Startup script
+├── user-service/              # Node.js user service
+│   ├── src/                   # Source code
+│   ├── docker/                # Docker configuration
+│   ├── prisma/                # Database schema
+│   ├── package.json           # Node.js dependencies
+│   └── Dockerfile             # Docker image
+├── post-service/              # Spring Boot post service
+│   ├── src/main/java/com/pulse/post/
+│   ├── pom.xml                # Maven dependencies
+│   └── Dockerfile             # Docker image
 └── README.md
 ```
 
@@ -315,15 +276,19 @@ To add a new microservice to this monorepo:
 ### Testing
 
 ```bash
-# Run tests for all services
-mvn test
+# Start all services
+./start-all-services.sh
 
-# Run tests for specific service
-cd auth-service
-mvn test
+# Test the integration
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123","firstName":"Test","lastName":"User"}'
 
-cd tweet-service
-mvn test
+# Test post creation (after getting JWT token)
+curl -X POST http://localhost:8082/api/posts \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Hello from the integrated platform!"}'
 ```
 
 ## Docker Support
@@ -331,6 +296,9 @@ mvn test
 ### Build and Run with Docker Compose
 ```bash
 # Build and start all services
+./start-all-services.sh
+
+# Or manually:
 docker-compose up --build
 
 # Run in background
@@ -345,13 +313,13 @@ docker-compose logs -f
 
 ### Individual Service Docker Commands
 ```bash
-# Build auth service
-cd auth-service
-docker build -t pulse-auth-service .
+# Build user service
+cd user-service
+docker build -t pulse-user-service .
 
-# Build tweet service
-cd tweet-service
-docker build -t pulse-tweet-service .
+# Build post service
+cd post-service
+docker build -t pulse-post-service .
 ```
 
 ## Usage Examples
@@ -360,37 +328,37 @@ docker build -t pulse-tweet-service .
 
 1. **Register a user:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
+curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"username":"john_doe","email":"john@example.com","password":"password123"}'
+  -d '{"email":"john@example.com","password":"password123","firstName":"John","lastName":"Doe"}'
 ```
 
 2. **Login to get JWT token:**
 ```bash
-curl -X POST http://localhost:8080/api/auth/login \
+curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"john_doe","password":"password123"}'
+  -d '{"email":"john@example.com","password":"password123"}'
 ```
 
-3. **Create a tweet:**
+3. **Create a post:**
 ```bash
-curl -X POST http://localhost:8081/api/tweets \
+curl -X POST http://localhost:8082/api/posts \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <JWT_TOKEN>" \
-  -d '{"content":"Hello, world! This is my first tweet."}'
+  -d '{"content":"Hello, world! This is my first post."}'
 ```
 
 4. **Add a comment:**
 ```bash
-curl -X POST http://localhost:8081/api/tweets/1/comments \
+curl -X POST http://localhost:8082/api/posts/1/comments \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <JWT_TOKEN>" \
-  -d '{"content":"Great tweet!"}'
+  -d '{"content":"Great post!"}'
 ```
 
-5. **Like a tweet:**
+5. **Like a post:**
 ```bash
-curl -X POST http://localhost:8081/api/tweets/1/like \
+curl -X POST http://localhost:8082/api/posts/1/like \
   -H "Authorization: Bearer <JWT_TOKEN>"
 ```
 
@@ -398,33 +366,36 @@ curl -X POST http://localhost:8081/api/tweets/1/like \
 
 ### Common Issues
 
-1. **Database Connection Error**
-   - Ensure PostgreSQL is running
-   - Check database credentials in `application.yml`
-   - Verify databases and users exist
+1. **Services Won't Start**
+   - Check if ports are available: `lsof -i :8080,8082,5432,5433,6379`
+   - Check Docker logs: `docker-compose logs [service-name]`
+   - Verify Docker is running: `docker info`
 
-2. **Port Already in Use**
-   - Change the port in `application.yml` or stop the conflicting service
+2. **Database Connection Issues**
+   - Wait for databases to be ready: `docker-compose logs postgres`
+   - Check database health: `docker exec pulse-users-db pg_isready`
+   - Verify network connectivity: `docker network ls`
 
 3. **JWT Token Issues**
-   - Ensure JWT secret is at least 32 characters long
-   - Check token expiration settings
-   - Verify JWT secret matches between services
+   - Ensure both services use the same `JWT_SECRET`
+   - Check token expiration time
+   - Verify User Service is accessible from Post Service
 
-4. **Service Communication**
-   - Ensure both services are running
-   - Check that JWT secrets are identical
-   - Verify CORS configuration
+4. **Service Communication Issues**
+   - Check if services are on the same network: `docker network inspect pulse-network`
+   - Verify service URLs in environment variables
+   - Check firewall settings
 
 ### Logs
 
-Enable debug logging by adding to `application.yml`:
-```yaml
-logging:
-  level:
-    com.pulse.auth: DEBUG
-    com.pulse.tweet: DEBUG
-    org.springframework.security: DEBUG
+View service logs:
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f user-service
+docker-compose logs -f post-service
 ```
 
 ## Contributing

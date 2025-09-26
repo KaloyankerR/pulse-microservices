@@ -14,8 +14,7 @@
     <description>Multi-service monorepo for Pulse application</description>
 
     <modules>
-        <module>auth-service</module>
-        <module>tweet-service</module>
+        <module>post-service</module>
     </modules>
 
     <properties>

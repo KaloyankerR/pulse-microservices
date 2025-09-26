@@ -6,16 +6,10 @@ const helmet = require('helmet');
 const swaggerUi = require('swagger-ui-express');
 const winston = require('winston');
 const expressWinston = require('express-winston');
-const passport = require('passport');
-
 const logger = require('./utils/logger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const swaggerSpecs = require('./config/swagger');
-const sessionConfig = require('./config/session');
-
-// Initialize Passport
-require('./config/passport');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -62,12 +56,6 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Session middleware
-app.use(sessionConfig);
-
-// Passport middleware
-app.use(passport.initialize());
-app.use(passport.session());
 
 // Request logging
 app.use(expressWinston.logger({
@@ -111,20 +99,6 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/admin', adminRoutes);
 
-// OAuth failure route
-app.get('/auth/failure', (req, res) => {
-  res.status(401).json({
-    success: false,
-    error: {
-      code: 'OAUTH_FAILURE',
-      message: 'OAuth authentication failed',
-    },
-    meta: {
-      timestamp: new Date().toISOString(),
-      version: 'v1',
-    },
-  });
-});
 
 // Root endpoint
 app.get('/', (req, res) => {

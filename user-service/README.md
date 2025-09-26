@@ -5,12 +5,10 @@ A comprehensive Node.js microservice for user management in the Pulse social med
 ## 🚀 Features
 
 - **User Authentication**: JWT-based authentication with email/password login
-- **OAuth Integration**: Google OAuth2 authentication with Passport.js
 - **User Management**: Complete CRUD operations for user profiles
 - **Social Features**: Follow/unfollow functionality with relationship tracking
 - **Admin Panel**: Administrative endpoints for user management
-- **Security**: Password hashing, rate limiting, input validation, OAuth security
-- **Session Management**: Redis-based session storage for OAuth flows
+- **Security**: Password hashing, rate limiting, input validation
 - **Documentation**: Comprehensive Swagger/OpenAPI documentation
 - **Testing**: Full test coverage with Jest and Supertest
 - **Docker Support**: Containerized deployment with Docker Compose
@@ -20,8 +18,6 @@ A comprehensive Node.js microservice for user management in the Pulse social med
 
 - Node.js 18+
 - PostgreSQL 13+
-- Redis 6+ (for session storage)
-- Google Cloud Platform account (for OAuth)
 - Docker & Docker Compose (optional)
 
 ## 🛠️ Installation
@@ -48,7 +44,7 @@ A comprehensive Node.js microservice for user management in the Pulse social med
    ```env
    NODE_ENV=development
    PORT=8080
-   DATABASE_URL="postgresql://username:password@localhost:5432/pulse_users"
+   DATABASE_URL="postgresql://username:password@localhost:5432/pulse_user_service_db"
    JWT_SECRET=your-super-secret-jwt-key
    JWT_EXPIRES_IN=24h
    JWT_REFRESH_EXPIRES_IN=7d
@@ -56,18 +52,6 @@ A comprehensive Node.js microservice for user management in the Pulse social med
    CORS_ORIGIN=http://localhost:3000
    ADMIN_EMAIL=admin@pulse.com
    ADMIN_PASSWORD=admin123
-   
-   # Google OAuth Configuration
-   GOOGLE_CLIENT_ID=your-google-client-id
-   GOOGLE_CLIENT_SECRET=your-google-client-secret
-   GOOGLE_CALLBACK_URL=http://localhost:8080/api/v1/auth/google/callback
-   
-   # Session Configuration
-   SESSION_SECRET=your-session-secret-key
-   SESSION_MAX_AGE=86400000
-   
-   # Redis Configuration (optional)
-   REDIS_URL=redis://localhost:6379
    ```
 
 4. **Set up the database**
@@ -145,11 +129,6 @@ Authorization: Bearer <your-jwt-token>
 | POST | `/auth/logout` | Logout user | Yes |
 | GET | `/auth/me` | Get current user profile | Yes |
 | POST | `/auth/change-password` | Change password | Yes |
-| GET | `/auth/google` | Initiate Google OAuth | No |
-| GET | `/auth/google/callback` | Google OAuth callback | No |
-| GET | `/auth/providers` | Get linked OAuth providers | Yes |
-| POST | `/auth/link-google` | Link Google account | Yes |
-| DELETE | `/auth/unlink-google` | Unlink Google account | Yes |
 
 ### User Management Endpoints
 
@@ -294,12 +273,6 @@ model UserFollow {
 | `LOG_LEVEL` | Logging level | `info` |
 | `ADMIN_EMAIL` | Admin user email | `admin@pulse.com` |
 | `ADMIN_PASSWORD` | Admin user password | `admin123` |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID | Required for OAuth |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | Required for OAuth |
-| `GOOGLE_CALLBACK_URL` | Google OAuth callback URL | `http://localhost:8080/api/v1/auth/google/callback` |
-| `SESSION_SECRET` | Session encryption secret | Required for OAuth |
-| `SESSION_MAX_AGE` | Session max age in ms | `86400000` (24h) |
-| `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
 
 ## 🚀 Deployment
 
@@ -308,13 +281,8 @@ model UserFollow {
 1. **Set production environment variables**
    ```env
    NODE_ENV=production
-   DATABASE_URL=postgresql://user:pass@host:5432/pulse_users
+   DATABASE_URL=postgresql://user:pass@host:5432/pulse_user_service_db
    JWT_SECRET=your-production-secret-key
-   GOOGLE_CLIENT_ID=your-production-google-client-id
-   GOOGLE_CLIENT_SECRET=your-production-google-client-secret
-   GOOGLE_CALLBACK_URL=https://yourdomain.com/api/v1/auth/google/callback
-   SESSION_SECRET=your-production-session-secret
-   REDIS_URL=redis://your-redis-host:6379
    ```
 
 2. **Build and run with Docker**
@@ -338,8 +306,6 @@ The service includes health check endpoints:
 
 - **Password Hashing**: bcrypt with configurable rounds
 - **JWT Authentication**: Secure token-based authentication
-- **OAuth Security**: Google OAuth2 with Passport.js
-- **Session Management**: Secure session handling with Redis
 - **Rate Limiting**: Configurable rate limits per endpoint
 - **Input Validation**: Joi schema validation
 - **CORS Protection**: Configurable cross-origin policies
@@ -381,13 +347,6 @@ For support and questions:
 
 ## 🔄 Version History
 
-- **v1.1.0** - Added Google OAuth2 integration
-  - Google OAuth2 authentication with Passport.js
-  - OAuth provider management (link/unlink accounts)
-  - Redis-based session storage
-  - Enhanced security features
-  - OAuth-specific tests and documentation
-
 - **v1.0.0** - Initial release with core user management features
   - User authentication and registration
   - Profile management
@@ -399,7 +358,6 @@ For support and questions:
 
 ## 📚 Additional Resources
 
-- [Google OAuth2 Setup Guide](docs/google-oauth-setup.md)
 - [API Documentation](http://localhost:8080/api-docs)
 - [Postman Collection](docs/postman-collection.json)
 
