@@ -15,7 +15,11 @@ const options = {
     servers: [
       {
         url: `http://localhost:${process.env.PORT || 8080}`,
-        description: 'Development server',
+        description: 'Direct access (bypass Kong)',
+      },
+      {
+        url: 'http://localhost:8000',
+        description: 'Kong Gateway (recommended)',
       },
     ],
     components: {

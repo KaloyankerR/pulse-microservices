@@ -101,6 +101,9 @@ All endpoints are accessible through Kong Gateway at `http://localhost:8000`:
 ### Health
 - `GET /health` - Service health check
 
+### Documentation
+- `GET /api-docs` - Swagger UI documentation
+
 ## Kong Features Enabled
 
 ### 1. CORS Plugin
@@ -132,6 +135,18 @@ All endpoints are accessible through Kong Gateway at `http://localhost:8000`:
 curl http://localhost:8000/health
 ```
 
+### Swagger Documentation
+```bash
+# Access Swagger UI through Kong (redirects to /api-docs/)
+curl http://localhost:8000/api-docs
+
+# Direct access to Swagger UI
+curl http://localhost:8000/api-docs/
+
+# Or open in browser
+open http://localhost:8000/api-docs/
+```
+
 ### User Registration
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/register \
@@ -146,10 +161,19 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 
 ### User Login
 ```bash
+# Login with seeded admin user
 curl -X POST http://localhost:8000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "test@example.com",
+    "email": "admin@pulse.com",
+    "password": "admin123"
+  }'
+
+# Login with seeded sample user
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john.doe@example.com",
     "password": "password123"
   }'
 ```
@@ -212,7 +236,31 @@ docker-compose logs -f kong
 
 ## Troubleshooting
 
-### 1. Services Not Starting
+### 1. Database Issues
+```bash
+# If you get "table does not exist" errors, run database migrations
+docker exec pulse-user-service npx prisma db push
+
+# Seed the database with sample data
+docker exec pulse-user-service npm run db:seed
+
+# Check database connection
+docker exec pulse-users-db pg_isready -U pulse_user -d pulse_users
+```
+
+### 2. CORS Issues
+```bash
+# Test CORS preflight request
+curl -X OPTIONS http://localhost:8080/api/v1/auth/login \
+  -H "Origin: http://localhost:8080" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: Content-Type"
+
+# Test Swagger UI CORS
+./test-swagger-cors.sh
+```
+
+### 3. Services Not Starting
 ```bash
 # Check Docker status
 docker info

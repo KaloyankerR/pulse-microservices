@@ -44,6 +44,14 @@ services:
         strip_path: false
         methods:
           - GET
+      - name: user-service-swagger
+        paths:
+          - /api-docs
+          - /api-docs/
+        strip_path: false
+        methods:
+          - GET
+          - OPTIONS
     plugins:
       - name: cors
         config:

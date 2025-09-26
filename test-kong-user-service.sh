@@ -101,17 +101,46 @@ else
     print_warning "CORS preflight request returned HTTP $cors_response"
 fi
 
-# Test 5: Test user registration through Kong
+# Test 5: Test user login with seeded admin user
 echo ""
-print_status "Test 5: Testing user registration through Kong..."
+print_status "Test 5: Testing user login with seeded admin user..."
+login_response=$(curl -s -w "%{http_code}" -X POST \
+    -H "Content-Type: application/json" \
+    -H "Origin: http://localhost:3000" \
+    -d '{
+        "email": "admin@pulse.com",
+        "password": "admin123"
+    }' \
+    "http://localhost:8000/api/v1/auth/login")
+
+http_code="${login_response: -3}"
+response_body="${login_response%???}"
+
+if [ "$http_code" = "200" ]; then
+    print_success "Admin user login successful (HTTP $http_code)"
+    echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
+    
+    # Extract token for further tests
+    token=$(echo "$response_body" | jq -r '.data.accessToken // empty' 2>/dev/null)
+    if [ -n "$token" ] && [ "$token" != "null" ]; then
+        print_success "JWT token received: ${token:0:20}..."
+    fi
+else
+    print_error "Admin user login failed (HTTP $http_code)"
+    echo "$response_body"
+fi
+
+# Test 6: Test user registration through Kong
+echo ""
+print_status "Test 6: Testing user registration through Kong..."
 registration_response=$(curl -s -w "%{http_code}" -X POST \
     -H "Content-Type: application/json" \
     -H "Origin: http://localhost:3000" \
     -d '{
         "email": "kong-test@example.com",
-        "password": "password123",
-        "firstName": "Kong",
-        "lastName": "Test"
+        "password": "Password123!",
+        "username": "kongtest",
+        "displayName": "Kong Test User"
     }' \
     "http://localhost:8000/api/v1/auth/register")
 
@@ -125,35 +154,6 @@ elif [ "$http_code" = "409" ]; then
     print_warning "User already exists (HTTP $http_code) - this is expected if test was run before"
 else
     print_error "User registration failed (HTTP $http_code)"
-    echo "$response_body"
-fi
-
-# Test 6: Test user login through Kong
-echo ""
-print_status "Test 6: Testing user login through Kong..."
-login_response=$(curl -s -w "%{http_code}" -X POST \
-    -H "Content-Type: application/json" \
-    -H "Origin: http://localhost:3000" \
-    -d '{
-        "email": "kong-test@example.com",
-        "password": "password123"
-    }' \
-    "http://localhost:8000/api/v1/auth/login")
-
-http_code="${login_response: -3}"
-response_body="${login_response%???}"
-
-if [ "$http_code" = "200" ]; then
-    print_success "User login successful (HTTP $http_code)"
-    echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
-    
-    # Extract token for further tests
-    token=$(echo "$response_body" | jq -r '.token // .accessToken // empty' 2>/dev/null)
-    if [ -n "$token" ] && [ "$token" != "null" ]; then
-        print_success "JWT token received: ${token:0:20}..."
-    fi
-else
-    print_error "User login failed (HTTP $http_code)"
     echo "$response_body"
 fi
 
@@ -178,9 +178,24 @@ else
     print_warning "Rate limiting may not be active (no 429 responses received)"
 fi
 
-# Test 8: Test Kong metrics
+# Test 8: Test Swagger documentation access through Kong
 echo ""
-print_status "Test 8: Checking Kong metrics..."
+print_status "Test 8: Testing Swagger documentation access through Kong..."
+swagger_response=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:8000/api-docs")
+swagger_slash_response=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:8000/api-docs/")
+
+if [ "$swagger_response" = "200" ] || [ "$swagger_slash_response" = "200" ]; then
+    print_success "Swagger documentation is accessible through Kong"
+    print_status "Swagger UI available at: http://localhost:8000/api-docs (redirects to /api-docs/)"
+    print_status "Direct access: http://localhost:8000/api-docs/"
+else
+    print_error "Swagger documentation not accessible through Kong"
+    print_status "Response codes: /api-docs=$swagger_response, /api-docs/=$swagger_slash_response"
+fi
+
+# Test 9: Test Kong metrics
+echo ""
+print_status "Test 9: Checking Kong metrics..."
 if curl -s -f "http://localhost:8001/metrics" > /dev/null; then
     print_success "Kong metrics endpoint is accessible"
     metrics_count=$(curl -s "http://localhost:8001/metrics" | wc -l)
@@ -201,6 +216,7 @@ echo "  • User Service Direct: http://localhost:8080"
 echo ""
 print_status "Available Endpoints through Kong:"
 echo "  • Health: http://localhost:8000/health"
+echo "  • Swagger UI: http://localhost:8000/api-docs"
 echo "  • Auth: http://localhost:8000/api/v1/auth/*"
 echo "  • Users: http://localhost:8000/api/v1/users/*"
 echo "  • Admin: http://localhost:8000/api/v1/admin/*"
