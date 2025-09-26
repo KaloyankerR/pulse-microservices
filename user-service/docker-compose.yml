@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -8,6 +6,7 @@ services:
       POSTGRES_DB: pulse_users
       POSTGRES_USER: pulse_user
       POSTGRES_PASSWORD: pulse_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     ports:
       - "5432:5432"
     volumes:
@@ -18,10 +17,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - pulse-network
 
   redis:
     image: redis:7-alpine
     container_name: pulse-users-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     ports:
       - "6379:6379"
     volumes:
@@ -31,15 +35,22 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - pulse-network
 
   user-service:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
     container_name: pulse-user-service
     environment:
       NODE_ENV: development
       PORT: 8080
       DATABASE_URL: postgresql://pulse_user:pulse_password@postgres:5432/pulse_users
-      JWT_SECRET: dev-secret-key
+      JWT_SECRET: dev-secret-key-change-in-production
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
       RATE_LIMIT_WINDOW_MS: 900000
@@ -52,7 +63,7 @@ services:
       GOOGLE_CLIENT_ID: your-google-client-id
       GOOGLE_CLIENT_SECRET: your-google-client-secret
       GOOGLE_CALLBACK_URL: http://localhost:8080/api/v1/auth/google/callback
-      SESSION_SECRET: dev-session-secret
+      SESSION_SECRET: dev-session-secret-change-in-production
       SESSION_MAX_AGE: 86400000
       REDIS_URL: redis://redis:6379
     ports:
@@ -67,7 +78,22 @@ services:
       - /app/node_modules
       - ./logs:/app/logs
     restart: unless-stopped
+    networks:
+      - pulse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
+
+networks:
+  pulse-network:
+    driver: bridge
+    external: true

@@ -54,3 +54,4 @@ if (sessionStore) {
 }
 
 module.exports = session(sessionConfig);
+

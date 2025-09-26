@@ -27,3 +27,4 @@ GRANT ALL PRIVILEGES ON DATABASE pulse_users TO pulse_user;
 GRANT ALL PRIVILEGES ON SCHEMA public TO pulse_user;
 
 -- Note: Tables will be created by Prisma migrations
+

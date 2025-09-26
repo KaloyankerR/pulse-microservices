@@ -25,3 +25,4 @@ router.delete('/:id/follow', userController.unfollowUser);
 router.get('/:id/follow-status', userController.getFollowStatus);
 
 module.exports = router;
+

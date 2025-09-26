@@ -15,3 +15,4 @@ router.get('/users', validateRequest(schemas.pagination, 'query'), adminControll
 router.put('/users/:id/status', validateRequest(schemas.updateUserStatus), adminController.updateUserStatus);
 
 module.exports = router;
+
