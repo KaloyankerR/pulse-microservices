@@ -11,41 +11,32 @@ datasource db {
 }
 
 model User {
-  id          String     @id @default(uuid())
-  email       String     @unique
-  username    String     @unique
-  password    String    // Hashed password
-  displayName String?
-  bio         String?
-  avatarUrl   String?
-  verified    Boolean    @default(false)
-  status      UserStatus @default(ACTIVE)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String   // Hashed password
+  displayName  String?
+  bio          String?
+  avatarUrl    String?
+  verified     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
-  // Social relationships
-  following   UserFollow[] @relation("UserFollowing")
-  followers   UserFollow[] @relation("UserFollowers")
+  // Sessions
+  sessions     UserSession[]
   
   @@map("users")
 }
 
-model UserFollow {
-  id          String @id @default(uuid())
-  followerId  String
-  followingId String
-  createdAt   DateTime @default(now())
+model UserSession {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
   
-  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  @@unique([followerId, followingId])
-  @@map("user_follows")
-}
-
-enum UserStatus {
-  ACTIVE
-  SUSPENDED
-  INACTIVE
+  @@map("user_sessions")
 }
 
