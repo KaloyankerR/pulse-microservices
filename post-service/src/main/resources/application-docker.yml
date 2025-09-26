@@ -1,0 +1,82 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: post-service
+  
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://post-service-db:5432/pulse_posts_service_db}
+    username: ${SPRING_DATASOURCE_USERNAME:pulse_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:pulse_password}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  cache:
+    type: simple
+    cache-names:
+      - user-cache
+      - post-cache
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+
+# User Service Integration
+user-service:
+  base-url: ${USER_SERVICE_BASE_URL:http://user-service:8080}
+  timeout: ${USER_SERVICE_TIMEOUT:5000}
+  retry-attempts: ${USER_SERVICE_RETRY_ATTEMPTS:3}
+
+# Content Validation Configuration
+content:
+  max-post-length: ${CONTENT_MAX_POST_LENGTH:2000}
+  max-comment-length: ${CONTENT_MAX_COMMENT_LENGTH:500}
+  max-image-size-mb: ${CONTENT_MAX_IMAGE_SIZE_MB:10}
+  max-video-size-mb: ${CONTENT_MAX_VIDEO_SIZE_MB:100}
+  allowed-image-types: ${CONTENT_ALLOWED_IMAGE_TYPES:jpg,jpeg,png,gif,webp}
+  allowed-video-types: ${CONTENT_ALLOWED_VIDEO_TYPES:mp4,webm,mov}
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+# Logging Configuration
+logging:
+  level:
+    com.pulse.post: ${LOGGING_LEVEL_COM_PULSE_POST:INFO}
+    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY:WARN}
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/post-service.log

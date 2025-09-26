@@ -87,10 +87,77 @@ services:
       retries: 3
       start_period: 40s
 
+  # Post Service Database
+  post-service-db:
+    image: postgres:15-alpine
+    container_name: pulse-posts-db
+    environment:
+      POSTGRES_DB: pulse_posts_service_db
+      POSTGRES_USER: pulse_user
+      POSTGRES_PASSWORD: pulse_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - post_service_data:/var/lib/postgresql/data
+      - ../post-service/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulse_user -d pulse_posts_service_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - pulse-network
+
+  # Post Service
+  post-service:
+    build:
+      context: ../post-service
+      dockerfile: Dockerfile.simple
+    container_name: pulse-post-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://post-service-db:5432/pulse_posts_service_db
+      SPRING_DATASOURCE_USERNAME: pulse_user
+      SPRING_DATASOURCE_PASSWORD: pulse_password
+      JWT_SECRET: dev-secret-key-change-in-production
+      JWT_EXPIRATION: 86400000
+      USER_SERVICE_BASE_URL: http://user-service:8080
+      USER_SERVICE_TIMEOUT: 5000
+      USER_SERVICE_RETRY_ATTEMPTS: 3
+      CONTENT_MAX_POST_LENGTH: 2000
+      CONTENT_MAX_COMMENT_LENGTH: 500
+      CONTENT_MAX_IMAGE_SIZE_MB: 10
+      CONTENT_MAX_VIDEO_SIZE_MB: 100
+      CONTENT_ALLOWED_IMAGE_TYPES: jpg,jpeg,png,gif,webp
+      CONTENT_ALLOWED_VIDEO_TYPES: mp4,webm,mov
+      LOGGING_LEVEL_COM_PULSE_POST: INFO
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: WARN
+    ports:
+      - "8082:8082"
+    depends_on:
+      post-service-db:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pulse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
 volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  post_service_data:
     driver: local
 
 networks:
