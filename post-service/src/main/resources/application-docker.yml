@@ -6,9 +6,9 @@ spring:
     name: post-service
   
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://post-service-db:5432/pulse_posts_service_db}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://host.docker.internal:5432/pulse_posts}
     username: ${SPRING_DATASOURCE_USERNAME:pulse_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:pulse_password}
+    password: ${SPRING_DATASOURCE_PASSWORD:pulse_user}
     driver-class-name: org.postgresql.Driver
   
   jpa:

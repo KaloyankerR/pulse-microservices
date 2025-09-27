@@ -1,45 +1,4 @@
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: pulse-users-db
-    environment:
-      POSTGRES_DB: pulse_users
-      POSTGRES_USER: pulse_user
-      POSTGRES_PASSWORD: pulse_password
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pulse_user -d pulse_users"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-    networks:
-      - pulse-network
-
-  redis:
-    image: redis:7-alpine
-    container_name: pulse-users-redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    networks:
-      - pulse-network
-
   user-service:
     build:
       context: .
@@ -49,7 +8,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 8081
-      DATABASE_URL: postgresql://pulse_user:pulse_password@postgres:5432/pulse_users
+      DATABASE_URL: postgresql://pulse_user:pulse_user@host.docker.internal:5432/pulse_users
       JWT_SECRET: dev-secret-key-change-in-production
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
@@ -62,14 +21,8 @@ services:
       ADMIN_PASSWORD: admin123
       SESSION_SECRET: dev-session-secret-change-in-production
       SESSION_MAX_AGE: 86400000
-      REDIS_URL: redis://redis:6379
     ports:
       - "8081:8081"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     volumes:
       - .:/app
       - /app/node_modules
@@ -83,30 +36,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # Post Service Database
-  post-service-db:
-    image: postgres:15-alpine
-    container_name: pulse-posts-db
-    environment:
-      POSTGRES_DB: pulse_posts_service_db
-      POSTGRES_USER: pulse_user
-      POSTGRES_PASSWORD: pulse_password
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5433:5432"
-    volumes:
-      - post_service_data:/var/lib/postgresql/data
-      - ../post-service/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pulse_user -d pulse_posts_service_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-    networks:
-      - pulse-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # Post Service
   post-service:
@@ -116,12 +47,12 @@ services:
     container_name: pulse-post-service
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://post-service-db:5432/pulse_posts_service_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/pulse_posts
       SPRING_DATASOURCE_USERNAME: pulse_user
-      SPRING_DATASOURCE_PASSWORD: pulse_password
+      SPRING_DATASOURCE_PASSWORD: pulse_user
       JWT_SECRET: dev-secret-key-change-in-production
       JWT_EXPIRATION: 86400000
-      USER_SERVICE_BASE_URL: http://user-service:8081
+      USER_SERVICE_BASE_URL: http://host.docker.internal:8081
       USER_SERVICE_TIMEOUT: 5000
       USER_SERVICE_RETRY_ATTEMPTS: 3
       CONTENT_MAX_POST_LENGTH: 2000
@@ -135,8 +66,6 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      post-service-db:
-        condition: service_healthy
       user-service:
         condition: service_healthy
     restart: unless-stopped
@@ -148,14 +77,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  post_service_data:
-    driver: local
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   pulse-network:

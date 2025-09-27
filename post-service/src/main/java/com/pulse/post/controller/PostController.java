@@ -20,6 +20,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Post Controller
@@ -83,7 +84,7 @@ public class PostController {
         @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public ResponseEntity<PostResponse> getPost(
-            @PathVariable Long postId,
+            @PathVariable UUID postId,
             Authentication authentication,
             @RequestHeader("Authorization") String authorization) {
         
@@ -108,7 +109,7 @@ public class PostController {
         @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
     public ResponseEntity<Page<PostResponse>> getPostsByAuthor(
-            @PathVariable String authorId,
+            @PathVariable UUID authorId,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
             Authentication authentication,
@@ -132,7 +133,7 @@ public class PostController {
     })
     public ResponseEntity<Page<PostResponse>> getFeedPosts(
             @Parameter(description = "Comma-separated list of following user IDs") 
-            @RequestParam List<String> following,
+            @RequestParam List<UUID> following,
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
             Authentication authentication,
@@ -209,7 +210,7 @@ public class PostController {
         @ApiResponse(responseCode = "404", description = "Post not found")
     })
     public ResponseEntity<PostResponse> updatePost(
-            @PathVariable Long postId,
+            @PathVariable UUID postId,
             @Parameter(description = "New post content") @RequestParam String content,
             Authentication authentication,
             @RequestHeader("Authorization") String authorization) {
@@ -243,7 +244,7 @@ public class PostController {
         @ApiResponse(responseCode = "404", description = "Post not found")
     })
     public ResponseEntity<String> deletePost(
-            @PathVariable Long postId,
+            @PathVariable UUID postId,
             Authentication authentication) {
         
         logger.info("Deleting post: {} by user: {}", postId, authentication.getName());

@@ -3,10 +3,13 @@ package com.pulse.post.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.util.UUID;
+
 /**
  * Create Post Request DTO
  * 
  * Represents the request payload for creating a new post.
+ * Aligned with DATABASE&SCHEMAS.md specification.
  * 
  * @author Pulse Team
  * @version 1.0.0
@@ -14,18 +17,21 @@ import jakarta.validation.constraints.Size;
 public class CreatePostRequest {
 
     @NotBlank(message = "Content is required")
-    @Size(max = 2000, message = "Content cannot exceed 2000 characters")
+    @Size(max = 280, message = "Content cannot exceed 280 characters")
     private String content;
 
-    private String[] imageUrls;
-
-    private String videoUrl;
+    private UUID eventId;
 
     // Constructors
     public CreatePostRequest() {}
 
     public CreatePostRequest(String content) {
         this.content = content;
+    }
+
+    public CreatePostRequest(String content, UUID eventId) {
+        this.content = content;
+        this.eventId = eventId;
     }
 
     // Getters and Setters
@@ -37,28 +43,19 @@ public class CreatePostRequest {
         this.content = content;
     }
 
-    public String[] getImageUrls() {
-        return imageUrls;
+    public UUID getEventId() {
+        return eventId;
     }
 
-    public void setImageUrls(String[] imageUrls) {
-        this.imageUrls = imageUrls;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
+    public void setEventId(UUID eventId) {
+        this.eventId = eventId;
     }
 
     @Override
     public String toString() {
         return "CreatePostRequest{" +
                 "content='" + content + '\'' +
-                ", imageUrls=" + (imageUrls != null ? imageUrls.length : 0) + " images" +
-                ", videoUrl='" + videoUrl + '\'' +
+                ", eventId=" + eventId +
                 '}';
     }
 }

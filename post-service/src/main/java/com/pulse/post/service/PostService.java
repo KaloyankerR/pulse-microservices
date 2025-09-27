@@ -4,7 +4,6 @@ import com.pulse.post.dto.CreatePostRequest;
 import com.pulse.post.dto.PostResponse;
 import com.pulse.post.dto.UserDto;
 import com.pulse.post.entity.Post;
-import com.pulse.post.entity.PostStatus;
 import com.pulse.post.repository.PostRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -61,6 +61,9 @@ public class PostService {
     public PostResponse createPost(CreatePostRequest request, String authorId, String authorization) {
         logger.info("Creating post for user: {}", authorId);
 
+        // Convert authorId to UUID
+        UUID authorUuid = UUID.fromString(authorId);
+
         // Validate user exists and is active
         if (!userService.isUserActive(authorId, authorization)) {
             throw new IllegalArgumentException("User not found or inactive");
@@ -69,24 +72,16 @@ public class PostService {
         // Validate and sanitize content
         String sanitizedContent = contentValidationService.validateAndSanitizePostContent(request.getContent());
 
-        // Validate media URLs
-        if (request.getImageUrls() != null) {
-            contentValidationService.validateImageUrls(request.getImageUrls());
-        }
-        if (request.getVideoUrl() != null) {
-            contentValidationService.validateVideoUrl(request.getVideoUrl());
-        }
-
         // Check content appropriateness
         if (!contentValidationService.isContentAppropriate(sanitizedContent)) {
             throw new IllegalArgumentException("Content violates community guidelines");
         }
 
         // Create post entity
-        Post post = new Post(authorId, sanitizedContent);
-        post.setImageUrls(request.getImageUrls());
-        post.setVideoUrl(request.getVideoUrl());
-        post.setStatus(PostStatus.PUBLISHED);
+        Post post = new Post(authorUuid, sanitizedContent);
+        if (request.getEventId() != null) {
+            post.setEventId(request.getEventId());
+        }
 
         // Save post
         Post savedPost = postRepository.save(post);
@@ -105,19 +100,15 @@ public class PostService {
      * @return Post response
      */
     @Transactional(readOnly = true)
-    public PostResponse getPostById(Long postId, String currentUserId, String authorization) {
+    public PostResponse getPostById(UUID postId, String currentUserId, String authorization) {
         logger.debug("Retrieving post: {}", postId);
 
-        Optional<Post> postOpt = postRepository.findByIdAndStatus(postId, PostStatus.PUBLISHED);
+        Optional<Post> postOpt = postRepository.findById(postId);
         if (postOpt.isEmpty()) {
             throw new IllegalArgumentException("Post not found");
         }
 
         Post post = postOpt.get();
-        
-        // Increment view count
-        post.incrementViewCount();
-        postRepository.save(post);
 
         return buildPostResponse(post, authorization, currentUserId);
     }
@@ -133,13 +124,12 @@ public class PostService {
      * @return Page of post responses
      */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getPostsByAuthor(String authorId, int page, int size, 
+    public Page<PostResponse> getPostsByAuthor(UUID authorId, int page, int size, 
                                                String currentUserId, String authorization) {
         logger.debug("Retrieving posts for author: {}, page: {}, size: {}", authorId, page, size);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Post> posts = postRepository.findByAuthorIdAndStatusOrderByCreatedAtDesc(
-            authorId, PostStatus.PUBLISHED, pageable);
+        Page<Post> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(authorId, pageable);
 
         return posts.map(post -> buildPostResponse(post, authorization, currentUserId));
     }
@@ -155,7 +145,7 @@ public class PostService {
      * @return Page of post responses
      */
     @Transactional(readOnly = true)
-    public Page<PostResponse> getFeedPosts(List<String> followingUserIds, int page, int size,
+    public Page<PostResponse> getFeedPosts(List<UUID> followingUserIds, int page, int size,
                                           String currentUserId, String authorization) {
         logger.debug("Retrieving feed posts for {} users, page: {}, size: {}", 
                     followingUserIds.size(), page, size);
@@ -165,8 +155,7 @@ public class PostService {
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Post> posts = postRepository.findByAuthorIdInAndStatusOrderByCreatedAtDesc(
-            followingUserIds, PostStatus.PUBLISHED, pageable);
+        Page<Post> posts = postRepository.findByAuthorIdInOrderByCreatedAtDesc(followingUserIds, pageable);
 
         return posts.map(post -> buildPostResponse(post, authorization, currentUserId));
     }
@@ -187,7 +176,7 @@ public class PostService {
         logger.debug("Searching posts with query: {}, page: {}, size: {}", query, page, size);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<Post> posts = postRepository.searchPostsByContent(query, PostStatus.PUBLISHED, pageable);
+        Page<Post> posts = postRepository.searchPostsByContent(query, pageable);
 
         return posts.map(post -> buildPostResponse(post, authorization, currentUserId));
     }
@@ -208,7 +197,7 @@ public class PostService {
         LocalDateTime since = LocalDateTime.now().minusHours(24);
         Pageable pageable = PageRequest.of(page, size, Sort.by("likeCount").descending()
                                                       .and(Sort.by("createdAt").descending()));
-        Page<Post> posts = postRepository.findTrendingPosts(PostStatus.PUBLISHED, since, pageable);
+        Page<Post> posts = postRepository.findTrendingPosts(since, pageable);
 
         return posts.map(post -> buildPostResponse(post, authorization, currentUserId));
     }
@@ -222,10 +211,10 @@ public class PostService {
      * @param authorization JWT authorization token
      * @return Updated post response
      */
-    public PostResponse updatePost(Long postId, String newContent, String authorId, String authorization) {
+    public PostResponse updatePost(UUID postId, String newContent, String authorId, String authorization) {
         logger.info("Updating post: {} by user: {}", postId, authorId);
 
-        Optional<Post> postOpt = postRepository.findByIdAndStatus(postId, PostStatus.PUBLISHED);
+        Optional<Post> postOpt = postRepository.findById(postId);
         if (postOpt.isEmpty()) {
             throw new IllegalArgumentException("Post not found");
         }
@@ -233,7 +222,7 @@ public class PostService {
         Post post = postOpt.get();
 
         // Check ownership
-        if (!post.getAuthorId().equals(authorId)) {
+        if (!post.getAuthorId().toString().equals(authorId)) {
             throw new IllegalArgumentException("Not authorized to update this post");
         }
 
@@ -247,7 +236,6 @@ public class PostService {
 
         // Update post
         post.setContent(sanitizedContent);
-        post.markAsEdited();
         Post updatedPost = postRepository.save(post);
 
         logger.info("Post updated successfully: {}", postId);
@@ -261,7 +249,7 @@ public class PostService {
      * @param authorId Author user ID
      * @return Success message
      */
-    public String deletePost(Long postId, String authorId) {
+    public String deletePost(UUID postId, String authorId) {
         logger.info("Deleting post: {} by user: {}", postId, authorId);
 
         Optional<Post> postOpt = postRepository.findById(postId);
@@ -272,13 +260,12 @@ public class PostService {
         Post post = postOpt.get();
 
         // Check ownership
-        if (!post.getAuthorId().equals(authorId)) {
+        if (!post.getAuthorId().toString().equals(authorId)) {
             throw new IllegalArgumentException("Not authorized to delete this post");
         }
 
-        // Soft delete by changing status
-        post.setStatus(PostStatus.REMOVED);
-        postRepository.save(post);
+        // Hard delete
+        postRepository.delete(post);
 
         logger.info("Post deleted successfully: {}", postId);
         return "Post deleted successfully";
@@ -296,20 +283,13 @@ public class PostService {
         PostResponse response = new PostResponse();
         response.setId(post.getId());
         response.setContent(post.getContent());
-        response.setImageUrls(post.getImageUrls());
-        response.setVideoUrl(post.getVideoUrl());
-        response.setStatus(post.getStatus());
-        response.setIsEdited(post.getIsEdited());
-        response.setEditedAt(post.getEditedAt());
+        response.setEventId(post.getEventId());
         response.setLikeCount(post.getLikeCount());
         response.setCommentCount(post.getCommentCount());
-        response.setShareCount(post.getShareCount());
-        response.setViewCount(post.getViewCount());
         response.setCreatedAt(post.getCreatedAt());
-        response.setUpdatedAt(post.getUpdatedAt());
 
         // Get author information
-        UserDto author = userService.getUserById(post.getAuthorId(), authorization);
+        UserDto author = userService.getUserById(post.getAuthorId().toString(), authorization);
         response.setAuthor(author);
 
         // Check if current user has liked this post

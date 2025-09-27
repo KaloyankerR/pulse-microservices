@@ -1,14 +1,15 @@
 package com.pulse.post.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.pulse.post.entity.PostStatus;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Post Response DTO
  * 
  * Represents the response payload for post operations with user information.
+ * Aligned with DATABASE&SCHEMAS.md specification.
  * 
  * @author Pulse Team
  * @version 1.0.0
@@ -16,25 +17,13 @@ import java.time.LocalDateTime;
 public class PostResponse {
 
     @JsonProperty("id")
-    private Long id;
+    private UUID id;
 
     @JsonProperty("content")
     private String content;
 
-    @JsonProperty("imageUrls")
-    private String[] imageUrls;
-
-    @JsonProperty("videoUrl")
-    private String videoUrl;
-
-    @JsonProperty("status")
-    private PostStatus status;
-
-    @JsonProperty("isEdited")
-    private Boolean isEdited;
-
-    @JsonProperty("editedAt")
-    private LocalDateTime editedAt;
+    @JsonProperty("eventId")
+    private UUID eventId;
 
     @JsonProperty("likeCount")
     private Integer likeCount;
@@ -42,17 +31,8 @@ public class PostResponse {
     @JsonProperty("commentCount")
     private Integer commentCount;
 
-    @JsonProperty("shareCount")
-    private Integer shareCount;
-
-    @JsonProperty("viewCount")
-    private Integer viewCount;
-
     @JsonProperty("createdAt")
     private LocalDateTime createdAt;
-
-    @JsonProperty("updatedAt")
-    private LocalDateTime updatedAt;
 
     @JsonProperty("author")
     private UserDto author;
@@ -64,11 +44,11 @@ public class PostResponse {
     public PostResponse() {}
 
     // Getters and Setters
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
@@ -80,44 +60,12 @@ public class PostResponse {
         this.content = content;
     }
 
-    public String[] getImageUrls() {
-        return imageUrls;
+    public UUID getEventId() {
+        return eventId;
     }
 
-    public void setImageUrls(String[] imageUrls) {
-        this.imageUrls = imageUrls;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public PostStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PostStatus status) {
-        this.status = status;
-    }
-
-    public Boolean getIsEdited() {
-        return isEdited;
-    }
-
-    public void setIsEdited(Boolean isEdited) {
-        this.isEdited = isEdited;
-    }
-
-    public LocalDateTime getEditedAt() {
-        return editedAt;
-    }
-
-    public void setEditedAt(LocalDateTime editedAt) {
-        this.editedAt = editedAt;
+    public void setEventId(UUID eventId) {
+        this.eventId = eventId;
     }
 
     public Integer getLikeCount() {
@@ -136,36 +84,12 @@ public class PostResponse {
         this.commentCount = commentCount;
     }
 
-    public Integer getShareCount() {
-        return shareCount;
-    }
-
-    public void setShareCount(Integer shareCount) {
-        this.shareCount = shareCount;
-    }
-
-    public Integer getViewCount() {
-        return viewCount;
-    }
-
-    public void setViewCount(Integer viewCount) {
-        this.viewCount = viewCount;
-    }
-
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
     }
 
     public UserDto getAuthor() {
@@ -189,7 +113,7 @@ public class PostResponse {
         return "PostResponse{" +
                 "id=" + id +
                 ", content='" + content + '\'' +
-                ", status=" + status +
+                ", eventId=" + eventId +
                 ", likeCount=" + likeCount +
                 ", commentCount=" + commentCount +
                 ", author=" + (author != null ? author.getUsername() : "null") +

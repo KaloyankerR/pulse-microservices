@@ -5,17 +5,17 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Post Entity
  * 
  * Represents a social media post with content, metadata, and engagement metrics.
- * Supports text, images, and videos with proper content validation.
+ * Aligned with DATABASE&SCHEMAS.md specification.
  * 
  * @author Pulse Team
  * @version 1.0.0
@@ -24,39 +24,25 @@ import java.util.List;
 @Table(name = "posts", indexes = {
     @Index(name = "idx_posts_author_id", columnList = "authorId"),
     @Index(name = "idx_posts_created_at", columnList = "createdAt"),
-    @Index(name = "idx_posts_status", columnList = "status"),
-    @Index(name = "idx_posts_content_search", columnList = "content")
+    @Index(name = "idx_posts_event_id", columnList = "eventId")
 })
 public class Post {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @NotNull(message = "Author ID is required")
     @Column(name = "author_id", nullable = false)
-    private String authorId;
+    private UUID authorId;
 
     @NotBlank(message = "Content cannot be blank")
-    @Size(max = 2000, message = "Content cannot exceed 2000 characters")
+    @Size(max = 280, message = "Content cannot exceed 280 characters")
     @Column(name = "content", columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(name = "image_urls", columnDefinition = "TEXT[]")
-    private String[] imageUrls;
-
-    @Column(name = "video_url")
-    private String videoUrl;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private PostStatus status = PostStatus.PUBLISHED;
-
-    @Column(name = "is_edited", nullable = false)
-    private Boolean isEdited = false;
-
-    @Column(name = "edited_at")
-    private LocalDateTime editedAt;
+    @Column(name = "event_id")
+    private UUID eventId;
 
     @Column(name = "like_count", nullable = false)
     private Integer likeCount = 0;
@@ -64,49 +50,42 @@ public class Post {
     @Column(name = "comment_count", nullable = false)
     private Integer commentCount = 0;
 
-    @Column(name = "share_count", nullable = false)
-    private Integer shareCount = 0;
-
-    @Column(name = "view_count", nullable = false)
-    private Integer viewCount = 0;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
     // Relationships
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Comment> comments = new ArrayList<>();
-
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Like> likes = new ArrayList<>();
+    private List<PostLike> likes = new ArrayList<>();
 
     // Constructors
     public Post() {}
 
-    public Post(String authorId, String content) {
+    public Post(UUID authorId, String content) {
         this.authorId = authorId;
         this.content = content;
     }
 
+    public Post(UUID authorId, String content, UUID eventId) {
+        this.authorId = authorId;
+        this.content = content;
+        this.eventId = eventId;
+    }
+
     // Getters and Setters
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public String getAuthorId() {
+    public UUID getAuthorId() {
         return authorId;
     }
 
-    public void setAuthorId(String authorId) {
+    public void setAuthorId(UUID authorId) {
         this.authorId = authorId;
     }
 
@@ -118,44 +97,12 @@ public class Post {
         this.content = content;
     }
 
-    public String[] getImageUrls() {
-        return imageUrls;
+    public UUID getEventId() {
+        return eventId;
     }
 
-    public void setImageUrls(String[] imageUrls) {
-        this.imageUrls = imageUrls;
-    }
-
-    public String getVideoUrl() {
-        return videoUrl;
-    }
-
-    public void setVideoUrl(String videoUrl) {
-        this.videoUrl = videoUrl;
-    }
-
-    public PostStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PostStatus status) {
-        this.status = status;
-    }
-
-    public Boolean getIsEdited() {
-        return isEdited;
-    }
-
-    public void setIsEdited(Boolean isEdited) {
-        this.isEdited = isEdited;
-    }
-
-    public LocalDateTime getEditedAt() {
-        return editedAt;
-    }
-
-    public void setEditedAt(LocalDateTime editedAt) {
-        this.editedAt = editedAt;
+    public void setEventId(UUID eventId) {
+        this.eventId = eventId;
     }
 
     public Integer getLikeCount() {
@@ -174,22 +121,6 @@ public class Post {
         this.commentCount = commentCount;
     }
 
-    public Integer getShareCount() {
-        return shareCount;
-    }
-
-    public void setShareCount(Integer shareCount) {
-        this.shareCount = shareCount;
-    }
-
-    public Integer getViewCount() {
-        return viewCount;
-    }
-
-    public void setViewCount(Integer viewCount) {
-        this.viewCount = viewCount;
-    }
-
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -198,27 +129,11 @@ public class Post {
         this.createdAt = createdAt;
     }
 
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public List<Comment> getComments() {
-        return comments;
-    }
-
-    public void setComments(List<Comment> comments) {
-        this.comments = comments;
-    }
-
-    public List<Like> getLikes() {
+    public List<PostLike> getLikes() {
         return likes;
     }
 
-    public void setLikes(List<Like> likes) {
+    public void setLikes(List<PostLike> likes) {
         this.likes = likes;
     }
 
@@ -243,22 +158,13 @@ public class Post {
         }
     }
 
-    public void incrementViewCount() {
-        this.viewCount++;
-    }
-
-    public void markAsEdited() {
-        this.isEdited = true;
-        this.editedAt = LocalDateTime.now();
-    }
-
     @Override
     public String toString() {
         return "Post{" +
                 "id=" + id +
-                ", authorId='" + authorId + '\'' +
+                ", authorId=" + authorId +
                 ", content='" + content + '\'' +
-                ", status=" + status +
+                ", eventId=" + eventId +
                 ", likeCount=" + likeCount +
                 ", commentCount=" + commentCount +
                 ", createdAt=" + createdAt +

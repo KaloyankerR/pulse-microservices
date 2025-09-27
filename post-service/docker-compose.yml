@@ -1,39 +1,16 @@
 version: '3.8'
 
 services:
-  post-service-db:
-    image: postgres:15-alpine
-    container_name: pulse-posts-db
-    environment:
-      POSTGRES_DB: pulse_posts_service_db
-      POSTGRES_USER: pulse_user
-      POSTGRES_PASSWORD: pulse_password
-    ports:
-      - "5433:5432"
-    volumes:
-      - post_service_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - pulse-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pulse_user -d pulse_posts_service_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   post-service:
     build: .
     container_name: pulse-post-service
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://post-service-db:5432/pulse_posts_service_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/pulse_posts
       SPRING_DATASOURCE_USERNAME: pulse_user
-      SPRING_DATASOURCE_PASSWORD: pulse_password
-      USER_SERVICE_BASE_URL: http://user-service:3000
+      SPRING_DATASOURCE_PASSWORD: pulse_user
+      USER_SERVICE_BASE_URL: http://host.docker.internal:8081
     ports:
       - "8082:8082"
-    depends_on:
-      post-service-db:
-        condition: service_healthy
     networks:
       - pulse-network
     healthcheck:
@@ -43,9 +20,8 @@ services:
       retries: 3
       start_period: 40s
     restart: unless-stopped
-
-volumes:
-  post_service_data:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   pulse-network:

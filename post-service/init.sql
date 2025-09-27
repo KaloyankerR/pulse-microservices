@@ -1,44 +1,68 @@
 -- Initialize Post Service Database
 -- This script sets up the initial database structure and configurations
-
--- Create database if it doesn't exist (handled by POSTGRES_DB env var)
--- CREATE DATABASE pulse_posts_service_db;
+-- Aligned with DATABASE&SCHEMAS.md specification
 
 -- Connect to the database
-\c pulse_posts_service_db;
+\c pulse_posts;
 
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- Create custom types
-DO $$ BEGIN
-    CREATE TYPE post_status AS ENUM ('PUBLISHED', 'DRAFT', 'HIDDEN', 'PENDING_MODERATION', 'REMOVED');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+-- Drop existing tables if they exist (for clean recreation)
+DROP TABLE IF EXISTS post_likes CASCADE;
+DROP TABLE IF EXISTS posts CASCADE;
+DROP TABLE IF EXISTS user_cache CASCADE;
 
-DO $$ BEGIN
-    CREATE TYPE comment_status AS ENUM ('PUBLISHED', 'HIDDEN', 'PENDING_MODERATION', 'REMOVED');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
+-- Create user_cache table (lightweight user cache for post service)
+CREATE TABLE user_cache (
+    id UUID PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    display_name VARCHAR(100),
+    avatar_url VARCHAR(500),
+    verified BOOLEAN DEFAULT FALSE,
+    last_synced TIMESTAMP DEFAULT NOW()
+);
 
--- Create tables (these will be created by JPA, but we can add custom indexes)
+-- Create posts table (aligned with DATABASE&SCHEMAS.md)
+CREATE TABLE posts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    author_id UUID NOT NULL,
+    content TEXT NOT NULL CHECK (length(content) <= 280),
+    event_id UUID, -- Reference to Event Service
+    like_count INTEGER DEFAULT 0,
+    comment_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
 
--- Create indexes for better performance
--- These will be created after JPA creates the tables
+-- Create post_likes table (aligned with DATABASE&SCHEMAS.md)
+CREATE TABLE post_likes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(post_id, user_id)
+);
 
--- Create full-text search index
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_posts_content_fts 
--- ON posts USING gin(to_tsvector('english', content));
+-- Create indexes for better performance (aligned with DATABASE&SCHEMAS.md)
+CREATE INDEX idx_posts_author ON posts(author_id);
+CREATE INDEX idx_posts_created_at ON posts(created_at DESC);
+CREATE INDEX idx_posts_event_id ON posts(event_id);
+CREATE INDEX idx_post_likes_post_id ON post_likes(post_id);
+CREATE INDEX idx_post_likes_user_id ON post_likes(user_id);
+
+-- Create full-text search index for post content
+CREATE INDEX idx_posts_content_fts ON posts USING gin(to_tsvector('english', content));
 
 -- Create trigram index for partial text matching
--- CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_posts_content_trgm 
--- ON posts USING gin(content gin_trgm_ops);
+CREATE INDEX idx_posts_content_trgm ON posts USING gin(content gin_trgm_ops);
+
+-- Create index on user_cache for efficient lookups
+CREATE INDEX idx_user_cache_username ON user_cache(username);
+CREATE INDEX idx_user_cache_last_synced ON user_cache(last_synced);
 
 -- Grant permissions
-GRANT ALL PRIVILEGES ON DATABASE pulse_posts_service_db TO pulse_user;
+GRANT ALL PRIVILEGES ON DATABASE pulse_posts TO pulse_user;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO pulse_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO pulse_user;
 

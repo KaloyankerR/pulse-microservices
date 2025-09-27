@@ -1,47 +1,4 @@
 services:
-  # User Service Database
-  postgres-users:
-    image: postgres:15-alpine
-    container_name: pulse-users-db
-    environment:
-      POSTGRES_DB: pulse_users
-      POSTGRES_USER: pulse_user
-      POSTGRES_PASSWORD: pulse_password
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_users_data:/var/lib/postgresql/data
-      - ./user-service/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pulse_user -d pulse_users"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-    networks:
-      - pulse-network
-
-  # Redis for User Service
-  redis:
-    image: redis:7-alpine
-    container_name: pulse-users-redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-    networks:
-      - pulse-network
-
   # User Service (Node.js)
   user-service:
     build:
@@ -52,7 +9,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 8081
-      DATABASE_URL: postgresql://pulse_user:pulse_password@postgres-users:5432/pulse_users
+      DATABASE_URL: postgresql://pulse_user:pulse_user@host.docker.internal:5432/pulse_users
       JWT_SECRET: dev-secret-key-change-in-production
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
@@ -68,14 +25,8 @@ services:
       GOOGLE_CALLBACK_URL: http://localhost:8081/api/v1/auth/google/callback
       SESSION_SECRET: dev-session-secret-change-in-production
       SESSION_MAX_AGE: 86400000
-      REDIS_URL: redis://redis:6379
     ports:
       - "8081:8081"
-    depends_on:
-      postgres-users:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     volumes:
       - ./user-service:/app
       - /app/node_modules
@@ -89,11 +40,49 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-
-volumes:
-  postgres_users_data:
-  redis_data:
+  # Post Service (Java Spring Boot)
+  post-service:
+    build:
+      context: ./post-service
+      dockerfile: Dockerfile
+    container_name: pulse-post-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/pulse_posts
+      SPRING_DATASOURCE_USERNAME: pulse_user
+      SPRING_DATASOURCE_PASSWORD: pulse_user
+      JWT_SECRET: dev-secret-key-change-in-production
+      JWT_EXPIRATION: 86400000
+      USER_SERVICE_BASE_URL: http://host.docker.internal:8081
+      USER_SERVICE_TIMEOUT: 5000
+      USER_SERVICE_RETRY_ATTEMPTS: 3
+      CONTENT_MAX_POST_LENGTH: 2000
+      CONTENT_MAX_COMMENT_LENGTH: 500
+      CONTENT_MAX_IMAGE_SIZE_MB: 10
+      CONTENT_MAX_VIDEO_SIZE_MB: 100
+      CONTENT_ALLOWED_IMAGE_TYPES: jpg,jpeg,png,gif,webp
+      CONTENT_ALLOWED_VIDEO_TYPES: mp4,webm,mov
+      LOGGING_LEVEL_COM_PULSE_POST: INFO
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: WARN
+    ports:
+      - "8082:8082"
+    depends_on:
+      user-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pulse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 networks:
   pulse-network:

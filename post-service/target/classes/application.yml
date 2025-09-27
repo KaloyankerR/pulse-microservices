@@ -6,7 +6,7 @@ spring:
     name: post-service
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/pulse_posts_service_db
+    url: jdbc:postgresql://localhost:5432/pulse_posts
     username: pulse_user
     password: pulse_user
     driver-class-name: org.postgresql.Driver
@@ -37,7 +37,7 @@ jwt:
 
 # User Service Integration
 user-service:
-  base-url: http://localhost:3000
+  base-url: http://localhost:8081
   timeout: 5000
   retry-attempts: 3
 
