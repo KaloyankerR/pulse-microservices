@@ -51,7 +51,7 @@ services:
     container_name: pulse-user-service
     environment:
       NODE_ENV: development
-      PORT: 8080
+      PORT: 8081
       DATABASE_URL: postgresql://pulse_user:pulse_password@postgres-users:5432/pulse_users
       JWT_SECRET: dev-secret-key-change-in-production
       JWT_EXPIRES_IN: 24h
@@ -65,12 +65,12 @@ services:
       ADMIN_PASSWORD: admin123
       GOOGLE_CLIENT_ID: 324113479892-7cq7ntoptj8cfn5u65ahssm5af55hdmd
       GOOGLE_CLIENT_SECRET: your-google-client-secret
-      GOOGLE_CALLBACK_URL: http://localhost:8080/api/v1/auth/google/callback
+      GOOGLE_CALLBACK_URL: http://localhost:8081/api/v1/auth/google/callback
       SESSION_SECRET: dev-session-secret-change-in-production
       SESSION_MAX_AGE: 86400000
       REDIS_URL: redis://redis:6379
     ports:
-      - "8080:8080"
+      - "8081:8081"
     depends_on:
       postgres-users:
         condition: service_healthy
@@ -84,7 +84,7 @@ services:
     networks:
       - pulse-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
       interval: 30s
       timeout: 10s
       retries: 3

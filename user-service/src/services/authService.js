@@ -38,7 +38,7 @@ class AuthService {
         data: {
           email,
           username,
-          password: hashedPassword,
+          passwordHash: hashedPassword,
           displayName: displayName || username,
         },
         select: {
@@ -49,7 +49,6 @@ class AuthService {
           bio: true,
           avatarUrl: true,
           verified: true,
-          status: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -76,25 +75,17 @@ class AuthService {
       }
 
       // Check user status
-      if (user.status !== 'ACTIVE') {
-        throw new AppError('Account is not active', 403, 'ACCOUNT_INACTIVE');
-      }
+      // Account is always active (status field removed from schema)
 
 
       // Verify password
-      const isPasswordValid = await BcryptUtil.comparePassword(password, user.password);
+      const isPasswordValid = await BcryptUtil.comparePassword(password, user.passwordHash);
       if (!isPasswordValid) {
         throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
       }
 
       // Generate tokens
       const tokens = JwtUtil.generateTokens(user);
-
-      // Get follower counts
-      const [followersCount, followingCount] = await Promise.all([
-        prisma.userFollow.count({ where: { followingId: user.id } }),
-        prisma.userFollow.count({ where: { followerId: user.id } }),
-      ]);
 
       const userResponse = {
         id: user.id,
@@ -104,9 +95,6 @@ class AuthService {
         bio: user.bio,
         avatarUrl: user.avatarUrl,
         verified: user.verified,
-        status: user.status,
-        followersCount,
-        followingCount,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       };
@@ -132,7 +120,7 @@ class AuthService {
         where: { id: decoded.id },
       });
 
-      if (!user || user.status !== 'ACTIVE') {
+      if (!user) {
         throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');
       }
 
@@ -160,7 +148,6 @@ class AuthService {
           bio: true,
           avatarUrl: true,
           verified: true,
-          status: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -199,7 +186,7 @@ class AuthService {
       }
 
       // Verify current password
-      const isCurrentPasswordValid = await BcryptUtil.comparePassword(currentPassword, user.password);
+      const isCurrentPasswordValid = await BcryptUtil.comparePassword(currentPassword, user.passwordHash);
       if (!isCurrentPasswordValid) {
         throw new AppError('Current password is incorrect', 400, 'INVALID_PASSWORD');
       }
@@ -216,7 +203,7 @@ class AuthService {
       // Update password
       await prisma.user.update({
         where: { id: userId },
-        data: { password: hashedNewPassword },
+        data: { passwordHash: hashedNewPassword },
       });
 
       logger.info('Password changed successfully', { userId });

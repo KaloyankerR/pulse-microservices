@@ -36,6 +36,7 @@ const corsOptions = {
     const allowedOrigins = [
       process.env.CORS_ORIGIN || 'http://localhost:3000',
       'http://localhost:8080', // Allow Swagger UI direct access
+      'http://localhost:8081', // Allow Docker service access
       'http://localhost:8000', // Allow Kong Gateway
     ];
     

@@ -25,6 +25,10 @@ model User {
   // Sessions
   sessions     UserSession[]
   
+  // Social relationships
+  following    UserFollow[] @relation("UserFollowing")
+  followers    UserFollow[] @relation("UserFollowers")
+  
   @@map("users")
 }
 
@@ -38,5 +42,18 @@ model UserSession {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("user_sessions")
+}
+
+model UserFollow {
+  id          String @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  
+  follower    User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  @@unique([followerId, followingId])
+  @@map("user_follows")
 }
 
