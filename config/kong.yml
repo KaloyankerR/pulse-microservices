@@ -1,0 +1,89 @@
+_format_version: "3.0"
+
+services:
+  - name: user-service
+    url: http://user-service:8081
+    routes:
+      - name: user-service-routes
+        paths:
+          - /api/v1/auth
+          - /api/v1/users
+          - /health
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        strip_path: false
+        path_handling: v1
+
+  - name: post-service
+    url: http://post-service:8082
+    routes:
+      - name: post-service-routes
+        paths:
+          - /api/v1/posts
+          - /health
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        strip_path: false
+        path_handling: v1
+
+# CORS plugin for all services
+plugins:
+  - name: cors
+    service: user-service
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+  - name: cors
+    service: post-service
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+      preflight_continue: false

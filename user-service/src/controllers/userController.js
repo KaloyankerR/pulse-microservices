@@ -78,7 +78,7 @@ class UserController {
     try {
       const { q, page, limit } = req.query;
       const currentUserId = req.user?.id || null;
-      const result = await userService.searchUsers(q, parseInt(page), parseInt(limit), currentUserId);
+      const result = await userService.searchUsers(q, parseInt(page) || 1, parseInt(limit) || 20, currentUserId);
 
       res.status(200).json({
         success: true,
@@ -100,7 +100,7 @@ class UserController {
     try {
       const { id } = req.params;
       const { page, limit } = req.query;
-      const result = await userService.getFollowers(id, parseInt(page), parseInt(limit));
+      const result = await userService.getFollowers(id, parseInt(page) || 1, parseInt(limit) || 20);
 
       res.status(200).json({
         success: true,
@@ -122,7 +122,7 @@ class UserController {
     try {
       const { id } = req.params;
       const { page, limit } = req.query;
-      const result = await userService.getFollowing(id, parseInt(page), parseInt(limit));
+      const result = await userService.getFollowing(id, parseInt(page) || 1, parseInt(limit) || 20);
 
       res.status(200).json({
         success: true,
@@ -184,6 +184,44 @@ class UserController {
       res.status(200).json({
         success: true,
         data: result,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getCurrentUserProfile(req, res, next) {
+    try {
+      const user = await userService.getUserById(req.user.id, req.user.id);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          user,
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateCurrentUserProfile(req, res, next) {
+    try {
+      const user = await userService.updateProfile(req.user.id, req.body);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          user,
+        },
         meta: {
           timestamp: new Date().toISOString(),
           version: 'v1',

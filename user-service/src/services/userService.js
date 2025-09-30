@@ -14,7 +14,6 @@ class UserService {
           bio: true,
           avatarUrl: true,
           verified: true,
-          status: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -22,10 +21,6 @@ class UserService {
 
       if (!user) {
         throw new AppError('User not found', 404, 'USER_NOT_FOUND');
-      }
-
-      if (user.status !== 'ACTIVE') {
-        throw new AppError('User account is not active', 403, 'USER_INACTIVE');
       }
 
       // Get follower counts
@@ -72,7 +67,6 @@ class UserService {
           bio: true,
           avatarUrl: true,
           verified: true,
-          status: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -118,14 +112,9 @@ class UserService {
 
       const users = await prisma.user.findMany({
         where: {
-          AND: [
-            { status: 'ACTIVE' },
-            {
-              OR: [
-                { username: { contains: query, mode: 'insensitive' } },
-                { displayName: { contains: query, mode: 'insensitive' } },
-              ],
-            },
+          OR: [
+            { username: { contains: query, mode: 'insensitive' } },
+            { displayName: { contains: query, mode: 'insensitive' } },
           ],
         },
         select: {
@@ -144,14 +133,9 @@ class UserService {
 
       const totalCount = await prisma.user.count({
         where: {
-          AND: [
-            { status: 'ACTIVE' },
-            {
-              OR: [
-                { username: { contains: query, mode: 'insensitive' } },
-                { displayName: { contains: query, mode: 'insensitive' } },
-              ],
-            },
+          OR: [
+            { username: { contains: query, mode: 'insensitive' } },
+            { displayName: { contains: query, mode: 'insensitive' } },
           ],
         },
       });
@@ -311,13 +295,13 @@ class UserService {
         throw new AppError('Cannot follow yourself', 400, 'CANNOT_FOLLOW_SELF');
       }
 
-      // Check if target user exists and is active
+      // Check if target user exists
       const targetUser = await prisma.user.findUnique({
         where: { id: followingId },
       });
 
-      if (!targetUser || targetUser.status !== 'ACTIVE') {
-        throw new AppError('User not found or inactive', 404, 'USER_NOT_FOUND');
+      if (!targetUser) {
+        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
       }
 
       // Check if already following
@@ -415,7 +399,6 @@ class UserService {
           bio: true,
           avatarUrl: true,
           verified: true,
-          status: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -460,33 +443,6 @@ class UserService {
     }
   }
 
-  async updateUserStatus(userId, status) {
-    try {
-      const user = await prisma.user.update({
-        where: { id: userId },
-        data: { status },
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          displayName: true,
-          bio: true,
-          avatarUrl: true,
-          verified: true,
-          status: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-
-      logger.info('User status updated successfully', { userId, status });
-
-      return user;
-    } catch (error) {
-      logger.error('Update user status error:', error);
-      throw error;
-    }
-  }
 }
 
 module.exports = new UserService();

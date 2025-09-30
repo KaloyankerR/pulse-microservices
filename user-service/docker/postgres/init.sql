@@ -1,11 +1,8 @@
 -- Initialize the PostgreSQL database for Pulse User Service
 -- This file is executed when the PostgreSQL container starts for the first time
 
--- Create the database if it doesn't exist
-CREATE DATABASE pulse_users;
-
--- Connect to the database
-\c pulse_users;
+-- Note: Database creation is handled by the container environment
+-- This script assumes the pulse_users database already exists
 
 -- Create extensions if needed
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

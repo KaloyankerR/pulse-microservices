@@ -50,6 +50,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 # Copy built application from build stage
 COPY --from=build /app/src ./src
 COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/package*.json ./
 
 # Create logs directory and set permissions

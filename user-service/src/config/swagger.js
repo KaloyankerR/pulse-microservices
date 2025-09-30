@@ -65,11 +65,6 @@ const options = {
               type: 'boolean',
               description: 'Whether the user is verified',
             },
-            status: {
-              type: 'string',
-              enum: ['ACTIVE', 'SUSPENDED', 'INACTIVE'],
-              description: 'User account status',
-            },
             followersCount: {
               type: 'integer',
               description: 'Number of followers',
@@ -180,17 +175,6 @@ const options = {
             refreshToken: {
               type: 'string',
               description: 'JWT refresh token',
-            },
-          },
-        },
-        UpdateUserStatusRequest: {
-          type: 'object',
-          required: ['status'],
-          properties: {
-            status: {
-              type: 'string',
-              enum: ['ACTIVE', 'SUSPENDED', 'INACTIVE'],
-              description: 'New user status',
             },
           },
         },

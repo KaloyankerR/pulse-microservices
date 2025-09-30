@@ -1,4 +1,34 @@
 services:
+  # Kong API Gateway (DB-less mode)
+  kong:
+    image: kong:3.4
+    container_name: kong-gateway
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    ports:
+      - "8000:8000"  # Kong proxy
+      - "8001:8001"  # Kong admin API
+    volumes:
+      - ./config/kong.yml:/kong/kong.yml:ro
+    networks:
+      - pulse-network
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    depends_on:
+      - user-service
+      - post-service
+
   # User Service (Node.js)
   user-service:
     build:
@@ -10,7 +40,7 @@ services:
       NODE_ENV: development
       PORT: 8081
       DATABASE_URL: postgresql://pulse_user:pulse_user@host.docker.internal:5432/pulse_users
-      JWT_SECRET: dev-secret-key-change-in-production
+      JWT_SECRET: 5b41d6a0c1adfd2804d730d26f7a4fd1
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
       RATE_LIMIT_WINDOW_MS: 900000
@@ -22,11 +52,11 @@ services:
       ADMIN_PASSWORD: admin123
       GOOGLE_CLIENT_ID: 324113479892-7cq7ntoptj8cfn5u65ahssm5af55hdmd
       GOOGLE_CLIENT_SECRET: your-google-client-secret
-      GOOGLE_CALLBACK_URL: http://localhost:8081/api/v1/auth/google/callback
+      GOOGLE_CALLBACK_URL: http://localhost:8000/api/v1/auth/google/callback
       SESSION_SECRET: dev-session-secret-change-in-production
       SESSION_MAX_AGE: 86400000
-    ports:
-      - "8081:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./user-service:/app
       - /app/node_modules
@@ -40,49 +70,34 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
-  # Post Service (Java Spring Boot)
+  # Post Service (Go)
   post-service:
     build:
       context: ./post-service
       dockerfile: Dockerfile
     container_name: pulse-post-service
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/pulse_posts
-      SPRING_DATASOURCE_USERNAME: pulse_user
-      SPRING_DATASOURCE_PASSWORD: pulse_user
-      JWT_SECRET: dev-secret-key-change-in-production
-      JWT_EXPIRATION: 86400000
-      USER_SERVICE_BASE_URL: http://host.docker.internal:8081
-      USER_SERVICE_TIMEOUT: 5000
-      USER_SERVICE_RETRY_ATTEMPTS: 3
-      CONTENT_MAX_POST_LENGTH: 2000
-      CONTENT_MAX_COMMENT_LENGTH: 500
-      CONTENT_MAX_IMAGE_SIZE_MB: 10
-      CONTENT_MAX_VIDEO_SIZE_MB: 100
-      CONTENT_ALLOWED_IMAGE_TYPES: jpg,jpeg,png,gif,webp
-      CONTENT_ALLOWED_VIDEO_TYPES: mp4,webm,mov
-      LOGGING_LEVEL_COM_PULSE_POST: INFO
-      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: WARN
-    ports:
-      - "8082:8082"
-    depends_on:
-      user-service:
-        condition: service_healthy
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_USER: pulse_user
+      DB_PASSWORD: pulse_user
+      DB_NAME: pulse_posts
+      DB_SSLMODE: disable
+      JWT_SECRET: 5b41d6a0c1adfd2804d730d26f7a4fd1
+      PORT: 8082
+      LOG_LEVEL: info
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
       - pulse-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
 
 networks:
   pulse-network:

@@ -23,9 +23,13 @@ class JwtUtil {
 
   static generateTokens(user) {
     const payload = {
+      iss: 'pulse-user-service', // Issuer claim for Kong
+      sub: user.email, // Subject claim (standard JWT)
       id: user.id,
+      userId: user.id, // For post-service compatibility
       email: user.email,
       username: user.username,
+      role: user.role || 'USER', // Add role claim
     };
 
     return {

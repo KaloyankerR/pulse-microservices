@@ -99,13 +99,6 @@ const schemas = {
       }),
   }),
 
-  updateUserStatus: Joi.object({
-    status: Joi.string().valid('ACTIVE', 'SUSPENDED', 'INACTIVE').required().messages({
-      'any.only': 'Status must be one of: ACTIVE, SUSPENDED, INACTIVE',
-      'any.required': 'Status is required',
-    }),
-  }),
-
   searchUsers: Joi.object({
     q: Joi.string().min(1).max(100).required().messages({
       'string.min': 'Search query cannot be empty',

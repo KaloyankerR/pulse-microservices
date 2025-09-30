@@ -23,28 +23,6 @@ class AdminController {
       next(error);
     }
   }
-
-  async updateUserStatus(req, res, next) {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      
-      const user = await userService.updateUserStatus(id, status);
-
-      res.status(200).json({
-        success: true,
-        data: {
-          user,
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-          version: 'v1',
-        },
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
 }
 
 module.exports = new AdminController();
