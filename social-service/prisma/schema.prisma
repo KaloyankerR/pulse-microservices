@@ -1,0 +1,62 @@
+// Social Service Database Schema
+// Manages follow relationships, blocks, and social graph
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-musl-arm64-openssl-1.1.x", "linux-musl-arm64-openssl-3.0.x", "linux-musl-openssl-3.0.x", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Lightweight user cache synced from User Service
+model UserCache {
+  id          String   @id
+  username    String
+  displayName String?  @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  verified    Boolean  @default(false)
+  lastSynced  DateTime @default(now()) @map("last_synced")
+  
+  @@map("user_cache")
+}
+
+// Follow relationships
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// Block relationships
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String   @map("blocker_id")
+  blockedId String   @map("blocked_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+// Denormalized social statistics for performance
+model UserSocialStats {
+  userId         String   @id @map("user_id")
+  followersCount Int      @default(0) @map("followers_count")
+  followingCount Int      @default(0) @map("following_count")
+  postsCount     Int      @default(0) @map("posts_count")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+  
+  @@map("user_social_stats")
+}
+
