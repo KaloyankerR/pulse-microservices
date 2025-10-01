@@ -33,6 +33,18 @@ test: ## Run basic health checks
 	@curl -s http://localhost:8000/api/v1/posts > /dev/null && echo "✅ Post service is healthy" || echo "❌ Post service failed"
 	@echo "Done!"
 
+test-user: ## Run user-service tests
+	@echo "Running user-service tests..."
+	@cd user-service && npm test
+
+test-coverage-user: ## Run user-service tests with coverage
+	@echo "Running user-service tests with coverage..."
+	@cd user-service && npm run test:coverage
+
+sonar-user: ## Run SonarQube analysis for user-service
+	@echo "Running SonarQube analysis for user-service..."
+	@cd user-service && npm run test:coverage && npm run sonar
+
 db-reset: db-reset-users db-reset-posts ## Reset all databases (drop and recreate)
 	@echo "✅ All databases reset complete!"
 

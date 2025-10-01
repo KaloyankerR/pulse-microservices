@@ -1,0 +1,6 @@
+projectKey=pulse-user-service
+serverUrl=http://localhost:9001
+serverVersion=25.9.0.112764
+dashboardUrl=http://localhost:9001/dashboard?id=pulse-user-service
+ceTaskId=61f1d5d1-4178-45fc-80eb-4ca2728ece34
+ceTaskUrl=http://localhost:9001/api/ce/task?id=61f1d5d1-4178-45fc-80eb-4ca2728ece34
