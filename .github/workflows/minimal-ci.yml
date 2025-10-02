@@ -88,7 +88,7 @@ jobs:
       # Go services (messaging-service, post-service)
       - name: Setup Go
         if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: '1.21'
           cache-dependency-path: ${{ matrix.service }}/go.sum
