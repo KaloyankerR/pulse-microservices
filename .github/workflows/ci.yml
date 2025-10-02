@@ -107,7 +107,7 @@ jobs:
           JWT_REFRESH_SECRET: test-refresh-secret-key-for-ci
       
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./${{ matrix.service }}/coverage/lcov.info
           flags: ${{ matrix.service }}
@@ -201,7 +201,7 @@ jobs:
           JWT_SECRET: test-secret-key-for-ci
       
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./${{ matrix.service }}/coverage.out
           flags: ${{ matrix.service }}
