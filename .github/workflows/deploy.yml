@@ -34,23 +34,30 @@ name: Deploy Microservices (DISABLED)
 on:
   workflow_dispatch:
     inputs:
-      confirm_enable:
-        description: 'Type "ENABLE" to manually trigger this disabled workflow'
+      service:
+        description: 'Service to deploy'
         required: true
-        type: string
+        type: choice
+        options:
+          - all
+          - user-service
+          - social-service
+          - messaging-service
+          - post-service
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
 
 jobs:
   determine-services:
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm_enable == 'ENABLE'
     outputs:
       services: ${{ steps.set-services.outputs.services }}
     steps:
-      - name: Warning - Deployment is disabled
-        run: |
-          echo "⚠️  WARNING: This deployment workflow is currently disabled!"
-          echo "This workflow should only run for testing purposes."
-          echo "To fully enable, update the 'on:' triggers in deploy.yml"
       - name: Determine which services to deploy
         id: set-services
         run: |
