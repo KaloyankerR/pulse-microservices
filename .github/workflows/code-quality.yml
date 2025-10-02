@@ -194,7 +194,7 @@ jobs:
       
       - name: Run golangci-lint
         if: matrix.type == 'go'
-        uses: golangci/golangci-lint-action@v4
+        uses: golangci/golangci-lint-action@v8
         with:
           version: latest
           working-directory: ./${{ matrix.service }}
