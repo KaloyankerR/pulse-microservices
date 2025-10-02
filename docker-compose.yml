@@ -154,10 +154,38 @@ services:
       retries: 5
       start_period: 60s
 
+  # Jenkins CI/CD Server
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: pulse-jenkins
+    ports:
+      - "8090:8080"
+      - "50001:50000"
+    environment:
+      - JENKINS_OPTS=--httpPort=8080
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins/jenkins.yaml:/usr/share/jenkins/ref/jenkins.yaml
+      - ./jenkins/plugins.txt:/usr/share/jenkins/ref/plugins.txt
+    networks:
+      - pulse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
 volumes:
   sonarqube_data:
   sonarqube_extensions:
   sonarqube_logs:
+  jenkins_home:
 
 networks:
   pulse-network:

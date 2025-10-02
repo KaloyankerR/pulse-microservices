@@ -1,0 +1,224 @@
+pipeline {
+    agent {
+        docker {
+            image 'node:18-alpine'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+    
+    environment {
+        NODE_ENV = 'test'
+        DATABASE_URL = 'postgresql://pulse_user:pulse_user@host.docker.internal:5432/pulse_users_test'
+        JWT_SECRET = 'test-jwt-secret'
+        JWT_EXPIRES_IN = '1h'
+        JWT_REFRESH_EXPIRES_IN = '7d'
+        RATE_LIMIT_WINDOW_MS = '900000'
+        RATE_LIMIT_MAX_REQUESTS = '1000'
+        BCRYPT_ROUNDS = '10'
+        CORS_ORIGIN = 'http://localhost:3000'
+        LOG_LEVEL = 'info'
+        ADMIN_EMAIL = 'admin@pulse.com'
+        ADMIN_PASSWORD = 'admin123'
+        SONAR_HOST_URL = 'http://sonarqube:9000'
+        SONAR_TOKEN = credentials('sonar-token')
+    }
+    
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 30, unit: 'MINUTES')
+        timestamps()
+        ansiColor('xterm')
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                script {
+                    // For local development, use workspace directly
+                    if (env.JOB_NAME.contains('local') || env.WORKSPACE.contains('user-service')) {
+                        echo 'Using local workspace...'
+                        sh 'ls -la'
+                    } else {
+                        echo 'Checking out from SCM...'
+                        checkout scm
+                    }
+                }
+            }
+        }
+        
+        stage('Install Dependencies') {
+            steps {
+                echo 'Installing Node.js dependencies...'
+                dir('user-service') {
+                    sh 'npm ci --silent'
+                }
+            }
+        }
+        
+        stage('Lint') {
+            steps {
+                echo 'Running ESLint...'
+                dir('user-service') {
+                    sh 'npm run lint'
+                }
+            }
+            post {
+                always {
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'user-service',
+                        reportFiles: 'eslint-report.html',
+                        reportName: 'ESLint Report'
+                    ])
+                }
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                echo 'Building application...'
+                dir('user-service') {
+                    sh 'npm run db:generate'
+                    sh 'npm run db:push'
+                    sh 'npm run db:seed'
+                }
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                dir('user-service') {
+                    sh 'npm test'
+                }
+            }
+            post {
+                always {
+                    // Publish JUnit test results
+                    publishTestResults testResultsPattern: 'user-service/coverage/junit.xml'
+                }
+            }
+        }
+        
+        stage('Test Coverage') {
+            steps {
+                echo 'Running test coverage...'
+                dir('user-service') {
+                    sh 'npm run test:coverage'
+                }
+            }
+            post {
+                always {
+                    // Publish coverage report
+                    publishCoverage adapters: [
+                        coberturaAdapter('user-service/coverage/cobertura-coverage.xml')
+                    ], sourceFileResolver: sourceFiles('STORE_LAST_BUILD')
+                    
+                    // Publish HTML coverage report
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'user-service/coverage/lcov-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Coverage Report'
+                    ])
+                }
+            }
+        }
+        
+        stage('SonarQube Analysis') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                echo 'Running SonarQube analysis...'
+                dir('user-service') {
+                    withSonarQubeEnv('SonarQube') {
+                        sh 'npm run sonar'
+                    }
+                }
+            }
+        }
+        
+        stage('Quality Gate') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                echo 'Waiting for SonarQube quality gate...'
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                echo 'Building Docker image...'
+                script {
+                    def image = docker.build("pulse-user-service:${env.BUILD_NUMBER}", "--target production ./user-service")
+                    docker.withRegistry('', 'dockerhub-credentials') {
+                        image.push("${env.BUILD_NUMBER}")
+                        image.push("latest")
+                    }
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                echo 'Running security scan...'
+                dir('user-service') {
+                    sh 'npm audit --audit-level moderate'
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo 'Pipeline execution completed.'
+            cleanWs()
+        }
+        
+        success {
+            echo 'Pipeline succeeded!'
+            // Optional: Send success notification
+            // slackSend channel: '#devops', color: 'good', message: "✅ User Service build #${env.BUILD_NUMBER} succeeded!"
+        }
+        
+        failure {
+            echo 'Pipeline failed!'
+            // Optional: Send failure notification
+            // slackSend channel: '#devops', color: 'danger', message: "❌ User Service build #${env.BUILD_NUMBER} failed!"
+        }
+        
+        unstable {
+            echo 'Pipeline unstable!'
+            // Optional: Send unstable notification
+            // slackSend channel: '#devops', color: 'warning', message: "⚠️ User Service build #${env.BUILD_NUMBER} is unstable!"
+        }
+    }
+}

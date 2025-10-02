@@ -1,4 +1,4 @@
-.PHONY: help up down logs ps restart rebuild clean test db-reset db-reset-users db-reset-posts
+.PHONY: help up down logs ps restart rebuild clean test db-reset db-reset-users db-reset-posts jenkins-up jenkins-down jenkins-logs jenkins-restart jenkins-rebuild
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -44,6 +44,29 @@ test-coverage-user: ## Run user-service tests with coverage
 sonar-user: ## Run SonarQube analysis for user-service
 	@echo "Running SonarQube analysis for user-service..."
 	@cd user-service && npm run test:coverage && npm run sonar
+
+jenkins-up: ## Start Jenkins service only
+	@echo "Starting Jenkins..."
+	@docker-compose up -d jenkins
+	@echo "✅ Jenkins started at http://localhost:8090"
+	@echo "Username: admin, Password: admin"
+
+jenkins-down: ## Stop Jenkins service
+	@echo "Stopping Jenkins..."
+	@docker-compose stop jenkins
+
+jenkins-logs: ## View Jenkins logs
+	@echo "Viewing Jenkins logs..."
+	@docker-compose logs -f jenkins
+
+jenkins-restart: ## Restart Jenkins service
+	@echo "Restarting Jenkins..."
+	@docker-compose restart jenkins
+
+jenkins-rebuild: ## Rebuild and restart Jenkins service
+	@echo "Rebuilding Jenkins..."
+	@docker-compose up -d --build jenkins
+	@echo "✅ Jenkins rebuilt and started at http://localhost:8090"
 
 db-reset: db-reset-users db-reset-posts ## Reset all databases (drop and recreate)
 	@echo "✅ All databases reset complete!"
