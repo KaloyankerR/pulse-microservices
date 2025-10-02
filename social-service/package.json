@@ -30,7 +30,7 @@
     "joi": "^17.11.0",
     "winston": "^3.11.0",
     "express-winston": "^4.2.0",
-    "@prisma/client": "^5.7.1",
+    "@prisma/client": "^5.22.0",
     "prisma": "^5.7.1",
     "swagger-ui-express": "^5.0.0",
     "swagger-jsdoc": "^6.2.8",
