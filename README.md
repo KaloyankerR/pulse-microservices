@@ -1,11 +1,17 @@
 # Pulse Microservices
 
-Microservices platform with API Gateway, user authentication, and post management.
+[![CI](https://github.com/yourusername/pulse-microservices/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/pulse-microservices/actions/workflows/ci.yml)
+[![Deploy](https://github.com/yourusername/pulse-microservices/actions/workflows/deploy.yml/badge.svg)](https://github.com/yourusername/pulse-microservices/actions/workflows/deploy.yml)
+[![Code Quality](https://github.com/yourusername/pulse-microservices/actions/workflows/code-quality.yml/badge.svg)](https://github.com/yourusername/pulse-microservices/actions/workflows/code-quality.yml)
+
+Microservices platform with API Gateway, user authentication, post management, and social features.
 
 ## Services
 
 - **Kong API Gateway** (port 8000) - Routes all requests
 - **User Service** (Node.js) - Authentication & user management
+- **Social Service** (Node.js) - Follow relationships & recommendations
+- **Messaging Service** (Go) - Real-time messaging & WebSocket support
 - **Post Service** (Go) - Posts, likes, and user cache
 
 
@@ -101,6 +107,68 @@ pulse-microservices/
 ├── docs/DATABASE&SCHEMAS.md    # Schema reference
 └── POSTMAN_COLLECTION.json     # API tests
 ```
+
+## CI/CD with GitHub Actions
+
+This project uses GitHub Actions with a **matrix strategy** for efficient parallel testing and deployment of all microservices.
+
+### Workflows
+
+1. **CI Workflow** (`.github/workflows/ci.yml`)
+   - Runs on every push and PR to `main`/`develop`
+   - Smart change detection - only tests modified services
+   - Matrix testing across multiple versions (Node 18/20, Go 1.21/1.22)
+   - Automated linting, testing, and coverage reports
+   - Docker image validation
+
+2. **Deploy Workflow** (`.github/workflows/deploy.yml`) - ⚠️ **CURRENTLY DISABLED**
+   - Triggered by version tags or manual dispatch
+   - Multi-platform Docker builds (AMD64/ARM64)
+   - Environment-specific deployments (staging/production)
+   - Service-specific or full platform deployment
+   - *To enable: Uncomment triggers in deploy.yml*
+
+3. **PR Validation** (`.github/workflows/pr-validation.yml`)
+   - Validates PR titles (conventional commits)
+   - Checks for merge conflicts and large files
+   - Security scanning with Trivy
+   - Automated PR size analysis
+
+4. **Code Quality** (`.github/workflows/code-quality.yml`)
+   - SonarCloud integration
+   - CodeQL security analysis
+   - Dependency review
+   - Cyclomatic complexity checks
+
+### Quick Start with GitHub Actions
+
+1. **Enable Actions**: Go to repository Settings → Actions and enable workflows
+
+2. **Configure Secrets** (for deployment):
+   ```
+   DOCKERHUB_USERNAME  # Docker Hub username
+   DOCKERHUB_TOKEN     # Docker Hub access token
+   SONAR_TOKEN         # SonarCloud token (optional)
+   ```
+
+3. **Deploy a Service** (⚠️ deployment currently disabled):
+   ```bash
+   # Deployment workflow is disabled by default
+   # To enable: Edit .github/workflows/deploy.yml
+   
+   # Once enabled:
+   # Deploy all services
+   git tag -a v1.0.0 -m "Release v1.0.0"
+   git push origin v1.0.0
+   
+   # Deploy specific service
+   git tag -a user-service-v1.0.0 -m "User service v1.0.0"
+   git push origin user-service-v1.0.0
+   ```
+
+4. **View Workflow Status**: Check the Actions tab in GitHub
+
+For detailed documentation, see [.github/workflows/README.md](.github/workflows/README.md)
 
 ## Troubleshooting
 

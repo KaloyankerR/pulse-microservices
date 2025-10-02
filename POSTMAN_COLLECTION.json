@@ -530,6 +530,207 @@
           }
         }
       ]
+    },
+    {
+      "name": "Messaging",
+      "item": [
+        {
+          "name": "Messaging Service Health",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8084/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8084",
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Messaging Service Ready",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8084/ready",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8084",
+              "path": ["ready"]
+            }
+          }
+        },
+        {
+          "name": "Get My Conversations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8084/api/messages/conversations?limit=50&offset=0",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8084",
+              "path": ["api", "messages", "conversations"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "description": "Number of conversations"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Conversation Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8084/api/messages/conversations/{{conversationId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8084",
+              "path": ["api", "messages", "conversations", "{{conversationId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Conversation Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8084/api/messages/conversations/{{conversationId}}/messages?limit=50&offset=0",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8084",
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Group Conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.id) {",
+                  "        pm.collectionVariables.set('conversationId', response.data.id);",
+                  "        console.log('✅ Group created:', response.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Team Chat\",\n  \"participants\": [\"{{targetUserId}}\"]\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8084/api/messages/group",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8084",
+              "path": ["api", "messages", "group"]
+            }
+          }
+        },
+        {
+          "name": "Send Message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.id) {",
+                  "        pm.collectionVariables.set('messageId', response.data.id);",
+                  "        console.log('✅ Message sent:', response.data.id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversation_id\": \"{{conversationId}}\",\n  \"content\": \"Hello! This is a test message from Postman. 👋\",\n  \"mentions\": []\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8084/api/messages",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8084",
+              "path": ["api", "messages"]
+            }
+          }
+        },
+        {
+          "name": "Mark Message as Read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8084/api/messages/{{messageId}}/read",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8084",
+              "path": ["api", "messages", "{{messageId}}", "read"]
+            }
+          }
+        }
+      ]
     }
   ]
 }

@@ -50,6 +50,22 @@ services:
         strip_path: false
         path_handling: v1
 
+  - name: messaging-service
+    url: http://messaging-service:8084
+    routes:
+      - name: messaging-service-routes
+        paths:
+          - /api/v1/messages
+          - /ws
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        strip_path: false
+        path_handling: v1
+
 # CORS plugin for all services
 plugins:
   - name: cors
@@ -106,6 +122,32 @@ plugins:
 
   - name: cors
     service: social-service
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+  - name: cors
+    service: messaging-service
     config:
       origins:
         - "*"
