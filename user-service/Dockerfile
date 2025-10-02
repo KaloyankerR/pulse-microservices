@@ -1,7 +1,7 @@
 # Multi-stage Dockerfile for Pulse User Service
 
 # Stage 1: Base image with common dependencies
-FROM node:18-alpine AS base
+FROM node:24-alpine AS base
 
 # Install system dependencies
 RUN apk add --no-cache \
