@@ -28,7 +28,7 @@
     "express-rate-limit": "^7.1.5",
     "jsonwebtoken": "^9.0.2",
     "joi": "^17.11.0",
-    "winston": "^3.11.0",
+    "winston": "^3.18.3",
     "express-winston": "^4.2.0",
     "@prisma/client": "^5.7.1",
     "prisma": "^5.7.1",
