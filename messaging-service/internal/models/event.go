@@ -25,3 +25,5 @@ type WSMessage struct {
 	Type    WSMessageType `json:"type"`
 	Payload interface{}   `json:"payload"`
 }
+
+

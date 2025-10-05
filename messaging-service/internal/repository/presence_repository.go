@@ -91,3 +91,5 @@ func (r *presenceRepository) UpdateHeartbeat(ctx context.Context, userID string)
 
 	return r.redis.HSet(ctx, key, "last_seen", time.Now().Unix()).Err()
 }
+
+

@@ -55,3 +55,5 @@ func (r *RabbitMQ) Close() error {
 	}
 	return nil
 }
+
+

@@ -1,4 +1,4 @@
-name: Minimal Microservices CI
+name: Microservices CI
 
 on:
   push:

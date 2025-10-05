@@ -102,3 +102,5 @@ func TestAuthMiddleware_InvalidFormat(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Contains(t, w.Body.String(), "Invalid authorization header format")
 }
+
+

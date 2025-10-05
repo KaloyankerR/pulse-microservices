@@ -69,3 +69,5 @@ func (h *HealthHandler) Ready(c *gin.Context) {
 
 	c.JSON(http.StatusOK, status)
 }
+
+

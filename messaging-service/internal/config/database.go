@@ -92,3 +92,5 @@ func createIndexes(ctx context.Context, db *mongo.Database, logger *zap.Logger) 
 func (m *MongoDB) Close(ctx context.Context) error {
 	return m.Client.Disconnect(ctx)
 }
+
+

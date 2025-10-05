@@ -29,3 +29,5 @@ type TypingIndicator struct {
 	IsTyping       bool      `json:"is_typing"`
 	Timestamp      time.Time `json:"timestamp"`
 }
+
+

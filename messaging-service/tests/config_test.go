@@ -38,3 +38,5 @@ func TestConfig_Defaults(t *testing.T) {
 	assert.Equal(t, "redis://localhost:6379", cfg.RedisURL)
 	assert.Equal(t, "development", cfg.Environment)
 }
+
+

@@ -29,3 +29,5 @@ func TestHealthHandler_Health(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "healthy")
 	assert.Contains(t, w.Body.String(), "messaging-service")
 }
+
+

@@ -42,3 +42,5 @@ type CreateMessageRequest struct {
 type MarkReadRequest struct {
 	UserID string `json:"user_id"`
 }
+
+

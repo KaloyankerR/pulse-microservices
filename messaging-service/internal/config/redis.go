@@ -30,3 +30,5 @@ func ConnectRedis(cfg *Config, logger *zap.Logger) (*redis.Client, error) {
 	logger.Info("Redis connected successfully")
 	return client, nil
 }
+
+

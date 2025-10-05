@@ -67,3 +67,5 @@ func DecrementActiveConnections() {
 func IncrementMessagesProcessed() {
 	messagesProcessedTotal.Inc()
 }
+
+

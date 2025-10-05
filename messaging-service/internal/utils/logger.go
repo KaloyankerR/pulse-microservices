@@ -19,3 +19,5 @@ func NewLogger(environment string) (*zap.Logger, error) {
 
 	return config.Build()
 }
+
+
