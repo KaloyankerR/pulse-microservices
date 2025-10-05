@@ -1,0 +1,95 @@
+# SonarQube Configuration
+# This file contains SonarQube-specific configuration for the Pulse microservices project
+
+_format_version: "3.0"
+
+# SonarQube service configuration
+services:
+  - name: sonarqube
+    url: http://sonarqube:9000
+    routes:
+      - name: sonarqube-routes
+        paths:
+          - /api
+          - /dashboard
+          - /project
+          - /security_hotspots
+          - /code_smells
+          - /bugs
+          - /vulnerabilities
+          - /coverage
+          - /duplications
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        strip_path: false
+        path_handling: v1
+
+# SonarQube specific plugins
+plugins:
+  - name: rate-limiting
+    service: sonarqube
+    config:
+      minute: 100
+      hour: 1000
+      policy: local
+
+  - name: request-size-limiting
+    service: sonarqube
+    config:
+      allowed_payload_size: 10
+
+  - name: cors
+    service: sonarqube
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+# SonarQube environment variables (for reference)
+# These would be set in docker-compose.yml
+environment:
+  SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+  SONAR_WEB_JAVAADDITIONALOPTS: "-Xmx512m -Xms128m"
+  SONAR_CE_JAVAADDITIONALOPTS: "-Xmx512m -Xms128m"
+  SONAR_SEARCH_JAVAADDITIONALOPTS: "-Xmx512m -Xms128m"
+  
+# Health check configuration
+health_check:
+  path: "/api/system/status"
+  interval: 30
+  timeout: 10
+  retries: 5
+  start_period: 60
+
+# Volume mounts (for reference)
+volumes:
+  - sonarqube_data:/opt/sonarqube/data
+  - sonarqube_extensions:/opt/sonarqube/extensions
+  - sonarqube_logs:/opt/sonarqube/logs
+
+# Network configuration
+networks:
+  - pulse-network

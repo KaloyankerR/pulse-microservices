@@ -1,0 +1,182 @@
+# Redis Configuration
+# This file contains Redis-specific configuration for the Pulse microservices project
+
+_format_version: "3.0"
+
+# Redis service configuration
+services:
+  - name: redis
+    url: http://redis:6379
+    routes:
+      - name: redis-routes
+        paths:
+          - /redis
+          - /cache
+          - /session
+          - /pubsub
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        strip_path: false
+        path_handling: v1
+
+# Redis specific plugins
+plugins:
+  - name: rate-limiting
+    service: redis
+    config:
+      minute: 1000
+      hour: 10000
+      policy: redis
+      redis_host: redis
+      redis_port: 6379
+      redis_password: null
+      redis_database: 0
+      redis_timeout: 2000
+
+  - name: request-size-limiting
+    service: redis
+    config:
+      allowed_payload_size: 10
+
+  - name: cors
+    service: redis
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+# Redis environment variables (for reference)
+# These would be set in docker-compose.yml
+environment:
+  REDIS_PASSWORD: ""
+  REDIS_DB: "0"
+  REDIS_MAXMEMORY: "256mb"
+  REDIS_MAXMEMORY_POLICY: "allkeys-lru"
+  REDIS_APPENDONLY: "yes"
+  REDIS_APPENDFSYNC: "everysec"
+  
+# Health check configuration
+health_check:
+  command: ["redis-cli", "ping"]
+  interval: 10
+  timeout: 3
+  retries: 5
+  start_period: 0
+
+# Volume mounts (for reference)
+volumes:
+  - redis_data:/data
+
+# Network configuration
+networks:
+  - pulse-network
+
+# Redis specific settings
+redis_config:
+  # Memory management
+  maxmemory: "256mb"
+  maxmemory_policy: "allkeys-lru"
+  
+  # Persistence
+  save: "900 1 300 10 60 10000"
+  appendonly: "yes"
+  appendfsync: "everysec"
+  
+  # Network
+  timeout: 0
+  tcp_keepalive: 300
+  
+  # Security
+  requirepass: ""
+  
+  # Logging
+  loglevel: "notice"
+  
+  # Database settings
+  databases: 16
+  
+  # Key expiration
+  expire_log: "yes"
+  
+  # Pub/Sub
+  notify_keyspace_events: "Ex"
+  
+# Redis data structures for Pulse microservices
+data_structures:
+  # User session storage
+  user_sessions:
+    key_pattern: "session:user:{user_id}"
+    ttl: 86400  # 24 hours
+    data_type: "hash"
+    
+  # User cache
+  user_cache:
+    key_pattern: "cache:user:{user_id}"
+    ttl: 3600  # 1 hour
+    data_type: "hash"
+    
+  # Post cache
+  post_cache:
+    key_pattern: "cache:post:{post_id}"
+    ttl: 1800  # 30 minutes
+    data_type: "hash"
+    
+  # Social connections
+  social_connections:
+    key_pattern: "social:connections:{user_id}"
+    ttl: 7200  # 2 hours
+    data_type: "set"
+    
+  # Message presence
+  message_presence:
+    key_pattern: "presence:user:{user_id}"
+    ttl: 300  # 5 minutes
+    data_type: "string"
+    
+  # Rate limiting
+  rate_limits:
+    key_pattern: "rate_limit:{service}:{user_id}"
+    ttl: 900  # 15 minutes
+    data_type: "string"
+    
+  # Event queues
+  event_queues:
+    key_pattern: "events:{service}:{event_type}"
+    ttl: 0  # No expiration
+    data_type: "list"
+    
+# Redis monitoring
+monitoring:
+  # Slow log
+  slowlog_max_len: 128
+  slowlog_log_slower_than: 10000  # 10ms
+  
+  # Memory usage
+  memory_usage_threshold: 80  # 80% of maxmemory
+  
+  # Connection monitoring
+  max_clients: 10000
+  client_output_buffer_limit: "normal 0 0 0 slave 268435456 67108864 60 pubsub 33554432 8388608 60"

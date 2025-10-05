@@ -146,6 +146,7 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+      - ./config/redis.yml:/usr/local/etc/redis/redis.yml:ro
     restart: unless-stopped
     networks:
       - pulse-network
@@ -167,6 +168,7 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./config/rabbitmq.yml:/etc/rabbitmq/rabbitmq.yml:ro
     restart: unless-stopped
     networks:
       - pulse-network
@@ -220,6 +222,7 @@ services:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
+      - ./config/sonarqube.yml:/opt/sonarqube/conf/sonar.yml:ro
     networks:
       - pulse-network
     healthcheck:

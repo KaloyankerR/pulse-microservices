@@ -1,0 +1,166 @@
+# RabbitMQ Configuration
+# This file contains RabbitMQ-specific configuration for the Pulse microservices project
+
+_format_version: "3.0"
+
+# RabbitMQ service configuration
+services:
+  - name: rabbitmq
+    url: http://rabbitmq:15672
+    routes:
+      - name: rabbitmq-management-routes
+        paths:
+          - /api
+          - /management
+          - /overview
+          - /connections
+          - /channels
+          - /exchanges
+          - /queues
+          - /bindings
+          - /vhosts
+          - /users
+          - /permissions
+          - /policies
+          - /aliveness-test
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        strip_path: false
+        path_handling: v1
+
+# RabbitMQ specific plugins
+plugins:
+  - name: rate-limiting
+    service: rabbitmq
+    config:
+      minute: 200
+      hour: 2000
+      policy: local
+
+  - name: request-size-limiting
+    service: rabbitmq
+    config:
+      allowed_payload_size: 16
+
+  - name: cors
+    service: rabbitmq
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
+      preflight_continue: false
+
+# RabbitMQ environment variables (for reference)
+# These would be set in docker-compose.yml
+environment:
+  RABBITMQ_DEFAULT_USER: "guest"
+  RABBITMQ_DEFAULT_PASS: "guest"
+  RABBITMQ_DEFAULT_VHOST: "/"
+  RABBITMQ_ERLANG_COOKIE: "SWQOKODSQALRPCLNMEQG"
+  RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit log_levels [{connection,error},{default,info}]"
+  
+# Health check configuration
+health_check:
+  path: "/api/overview"
+  interval: 30
+  timeout: 10
+  retries: 5
+  start_period: 40
+
+# Volume mounts (for reference)
+volumes:
+  - rabbitmq_data:/var/lib/rabbitmq
+
+# Network configuration
+networks:
+  - pulse-network
+
+# RabbitMQ specific settings
+rabbitmq_config:
+  # Virtual hosts
+  vhosts:
+    - name: "/"
+      description: "Default virtual host"
+      
+  # Users and permissions
+  users:
+    - username: "guest"
+      password: "guest"
+      tags: "administrator"
+      vhosts:
+        - vhost: "/"
+          configure: ".*"
+          write: ".*"
+          read: ".*"
+          
+  # Exchanges
+  exchanges:
+    - name: "pulse.events"
+      type: "topic"
+      durable: true
+      auto_delete: false
+      vhost: "/"
+      
+  # Queues
+  queues:
+    - name: "user.events"
+      durable: true
+      auto_delete: false
+      vhost: "/"
+    - name: "post.events"
+      durable: true
+      auto_delete: false
+      vhost: "/"
+    - name: "social.events"
+      durable: true
+      auto_delete: false
+      vhost: "/"
+    - name: "messaging.events"
+      durable: true
+      auto_delete: false
+      vhost: "/"
+      
+  # Bindings
+  bindings:
+    - source: "pulse.events"
+      destination: "user.events"
+      destination_type: "queue"
+      routing_key: "user.*"
+      vhost: "/"
+    - source: "pulse.events"
+      destination: "post.events"
+      destination_type: "queue"
+      routing_key: "post.*"
+      vhost: "/"
+    - source: "pulse.events"
+      destination: "social.events"
+      destination_type: "queue"
+      routing_key: "social.*"
+      vhost: "/"
+    - source: "pulse.events"
+      destination: "messaging.events"
+      destination_type: "queue"
+      routing_key: "messaging.*"
+      vhost: "/"
