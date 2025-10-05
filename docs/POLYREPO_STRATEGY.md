@@ -30,7 +30,6 @@ pulse-microservices/
 ├── social-service/
 ├── docker-compose.yml
 ├── config/kong.yml
-├── jenkins/
 └── docs/
 ```
 
@@ -513,7 +512,6 @@ cp -r ../pulse-microservices/user-service/* .
 
 # Remove deployment-specific files (if any)
 rm -f docker-compose.yml
-rm -f Jenkinsfile
 
 # Initial commit
 git add .
