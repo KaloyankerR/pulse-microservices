@@ -86,6 +86,7 @@ describe('App', () => {
           version: '1.0.0',
           documentation: '/api-docs',
           health: '/health',
+          metrics: '/metrics',
         },
         meta: {
           timestamp: expect.any(String),
