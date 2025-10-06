@@ -13,6 +13,9 @@ const redis = require('./config/redis');
 const rabbitmq = require('./config/rabbitmq');
 const metrics = require('./config/metrics');
 
+// Import services
+const eventService = require('./services/eventService');
+
 // Import utilities
 const logger = require('./utils/logger');
 
@@ -20,9 +23,6 @@ const logger = require('./utils/logger');
 const { errorHandler, notFound, initializeErrorHandlers } = require('./middleware/errorHandler');
 const { generalLimiter, healthCheckLimiter, metricsLimiter } = require('./middleware/rateLimiter');
 const { requestMetrics, healthCheckMetrics } = require('./middleware/metrics');
-
-// Import services
-const eventService = require('./services/eventService');
 
 // Import routes
 const notificationRoutes = require('./routes/notifications');
@@ -352,89 +352,5 @@ app.use(notFound);
 // Global error handler
 app.use(errorHandler);
 
-// Graceful shutdown handlers
-const gracefulShutdown = (signal) => {
-  logger.info(`${signal} received. Starting graceful shutdown...`);
-  
-  server.close(async (err) => {
-    if (err) {
-      logger.error('Error during server shutdown', { error: err.message });
-      process.exit(1);
-    }
-    
-    logger.info('Server closed successfully');
-    
-    // Close database connections
-    try {
-      await Promise.all([
-        database.disconnect(),
-        redis.disconnect(),
-        rabbitmq.disconnect(),
-      ]);
-      logger.info('All connections closed successfully');
-    } catch (error) {
-      logger.error('Error closing connections', { error: error.message });
-    }
-    
-    process.exit(0);
-  });
-
-  // Force close after 30 seconds
-  setTimeout(() => {
-    logger.error('Forced shutdown after timeout');
-    process.exit(1);
-  }, 30000);
-};
-
-// Initialize services and start server
-const initializeServices = async () => {
-  try {
-    logger.info('Initializing services...');
-
-    // Connect to databases
-    await Promise.all([
-      database.connect(),
-      redis.connect(),
-      rabbitmq.connect(),
-    ]);
-
-    // Initialize event consumers
-    await eventService.initializeConsumers(rabbitmq);
-
-    logger.info('All services initialized successfully');
-  } catch (error) {
-    logger.error('Failed to initialize services', { error: error.message });
-    process.exit(1);
-  }
-};
-
-// Start server
-const startServer = async () => {
-  try {
-    await initializeServices();
-    
-    const server = app.listen(PORT, () => {
-      logger.info(`Pulse Notification Service is running on port ${PORT}`);
-      logger.info(`API documentation available at http://localhost:${PORT}/api-docs`);
-      logger.info(`Health check available at http://localhost:${PORT}/health`);
-      logger.info(`Metrics available at http://localhost:${PORT}/metrics`);
-    });
-
-    // Setup graceful shutdown
-    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-    return server;
-  } catch (error) {
-    logger.error('Failed to start server', { error: error.message });
-    process.exit(1);
-  }
-};
-
-// Start the server
-let server;
-startServer().then((srv) => {
-  server = srv;
-});
-
+// Export the app for testing or use by server.js
 module.exports = app;
