@@ -14,7 +14,7 @@ jobs:
     
     strategy:
       matrix:
-        service: [user-service, social-service, messaging-service, post-service]
+        service: [user-service, social-service, messaging-service, post-service, notification-service]
     
     services:
       postgres:
@@ -51,20 +51,34 @@ jobs:
         ports:
           - 5672:5672
           - 15672:15672
+      
+      mongodb:
+        image: mongo:7.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: pulse_user
+          MONGO_INITDB_ROOT_PASSWORD: pulse_user
+          MONGO_INITDB_DATABASE: pulse_notifications
+        options: >-
+          --health-cmd "mongosh --eval \"db.adminCommand('ping')\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # Node.js services (user-service, social-service)
+      # Node.js services (user-service, social-service, notification-service)
       - name: Setup Node.js
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
       
       - name: Install Node dependencies
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm ci
       
@@ -74,12 +88,13 @@ jobs:
         run: npm run db:generate
       
       - name: Run Node tests
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm test
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          MONGODB_URI: mongodb://localhost:27017/pulse_notifications
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key-for-ci
       
@@ -133,7 +148,7 @@ jobs:
     
     strategy:
       matrix:
-        service: [user-service, social-service, messaging-service, post-service]
+        service: [user-service, social-service, messaging-service, post-service, notification-service]
     
     steps:
       - name: Checkout code
@@ -141,7 +156,7 @@ jobs:
       
       # Node.js security scan
       - name: Run npm audit (Node services)
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm audit --audit-level=moderate
         continue-on-error: true

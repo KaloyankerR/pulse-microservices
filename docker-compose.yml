@@ -141,7 +141,7 @@ services:
   # Redis (for messaging and caching)
   redis:
     image: redis:7-alpine
-    container_name: pulse-redis
+    container_name: redis
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -160,7 +160,7 @@ services:
   # RabbitMQ (for event messaging)
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
-    container_name: pulse-rabbitmq
+    container_name: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -215,7 +215,7 @@ services:
   # MongoDB
   mongodb:
     image: mongo:7.0
-    container_name: pulse-mongodb
+    container_name: mongodb
     ports:
       - "27017:27017"
     environment:
@@ -274,7 +274,7 @@ services:
   # SonarQube for Code Quality
   sonarqube:
     image: sonarqube:community
-    container_name: pulse-sonarqube
+    container_name: sonarqube
     ports:
       - "9001:9000"
     environment:
