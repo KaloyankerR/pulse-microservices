@@ -6,15 +6,17 @@ let mongoServer;
 // Setup test database
 beforeAll(async () => {
   try {
+    // Close any existing connections first
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
+    
     // Start in-memory MongoDB instance
     mongoServer = await MongoMemoryServer.create();
     const mongoUri = mongoServer.getUri();
     
     // Connect to the in-memory database
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(mongoUri);
     
     console.log('Test database connected successfully');
   } catch (error) {

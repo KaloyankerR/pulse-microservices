@@ -9,12 +9,12 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Test All Services
+    name: Build & Test Core Services
     runs-on: ubuntu-latest
     
     strategy:
       matrix:
-        service: [user-service, social-service, messaging-service, post-service, notification-service]
+        service: [user-service, social-service, messaging-service, post-service]
     
     services:
       postgres:
@@ -70,15 +70,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # Node.js services (user-service, social-service, notification-service)
+      # Node.js services (user-service, social-service)
       - name: Setup Node.js
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
       
       - name: Install Node dependencies
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service'
         working-directory: ./${{ matrix.service }}
         run: npm ci
       
@@ -88,13 +88,12 @@ jobs:
         run: npm run db:generate
       
       - name: Run Node tests
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service'
         working-directory: ./${{ matrix.service }}
         run: npm test
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-          MONGODB_URI: mongodb://localhost:27017/pulse_notifications
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key-for-ci
       
@@ -141,14 +140,94 @@ jobs:
           echo "✅ ${{ matrix.service }} - Build and test completed successfully"
           echo "Docker image built: pulse-${{ matrix.service }}:test"
 
+  build-and-test-notification:
+    name: Build & Test Notification Service
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:7.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: pulse_user
+          MONGO_INITDB_ROOT_PASSWORD: pulse_user
+          MONGO_INITDB_DATABASE: pulse_notifications
+        options: >-
+          --health-cmd "mongosh --eval \"db.adminCommand('ping')\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5672:5672
+          - 15672:15672
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install Node dependencies
+        working-directory: ./notification-service
+        run: npm ci
+      
+      - name: Run Node tests
+        working-directory: ./notification-service
+        run: npm test
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://localhost:27017/pulse_notifications
+          REDIS_URL: redis://localhost:6379
+          RABBITMQ_URL: amqp://guest:guest@localhost:5672/
+          JWT_SECRET: test-secret-key-for-ci
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./notification-service
+          push: false
+          tags: pulse-notification-service:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Test summary
+        run: |
+          echo "✅ notification-service - Build and test completed successfully"
+          echo "Docker image built: pulse-notification-service:test"
+
   security-scan:
-    name: Security Scan
+    name: Security Scan Core Services
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     
     strategy:
       matrix:
-        service: [user-service, social-service, messaging-service, post-service, notification-service]
+        service: [user-service, social-service, messaging-service, post-service]
     
     steps:
       - name: Checkout code
@@ -156,7 +235,7 @@ jobs:
       
       # Node.js security scan
       - name: Run npm audit (Node services)
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service'
         working-directory: ./${{ matrix.service }}
         run: npm audit --audit-level=moderate
         continue-on-error: true
@@ -169,19 +248,35 @@ jobs:
           args: '-no-fail -fmt json -out gosec-report.json ./${{ matrix.service }}/...'
         continue-on-error: true
 
+  security-scan-notification:
+    name: Security Scan Notification Service
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run npm audit (Notification service)
+        working-directory: ./notification-service
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
   pr-summary:
     name: PR Summary
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    needs: [build-and-test, security-scan]
+    needs: [build-and-test, build-and-test-notification, security-scan, security-scan-notification]
     
     steps:
       - name: Comment PR
         uses: actions/github-script@v7
         with:
           script: |
-            const buildStatus = '${{ needs.build-and-test.result }}';
-            const securityStatus = '${{ needs.security-scan.result }}';
+            const coreBuildStatus = '${{ needs.build-and-test.result }}';
+            const notificationBuildStatus = '${{ needs.build-and-test-notification.result }}';
+            const coreSecurityStatus = '${{ needs.security-scan.result }}';
+            const notificationSecurityStatus = '${{ needs.security-scan-notification.result }}';
             
             const statusEmoji = {
               'success': '✅',
@@ -190,17 +285,22 @@ jobs:
               'skipped': '⏭️'
             };
             
-            const body = `## 🚀 Minimal CI Pipeline Results
+            const body = `## 🚀 Microservices CI Pipeline Results
             
-            - ${statusEmoji[buildStatus] || '❓'} **Build & Test**: ${buildStatus}
-            - ${statusEmoji[securityStatus] || '❓'} **Security Scan**: ${securityStatus}
+            ### Core Services
+            - ${statusEmoji[coreBuildStatus] || '❓'} **Build & Test**: ${coreBuildStatus}
+            - ${statusEmoji[coreSecurityStatus] || '❓'} **Security Scan**: ${coreSecurityStatus}
             
-            ${buildStatus === 'success' && securityStatus === 'success' 
+            ### Notification Service (Async)
+            - ${statusEmoji[notificationBuildStatus] || '❓'} **Build & Test**: ${notificationBuildStatus}
+            - ${statusEmoji[notificationSecurityStatus] || '❓'} **Security Scan**: ${notificationSecurityStatus}
+            
+            ${coreBuildStatus === 'success' && notificationBuildStatus === 'success' && coreSecurityStatus === 'success' && notificationSecurityStatus === 'success'
               ? '🎉 All checks passed! Ready for review.' 
               : '⚠️ Some checks failed. Please review the details above.'}
             
             ---
-            *This is a minimal pipeline focused on essential checks only.*
+            *Core services and notification service run asynchronously for better performance.*
             `;
             
             await github.rest.issues.createComment({
