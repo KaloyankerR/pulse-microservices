@@ -10,6 +10,7 @@ const logger = require('./utils/logger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const swaggerSpecs = require('./config/swagger');
+const metrics = require('./config/metrics');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -65,8 +66,11 @@ app.use(expressWinston.logger({
   msg: 'HTTP {{req.method}} {{req.url}}',
   expressFormat: true,
   colorize: false,
-  ignoreRoute: (req) => req.url === '/health' || req.url.startsWith('/api-docs'),
+  ignoreRoute: (req) => req.url === '/health' || req.url === '/metrics' || req.url.startsWith('/api-docs'),
 }));
+
+// Metrics middleware
+app.use(metrics.metricsMiddleware);
 
 // Apply general rate limiting
 app.use(generalLimiter);
@@ -86,6 +90,17 @@ app.get('/health', (req, res) => {
       version: 'v1',
     },
   });
+});
+
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', metrics.register.contentType);
+    const metricsOutput = await metrics.getMetrics();
+    res.end(metricsOutput);
+  } catch (error) {
+    res.status(500).end(error.message);
+  }
 });
 
 // API documentation
@@ -110,6 +125,7 @@ app.get('/', (req, res) => {
       version: '1.0.0',
       documentation: '/api-docs',
       health: '/health',
+      metrics: '/metrics',
     },
     meta: {
       timestamp: new Date().toISOString(),
@@ -147,6 +163,7 @@ app.listen(PORT, () => {
   logger.info(`Pulse User Service is running on port ${PORT}`);
   logger.info(`API documentation available at http://localhost:${PORT}/api-docs`);
   logger.info(`Health check available at http://localhost:${PORT}/health`);
+  logger.info(`Metrics available at http://localhost:${PORT}/metrics`);
 });
 
 module.exports = app;

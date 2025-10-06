@@ -13,6 +13,9 @@ Microservices platform with API Gateway, user authentication, post management, a
 - **Social Service** (Node.js) - Follow relationships & recommendations
 - **Messaging Service** (Go) - Real-time messaging & WebSocket support
 - **Post Service** (Go) - Posts, likes, and user cache
+- **Notification Service** (Node.js) - Push notifications & user preferences
+- **Prometheus** (port 9090) - Metrics collection & monitoring
+- **Grafana** (port 3001) - Metrics visualization & dashboards
 
 
 ## Prerequisites
@@ -169,6 +172,56 @@ This project uses GitHub Actions with a **matrix strategy** for efficient parall
 4. **View Workflow Status**: Check the Actions tab in GitHub
 
 For detailed documentation, see [.github/workflows/README.md](.github/workflows/README.md)
+
+## Monitoring & Observability
+
+The platform includes comprehensive monitoring with Prometheus and Grafana:
+
+### Access Monitoring Tools
+
+- **Prometheus**: http://localhost:9090
+  - Metrics collection and time-series database
+  - Query metrics with PromQL
+  - View scrape targets: http://localhost:9090/targets
+
+- **Grafana**: http://localhost:3001
+  - Username: `admin` / Password: `admin`
+  - Pre-configured dashboards for all services
+  - Customizable alerts and visualizations
+
+### Service Metrics Endpoints
+
+All services expose Prometheus metrics at `/metrics`:
+
+- User Service: http://localhost:8081/metrics
+- Post Service: http://localhost:8082/metrics
+- Messaging Service: http://localhost:8084/metrics
+- Social Service: http://localhost:8085/metrics
+- Notification Service: http://localhost:8086/metrics
+
+### Available Dashboards
+
+1. **Pulse Microservices Overview**: Comprehensive dashboard showing:
+   - HTTP request rates and response times
+   - Service health status
+   - CPU and memory usage
+   - Error rates by status code
+   - Business metrics (users, posts, messages)
+
+### Quick Monitoring Commands
+
+```bash
+# View Prometheus targets
+curl http://localhost:9090/api/v1/targets
+
+# Query metrics via PromQL
+curl 'http://localhost:9090/api/v1/query?query=up'
+
+# Check service metrics
+curl http://localhost:8081/metrics
+```
+
+For detailed monitoring documentation, see [docs/MONITORING.md](docs/MONITORING.md)
 
 ## Troubleshooting
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/pulse/post-service-go/config"
 	"github.com/pulse/post-service-go/handlers"
 	"github.com/pulse/post-service-go/middleware"
@@ -55,6 +56,9 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"UP","service":"post-service-go"}`))
 	}).Methods("GET")
+
+	// Metrics endpoint
+	router.Handle("/metrics", promhttp.Handler()).Methods("GET")
 
 	// API routes with authentication
 	api := router.PathPrefix("/api/v1").Subrouter()
