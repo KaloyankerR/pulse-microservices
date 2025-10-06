@@ -30,6 +30,11 @@
       "key": "targetUserId",
       "value": "",
       "description": "Target user ID for social operations"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "description": "Notification ID for operations"
     }
   ],
   "auth": {
@@ -727,6 +732,249 @@
               "host": ["localhost"],
               "port": "8084",
               "path": ["api", "messages", "{{messageId}}", "read"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Notification Service Health (via Kong)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "health"]
+            }
+          }
+        },
+        {
+          "name": "Notification Service Health (Direct)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8086/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8086",
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "Filter by notification type (FOLLOW, LIKE, COMMENT, etc.)",
+                  "disabled": true
+                },
+                {
+                  "key": "unread_only",
+                  "value": "false",
+                  "description": "Show only unread notifications",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "desc",
+                  "description": "Sort order (asc/desc)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "unread-count"]
+            }
+          }
+        },
+        {
+          "name": "Get Notification Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "stats"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification as Read",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data._id) {",
+                  "        pm.collectionVariables.set('notificationId', response.data._id);",
+                  "        console.log('✅ Notification ID saved:', response.data._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "{{notificationId}}", "read"]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/{{notificationId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "{{notificationId}}"]
+            }
+          }
+        },
+        {
+          "name": "Cleanup Old Notifications",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/cleanup?days_old=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "cleanup"],
+              "query": [
+                {
+                  "key": "days_old",
+                  "value": "30",
+                  "description": "Delete notifications older than N days"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Notification Preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Update Notification Preferences",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email_notifications\": true,\n  \"push_notifications\": true,\n  \"in_app_notifications\": true,\n  \"quiet_hours\": {\n    \"enabled\": false,\n    \"start_time\": \"22:00\",\n    \"end_time\": \"08:00\",\n    \"timezone\": \"UTC\"\n  },\n  \"preferences\": {\n    \"FOLLOW\": {\n      \"email\": true,\n      \"push\": true,\n      \"in_app\": true\n    },\n    \"LIKE\": {\n      \"email\": false,\n      \"push\": true,\n      \"in_app\": true\n    },\n    \"COMMENT\": {\n      \"email\": true,\n      \"push\": true,\n      \"in_app\": true\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "preferences"]
+            }
+          }
+        },
+        {
+          "name": "Create Test Notification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data._id) {",
+                  "        pm.collectionVariables.set('notificationId', response.data._id);",
+                  "        console.log('✅ Test notification created:', response.data._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient_id\": \"{{userId}}\",\n  \"sender_id\": \"{{targetUserId}}\",\n  \"type\": \"FOLLOW\",\n  \"title\": \"New Follower\",\n  \"message\": \"Someone started following you!\",\n  \"reference_id\": \"{{targetUserId}}\",\n  \"reference_type\": \"USER\",\n  \"priority\": \"MEDIUM\",\n  \"metadata\": {\n    \"source\": \"postman_test\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"]
             }
           }
         }

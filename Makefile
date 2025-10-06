@@ -31,6 +31,7 @@ test: ## Run basic health checks
 	@echo "Testing services..."
 	@curl -s http://localhost:8000/health > /dev/null && echo "✅ User service is healthy" || echo "❌ User service failed"
 	@curl -s http://localhost:8000/api/v1/posts > /dev/null && echo "✅ Post service is healthy" || echo "❌ Post service failed"
+	@curl -s http://localhost:8086/health > /dev/null && echo "✅ Notification service is healthy" || echo "❌ Notification service failed"
 	@echo "Done!"
 
 test-user: ## Run user-service tests
@@ -44,6 +45,14 @@ test-coverage-user: ## Run user-service tests with coverage
 sonar-user: ## Run SonarQube analysis for user-service
 	@echo "Running SonarQube analysis for user-service..."
 	@cd user-service && npm run test:coverage && npm run sonar
+
+test-notification: ## Run notification-service tests
+	@echo "Running notification-service tests..."
+	@cd notification-service && npm test
+
+test-coverage-notification: ## Run notification-service tests with coverage
+	@echo "Running notification-service tests with coverage..."
+	@cd notification-service && npm run test:coverage
 
 
 db-reset: db-reset-users db-reset-posts ## Reset all databases (drop and recreate)
