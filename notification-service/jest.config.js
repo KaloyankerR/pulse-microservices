@@ -36,9 +36,6 @@ module.exports = {
   resetMocks: true,
   restoreMocks: true,
   maxWorkers: 1,
-  transform: {
-    '^.+\\.js$': 'babel-jest'
-  },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1'
   },

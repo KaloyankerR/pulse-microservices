@@ -6,6 +6,7 @@ describe('Health Check Endpoints', () => {
     it('should return healthy status when all services are connected', async () => {
       const response = await request(app)
         .get('/health')
+        .timeout(5000)
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -22,6 +23,7 @@ describe('Health Check Endpoints', () => {
     it('should include timestamp in response', async () => {
       const response = await request(app)
         .get('/health')
+        .timeout(5000)
         .expect(200);
 
       expect(response.body.data.timestamp).toBeDefined();
@@ -35,6 +37,7 @@ describe('Health Check Endpoints', () => {
     it('should include version information', async () => {
       const response = await request(app)
         .get('/health')
+        .timeout(5000)
         .expect(200);
 
       expect(response.body.data.version).toBe('1.0.0');
@@ -46,6 +49,7 @@ describe('Health Check Endpoints', () => {
     it('should return ready status when all services are connected', async () => {
       const response = await request(app)
         .get('/ready')
+        .timeout(5000)
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -57,6 +61,7 @@ describe('Health Check Endpoints', () => {
     it('should return ready status when all services are connected', async () => {
       const response = await request(app)
         .get('/ready')
+        .timeout(5000)
         .expect(200);
 
       expect(response.body.success).toBe(true);
@@ -69,6 +74,7 @@ describe('Health Check Endpoints', () => {
     it('should return metrics in Prometheus format', async () => {
       const response = await request(app)
         .get('/metrics')
+        .timeout(5000)
         .expect(200);
 
       expect(response.headers['content-type']).toBe('text/plain; charset=utf-8');
@@ -81,6 +87,7 @@ describe('Health Check Endpoints', () => {
     it('should return service information', async () => {
       const response = await request(app)
         .get('/')
+        .timeout(5000)
         .expect(200);
 
       expect(response.body.success).toBe(true);

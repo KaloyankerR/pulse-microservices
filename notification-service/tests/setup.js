@@ -1,5 +1,7 @@
-// Mock database setup for tests
-// Since we're using mocked mongoose in jest.setup.js, we don't need real database connections
+// Setup test environment with real service connections
+const database = require('../src/config/database');
+const redis = require('../src/config/redis');
+const rabbitmq = require('../src/config/rabbitmq');
 
 // Setup test environment
 beforeAll(async () => {
@@ -8,16 +10,30 @@ beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = 'test-jwt-secret';
     
+    // Connect to real services for integration tests
+    await Promise.all([
+      database.connect(),
+      redis.connect(),
+      rabbitmq.connect(),
+    ]);
+    
     console.log('Test environment setup completed');
   } catch (error) {
     console.error('Failed to setup test environment:', error);
     throw error;
   }
-});
+}, 30000); // Increase timeout for service connections
 
 // Cleanup after all tests
 afterAll(async () => {
   try {
+    // Disconnect from services
+    await Promise.all([
+      database.disconnect(),
+      redis.disconnect(),
+      rabbitmq.disconnect(),
+    ]);
+    
     // Clear all mocks
     jest.clearAllMocks();
     
@@ -25,7 +41,7 @@ afterAll(async () => {
   } catch (error) {
     console.error('Failed to cleanup test environment:', error);
   }
-});
+}, 30000); // Increase timeout for service disconnection
 
 // Clear mocks between tests
 afterEach(async () => {
