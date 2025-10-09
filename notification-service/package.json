@@ -11,12 +11,7 @@
     "test:coverage": "jest --coverage --forceExit",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
-    "format": "prettier --write src/ tests/",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:migrate": "prisma migrate dev",
-    "db:reset": "prisma migrate reset",
-    "db:seed": "node prisma/seed.js"
+    "format": "prettier --write src/ tests/"
   },
   "keywords": [
     "microservice",
