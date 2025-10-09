@@ -283,3 +283,4 @@ make ps                # Check service status
 make db-reset          # Reset databases
 docker-compose restart # Restart services
 ```
+
