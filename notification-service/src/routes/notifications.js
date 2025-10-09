@@ -258,34 +258,6 @@ router.get('/stats', apiLimiter, notificationController.getNotificationStats);
 
 /**
  * @swagger
- * /api/notifications/{id}/read:
- *   put:
- *     summary: Mark notification as read
- *     tags: [Notifications]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *         description: Notification ID
- *     responses:
- *       200:
- *         description: Notification marked as read successfully
- *       404:
- *         description: Notification not found
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.put('/:id/read', apiLimiter, validateNotificationId, businessMetrics.trackNotificationRead, notificationController.markNotificationAsRead);
-
-/**
- * @swagger
  * /api/notifications/read-all:
  *   put:
  *     summary: Mark all notifications as read
@@ -318,34 +290,6 @@ router.put('/:id/read', apiLimiter, validateNotificationId, businessMetrics.trac
  *         description: Internal server error
  */
 router.put('/read-all', apiLimiter, notificationController.markAllNotificationsAsRead);
-
-/**
- * @swagger
- * /api/notifications/{id}:
- *   delete:
- *     summary: Delete a notification
- *     tags: [Notifications]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *           pattern: '^[0-9a-fA-F]{24}$'
- *         description: Notification ID
- *     responses:
- *       200:
- *         description: Notification deleted successfully
- *       404:
- *         description: Notification not found
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.delete('/:id', apiLimiter, validateNotificationId, notificationController.deleteNotification);
 
 /**
  * @swagger
@@ -390,6 +334,62 @@ router.delete('/:id', apiLimiter, validateNotificationId, notificationController
  *         description: Internal server error
  */
 router.delete('/cleanup', apiLimiter, validateCleanup, notificationController.cleanupOldNotifications);
+
+/**
+ * @swagger
+ * /api/notifications/{id}/read:
+ *   put:
+ *     summary: Mark notification as read
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Notification ID
+ *     responses:
+ *       200:
+ *         description: Notification marked as read successfully
+ *       404:
+ *         description: Notification not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.put('/:id/read', apiLimiter, validateNotificationId, businessMetrics.trackNotificationRead, notificationController.markNotificationAsRead);
+
+/**
+ * @swagger
+ * /api/notifications/{id}:
+ *   delete:
+ *     summary: Delete a notification
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: '^[0-9a-fA-F]{24}$'
+ *         description: Notification ID
+ *     responses:
+ *       200:
+ *         description: Notification deleted successfully
+ *       404:
+ *         description: Notification not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/:id', apiLimiter, validateNotificationId, notificationController.deleteNotification);
 
 /**
  * @swagger

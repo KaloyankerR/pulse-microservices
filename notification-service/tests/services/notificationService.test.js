@@ -1,6 +1,7 @@
 const NotificationService = require('../../src/services/notificationService');
 const Notification = require('../../src/models/notification');
 const UserCache = require('../../src/models/userCache');
+const redis = require('../../src/config/redis');
 
 describe('NotificationService', () => {
   const testUserId = '507f1f77bcf86cd799439011';
@@ -42,6 +43,19 @@ describe('NotificationService', () => {
 
   describe('getNotifications', () => {
     beforeEach(async () => {
+      // Clean up existing test data
+      await Notification.deleteMany({ recipient_id: testUserId });
+      
+      // Clear Redis cache for this user (clear specific cache keys)
+      try {
+        await redis.del(`notifications:${testUserId}:1:20:all:false`);
+        await redis.del(`notifications:${testUserId}:1:20:FOLLOW:false`);
+        await redis.del(`notifications:${testUserId}:1:20:all:true`);
+        await redis.del(`unread_count:${testUserId}`);
+      } catch (e) {
+        // Ignore cache clear errors in tests
+      }
+      
       // Create test notifications
       await Notification.create([
         global.createMockNotification({
@@ -154,6 +168,9 @@ describe('NotificationService', () => {
 
   describe('markAllAsRead', () => {
     beforeEach(async () => {
+      // Clean up existing test data
+      await Notification.deleteMany({ recipient_id: testUserId });
+      
       await Notification.create([
         global.createMockNotification({
           recipient_id: testUserId,
@@ -182,6 +199,9 @@ describe('NotificationService', () => {
 
   describe('getUnreadCount', () => {
     beforeEach(async () => {
+      // Clean up existing test data
+      await Notification.deleteMany({ recipient_id: testUserId });
+      
       await Notification.create([
         global.createMockNotification({
           recipient_id: testUserId,
@@ -207,6 +227,9 @@ describe('NotificationService', () => {
 
   describe('getNotificationStats', () => {
     beforeEach(async () => {
+      // Clean up existing test data
+      await Notification.deleteMany({ recipient_id: testUserId });
+      
       await Notification.create([
         global.createMockNotification({
           recipient_id: testUserId,
@@ -267,6 +290,11 @@ describe('NotificationService', () => {
   });
 
   describe('processEvent', () => {
+    beforeEach(async () => {
+      // Clean up existing test data before each processEvent test
+      await Notification.deleteMany({ recipient_id: testUserId });
+    });
+
     it('should process follow event', async () => {
       const eventData = {
         event_type: 'user.followed',

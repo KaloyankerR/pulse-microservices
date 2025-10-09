@@ -8,7 +8,7 @@ const validate = (schema, property = 'body') => {
       const { error, value } = schema.validate(req[property], {
         abortEarly: false,
         stripUnknown: true,
-        allowUnknown: false,
+        allowUnknown: property === 'query', // Allow unknown for query params, strict for body/params
       });
 
       if (error) {
