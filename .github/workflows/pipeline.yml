@@ -19,6 +19,7 @@ on:
           - all
           - user-service
           - social-service
+          - notification-service
           - messaging-service
           - post-service
       environment:
@@ -46,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [user-service, social-service, messaging-service, post-service]
+        service: [user-service, social-service, notification-service, messaging-service, post-service]
     
     services:
       postgres:
@@ -102,15 +103,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # Node.js services (user-service, social-service)
+      # Node.js services (user-service, social-service, notification-service)
       - name: Setup Node.js
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
       
       - name: Install Node dependencies
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm ci
       
@@ -120,13 +121,15 @@ jobs:
         run: npm run db:generate
       
       - name: Run Node tests
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm test
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+          MONGODB_URI: mongodb://pulse_user:pulse_user@localhost:27017/pulse_notifications
           REDIS_URL: redis://localhost:6379
+          RABBITMQ_URL: amqp://guest:guest@localhost:5672/
           JWT_SECRET: test-secret-key-for-ci
       
       # Go services (messaging-service, post-service)
@@ -171,14 +174,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [user-service, social-service, messaging-service, post-service]
+        service: [user-service, social-service, notification-service, messaging-service, post-service]
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
       - name: Run npm audit (Node services)
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm audit --audit-level=moderate
         continue-on-error: true
@@ -223,7 +226,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             # Manual trigger
             if [[ "${{ github.event.inputs.service }}" == "all" ]]; then
-              SERVICES='["user-service","social-service","messaging-service","post-service"]'
+              SERVICES='["user-service","social-service","notification-service","messaging-service","post-service"]'
             else
               SERVICES='["${{ github.event.inputs.service }}"]'
             fi
@@ -234,7 +237,7 @@ jobs:
             TAG="${{ github.ref_name }}"
             if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               # Full version tag (e.g., v1.0.0) - deploy all services
-              SERVICES='["user-service","social-service","messaging-service","post-service"]'
+              SERVICES='["user-service","social-service","notification-service","messaging-service","post-service"]'
             else
               # Service-specific tag (e.g., user-service-v1.0.0)
               SERVICE=$(echo "$TAG" | sed 's/-v[0-9].*//')
@@ -244,7 +247,7 @@ jobs:
           
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             # Push to main - deploy all services
-            SERVICES='["user-service","social-service","messaging-service","post-service"]'
+            SERVICES='["user-service","social-service","notification-service","messaging-service","post-service"]'
             DEPLOY="staging"
           
           else
@@ -326,7 +329,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./${{ matrix.service }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
@@ -382,9 +385,9 @@ jobs:
             ### Services Tested
             - ✅ user-service
             - ✅ social-service
+            - ✅ notification-service
             - ✅ messaging-service
             - ✅ post-service
-            - ⏭️ notification-service (disabled)
             
             ${testStatus === 'success' && securityStatus === 'success'
               ? '🎉 All checks passed! Ready to merge.' 
