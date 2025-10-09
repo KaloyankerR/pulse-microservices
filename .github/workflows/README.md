@@ -4,66 +4,67 @@ This directory contains CI/CD workflows for the Pulse microservices platform usi
 
 ## Workflows
 
-### 1. CI Workflow (`ci.yml`)
+### 1. Microservices CI (`microservices-ci.yml`)
 
 Runs on every push and pull request to `main` and `develop` branches.
 
 **Features:**
-- **Smart Change Detection**: Only runs tests for services that have changed
-- **Matrix Strategy**: Tests multiple versions in parallel
-  - Node.js services: Tests on Node 18.x and 20.x
-  - Go services: Tests on Go 1.21 and 1.22
-- **Service Dependencies**: Automatically spins up PostgreSQL, Redis, and RabbitMQ
-- **Code Quality**: Runs linters and formatters
-- **Test Coverage**: Generates and uploads coverage reports to Codecov
+- **Matrix Strategy**: Tests all services in parallel
+- **Service Dependencies**: Automatically spins up PostgreSQL, Redis, RabbitMQ, and MongoDB
+- **Automated Testing**: Runs tests for Node.js and Go services
 - **Docker Builds**: Validates Docker image builds
+- **Automatic Deployment**: Pushes images to Docker Hub on push to `main` branch
+- **Security Scanning**: Runs security audits on pull requests
 
 **Services Tested:**
 - `user-service` (Node.js + Prisma + PostgreSQL)
 - `social-service` (Node.js + Prisma + PostgreSQL)
 - `messaging-service` (Go + PostgreSQL + Redis + RabbitMQ)
 - `post-service` (Go + PostgreSQL)
+- `notification-service` (Node.js + MongoDB + Redis + RabbitMQ) - Currently disabled
 
-### 2. Deploy Workflow (`deploy.yml`)
+**Deployment Behavior:**
+- **Pull Requests**: Builds images but doesn't push to Docker Hub
+- **Push to `main`**: Builds, tests, and pushes images with `latest` and commit SHA tags
 
-⚠️ **NOTE: This workflow is currently DISABLED by default.**
+### 2. Docker Hub Deploy (`docker-deploy.yml`)
 
-To enable deployment, edit `.github/workflows/deploy.yml` and uncomment the trigger section.
-
-Runs on version tags or manual trigger (when enabled).
+✅ **ACTIVE** - Runs on version tags or manual dispatch.
 
 **Features:**
 - **Flexible Deployment**: Deploy individual services or all at once
-- **Multi-platform Builds**: Builds for both AMD64 and ARM64
+- **Multi-platform Builds**: Builds for both AMD64 and ARM64 architectures
 - **Version Management**: Extracts version from git tags
-- **Environment Support**: Separate staging and production deployments
-- **Docker Registry**: Pushes images to Docker Hub or GHCR
+- **Smart Service Detection**: Automatically determines which services to deploy
+- **Comprehensive Logging**: Provides detailed deployment summaries
 
-**To Re-enable Deployment:**
+**Trigger Methods:**
 
-1. Edit `.github/workflows/deploy.yml`
-2. Uncomment the `on:` section (lines 6-32)
-3. Remove or comment out the temporary `on: workflow_dispatch:` with confirm_enable
-4. Commit and push the changes
-
-**Trigger Methods** (when enabled):
-
-1. **Tag-based deployment:**
+1. **Tag-based deployment (all services):**
    ```bash
-   # Deploy all services
+   # Deploy all services with version tag
    git tag -a v1.0.0 -m "Release v1.0.0"
    git push origin v1.0.0
-   
-   # Deploy specific service
-   git tag -a user-service-v1.0.0 -m "User service v1.0.0"
-   git push origin user-service-v1.0.0
    ```
 
-2. **Manual deployment:**
+2. **Tag-based deployment (single service):**
+   ```bash
+   # Deploy only user-service
+   git tag -a user-service-v1.2.3 -m "User service v1.2.3"
+   git push origin user-service-v1.2.3
+   ```
+
+3. **Manual deployment:**
    - Go to Actions tab in GitHub
-   - Select "Deploy Microservices" workflow
+   - Select "Deploy to Docker Hub" workflow
    - Click "Run workflow"
-   - Choose service and environment
+   - Choose service (all or specific) and environment (staging/production)
+   - Click "Run workflow"
+
+**Image Tagging:**
+- Version tags: `<username>/pulse-<service>:<version>`
+- Latest tag: `<username>/pulse-<service>:latest`
+- Commit SHA: `<username>/pulse-<service>:<commit-sha>` (for main branch pushes)
 
 ## Matrix Strategy Benefits
 

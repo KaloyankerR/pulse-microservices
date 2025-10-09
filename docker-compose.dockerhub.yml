@@ -1,0 +1,298 @@
+# Docker Compose configuration using pre-built Docker Hub images
+# This configuration pulls images from Docker Hub instead of building locally
+# 
+# Prerequisites:
+# 1. Replace 'yourusername' with your actual Docker Hub username
+# 2. Ensure local PostgreSQL is running (services connect to host.docker.internal)
+# 3. Configure environment variables in each service
+#
+# Usage:
+#   docker-compose -f docker-compose.dockerhub.yml pull
+#   docker-compose -f docker-compose.dockerhub.yml up -d
+
+version: '3.8'
+
+services:
+  # API Gateway
+  kong:
+    image: kong:3.4-alpine
+    container_name: pulse-kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+      KONG_ADMIN_GUI_LISTEN: "0.0.0.0:8002"
+    ports:
+      - "8000:8000"  # Proxy
+      - "8001:8001"  # Admin API
+      - "8002:8002"  # Admin GUI
+    volumes:
+      - ./config/kong.yml:/usr/local/kong/declarative/kong.yml:ro
+    networks:
+      - pulse-network
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # User Service (Node.js)
+  user-service:
+    image: yourusername/pulse-user-service:latest
+    container_name: pulse-user-service
+    ports:
+      - "8081:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgresql://pulse_user:pulse_user@host.docker.internal:5432/pulse_users
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      JWT_EXPIRES_IN: 7d
+      REDIS_URL: redis://redis:6379
+      # Google OAuth (optional)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: http://localhost:8081/api/v1/auth/google/callback
+    depends_on:
+      - redis
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Social Service (Node.js)
+  social-service:
+    image: yourusername/pulse-social-service:latest
+    container_name: pulse-social-service
+    ports:
+      - "8085:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_URL: postgresql://pulse_user:pulse_user@host.docker.internal:5432/pulse_social
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Post Service (Go)
+  post-service:
+    image: yourusername/pulse-post-service:latest
+    container_name: pulse-post-service
+    ports:
+      - "8082:8082"
+    environment:
+      DATABASE_URL: postgres://pulse_user:pulse_user@host.docker.internal:5432/pulse_posts?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      REDIS_URL: redis://redis:6379
+      PORT: 8082
+    depends_on:
+      - redis
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Messaging Service (Go)
+  messaging-service:
+    image: yourusername/pulse-messaging-service:latest
+    container_name: pulse-messaging-service
+    ports:
+      - "8084:8084"
+    environment:
+      DATABASE_URL: postgres://pulse_user:pulse_user@host.docker.internal:5432/pulse_messaging?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      PORT: 8084
+    depends_on:
+      - redis
+      - rabbitmq
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Notification Service (Node.js)
+  notification-service:
+    image: yourusername/pulse-notification-service:latest
+    container_name: pulse-notification-service
+    ports:
+      - "8086:8080"
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      MONGODB_URI: mongodb://pulse_user:pulse_user@mongodb:27017/pulse_notifications?authSource=admin
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: pulse-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+      - ./config/redis.yml:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server --appendonly yes
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: pulse-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./config/rabbitmq.yml:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB (for notifications)
+  mongodb:
+    image: mongo:7.0
+    container_name: pulse-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: pulse_user
+      MONGO_INITDB_ROOT_PASSWORD: pulse_user
+      MONGO_INITDB_DATABASE: pulse_notifications
+    volumes:
+      - mongodb-data:/data/db
+      - ./config/mongodb/init.js:/docker-entrypoint-initdb.d/init.js:ro
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus (Monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: pulse-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: pulse-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3001
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./config/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./config/grafana/dashboard-overview.json:/var/lib/grafana/dashboards/overview.json:ro
+    depends_on:
+      - prometheus
+    networks:
+      - pulse-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  pulse-network:
+    name: pulse-network
+    driver: bridge
+
+volumes:
+  redis-data:
+    name: pulse-redis-data
+  rabbitmq-data:
+    name: pulse-rabbitmq-data
+  mongodb-data:
+    name: pulse-mongodb-data
+  prometheus-data:
+    name: pulse-prometheus-data
+  grafana-data:
+    name: pulse-grafana-data
+

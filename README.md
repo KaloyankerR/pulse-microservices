@@ -117,61 +117,113 @@ This project uses GitHub Actions with a **matrix strategy** for efficient parall
 
 ### Workflows
 
-1. **CI Workflow** (`.github/workflows/ci.yml`)
+1. **CI Workflow** (`.github/workflows/microservices-ci.yml`)
    - Runs on every push and PR to `main`/`develop`
-   - Smart change detection - only tests modified services
-   - Matrix testing across multiple versions (Node 18/20, Go 1.21/1.22)
-   - Automated linting, testing, and coverage reports
-   - Docker image validation
+   - Automatically builds and pushes Docker images to Docker Hub on `main` branch
+   - Matrix testing across multiple versions
+   - Automated testing and Docker image validation
+   - Multi-service parallel execution
 
-2. **Deploy Workflow** (`.github/workflows/deploy.yml`) - ⚠️ **CURRENTLY DISABLED**
+2. **Docker Hub Deploy Workflow** (`.github/workflows/docker-deploy.yml`) - ✅ **ACTIVE**
    - Triggered by version tags or manual dispatch
    - Multi-platform Docker builds (AMD64/ARM64)
-   - Environment-specific deployments (staging/production)
-   - Service-specific or full platform deployment
-   - *To enable: Uncomment triggers in deploy.yml*
+   - Flexible deployment options (all services or individual)
+   - Semantic versioning support
+   - Automatic tagging strategy (latest, version, commit SHA)
 
-3. **PR Validation** (`.github/workflows/pr-validation.yml`)
-   - Validates PR titles (conventional commits)
-   - Checks for merge conflicts and large files
-   - Security scanning with Trivy
-   - Automated PR size analysis
+### Quick Start with Docker Hub Deployment
 
-4. **Code Quality** (`.github/workflows/code-quality.yml`)
-   - SonarCloud integration
-   - CodeQL security analysis
-   - Dependency review
-   - Cyclomatic complexity checks
+#### 1. Setup (One-Time)
 
-### Quick Start with GitHub Actions
+Configure GitHub repository secrets:
 
-1. **Enable Actions**: Go to repository Settings → Actions and enable workflows
+**Settings → Secrets and variables → Actions**
 
-2. **Configure Secrets** (for deployment):
-   ```
-   DOCKERHUB_USERNAME  # Docker Hub username
-   DOCKERHUB_TOKEN     # Docker Hub access token
-   SONAR_TOKEN         # SonarCloud token (optional)
-   ```
+| Secret Name | Description |
+|-------------|-------------|
+| `DOCKERHUB_USERNAME` | Your Docker Hub username |
+| `DOCKERHUB_TOKEN` | Docker Hub access token ([create here](https://hub.docker.com/settings/security)) |
 
-3. **Deploy a Service** (⚠️ deployment currently disabled):
-   ```bash
-   # Deployment workflow is disabled by default
-   # To enable: Edit .github/workflows/deploy.yml
-   
-   # Once enabled:
-   # Deploy all services
-   git tag -a v1.0.0 -m "Release v1.0.0"
-   git push origin v1.0.0
-   
-   # Deploy specific service
-   git tag -a user-service-v1.0.0 -m "User service v1.0.0"
-   git push origin user-service-v1.0.0
-   ```
+#### 2. Automatic Deployment
 
-4. **View Workflow Status**: Check the Actions tab in GitHub
+Every merge to `main` automatically:
+- Runs all tests
+- Builds Docker images for all services
+- Pushes to Docker Hub with `latest` and commit SHA tags
 
-For detailed documentation, see [.github/workflows/README.md](.github/workflows/README.md)
+```bash
+# Merge PR to main
+git checkout main
+git pull
+git merge feature/new-feature
+git push origin main
+
+# Images automatically available:
+# <username>/pulse-user-service:latest
+# <username>/pulse-user-service:<commit-sha>
+```
+
+#### 3. Version Release (Deploy All Services)
+
+Create and push a version tag:
+
+```bash
+# Create release tag
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
+
+# All services deployed with tags:
+# <username>/pulse-user-service:1.0.0
+# <username>/pulse-user-service:latest
+# (and all other services)
+```
+
+#### 4. Deploy Single Service
+
+```bash
+# Deploy only user-service with specific version
+git tag -a user-service-v1.2.3 -m "User service hotfix v1.2.3"
+git push origin user-service-v1.2.3
+
+# Only user-service deployed:
+# <username>/pulse-user-service:1.2.3
+# <username>/pulse-user-service:latest
+```
+
+#### 5. Manual Deployment
+
+1. Go to **Actions** tab in GitHub
+2. Select "Deploy to Docker Hub" workflow
+3. Click "Run workflow"
+4. Choose service and environment
+5. Click "Run workflow"
+
+### Using Docker Hub Images
+
+Pull and run the latest images:
+
+```bash
+# Pull latest images
+docker pull yourusername/pulse-user-service:latest
+docker pull yourusername/pulse-messaging-service:latest
+docker pull yourusername/pulse-post-service:latest
+docker pull yourusername/pulse-social-service:latest
+docker pull yourusername/pulse-notification-service:latest
+
+# Run with docker-compose (update image names in docker-compose.yml)
+docker-compose pull
+docker-compose up -d
+```
+
+### Image Tagging Strategy
+
+| Trigger | Tags Created | Example |
+|---------|-------------|---------|
+| Push to `main` | `latest`, `<commit-sha>` | `latest`, `a1b2c3d` |
+| Full version tag (`v1.0.0`) | `<version>`, `latest` | `1.0.0`, `latest` |
+| Service tag (`user-service-v1.2.3`) | `<version>`, `latest` | `1.2.3`, `latest` |
+
+For detailed documentation, see [docs/DOCKER_HUB_DEPLOYMENT.md](docs/DOCKER_HUB_DEPLOYMENT.md)
 
 ## Monitoring & Observability
 
