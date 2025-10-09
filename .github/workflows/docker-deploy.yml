@@ -19,7 +19,6 @@ on:
           - social-service
           - messaging-service
           - post-service
-          - notification-service
       environment:
         description: 'Deployment environment'
         required: true
@@ -54,7 +53,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             # Manual trigger
             if [[ "${{ github.event.inputs.service }}" == "all" ]]; then
-              echo "services=[\"user-service\",\"social-service\",\"messaging-service\",\"post-service\",\"notification-service\"]" >> $GITHUB_OUTPUT
+              echo "services=[\"user-service\",\"social-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
               echo "deploy_all=true" >> $GITHUB_OUTPUT
             else
               echo "services=[\"${{ github.event.inputs.service }}\"]" >> $GITHUB_OUTPUT
@@ -65,7 +64,7 @@ jobs:
             TAG="${{ github.ref_name }}"
             if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               # Full version tag (e.g., v1.0.0) - deploy all services
-              echo "services=[\"user-service\",\"social-service\",\"messaging-service\",\"post-service\",\"notification-service\"]" >> $GITHUB_OUTPUT
+              echo "services=[\"user-service\",\"social-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
               echo "deploy_all=true" >> $GITHUB_OUTPUT
             else
               # Service-specific tag (e.g., user-service-v1.0.0)
@@ -75,7 +74,7 @@ jobs:
             fi
           else
             # Push to main - deploy all services
-            echo "services=[\"user-service\",\"social-service\",\"messaging-service\",\"post-service\",\"notification-service\"]" >> $GITHUB_OUTPUT
+            echo "services=[\"user-service\",\"social-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
             echo "deploy_all=true" >> $GITHUB_OUTPUT
           fi
 
