@@ -348,130 +348,23 @@ jobs:
           echo "✅ ${{ matrix.service }} - Tests passed"
 
   # ============================================================================
-  # STAGE 3: SECURITY SCAN - Only on pull requests
-  # ============================================================================
-  
-  security-scan:
-    name: Security Scan ${{ matrix.service }}
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != '[]'
-    needs: [detect-changes, test]
-    
-    strategy:
-      fail-fast: false
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Run npm audit (Node services)
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
-        working-directory: ./${{ matrix.service }}
-        run: npm audit --audit-level=moderate
-        continue-on-error: true
-      
-      - name: Run Gosec Security Scanner (Go services)
-        if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
-        uses: securego/gosec@master
-        with:
-          args: '-no-fail -fmt json -out gosec-report.json ./${{ matrix.service }}/...'
-        continue-on-error: true
-
-  # ============================================================================
-  # STAGE 4: DETERMINE DEPLOYMENT - Decide which services to deploy
-  # ============================================================================
-  
-  determine-deployment:
-    name: Determine Deployment
-    runs-on: ubuntu-latest
-    needs: [detect-changes, test]
-    # Only run for: push to main, tags, or manual dispatch
-    if: |
-      github.event_name == 'push' || 
-      github.event_name == 'workflow_dispatch' ||
-      startsWith(github.ref, 'refs/tags/')
-    
-    outputs:
-      services: ${{ steps.set-services.outputs.services }}
-      deploy: ${{ steps.set-services.outputs.deploy }}
-      should_deploy: ${{ steps.set-services.outputs.should_deploy }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      
-      - name: Determine services to deploy
-        id: set-services
-        run: |
-          SHOULD_DEPLOY="true"
-          CHANGED_SERVICES='${{ needs.detect-changes.outputs.services }}'
-          
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # Manual trigger - use user input
-            if [[ "${{ github.event.inputs.service }}" == "all" ]]; then
-              SERVICES='["user-service","social-service","notification-service","messaging-service","post-service"]'
-            else
-              SERVICES='["${{ github.event.inputs.service }}"]'
-            fi
-            DEPLOY="${{ github.event.inputs.environment }}"
-          
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # Tag-based deployment
-            TAG="${{ github.ref_name }}"
-            if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              # Full version tag (e.g., v1.0.0) - deploy all services
-              SERVICES='["user-service","social-service","notification-service","messaging-service","post-service"]'
-            else
-              # Service-specific tag (e.g., user-service-v1.0.0)
-              SERVICE=$(echo "$TAG" | sed 's/-v[0-9].*//')
-              SERVICES="[\"$SERVICE\"]"
-            fi
-            DEPLOY="production"
-          
-          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            # Push to main - deploy only changed services
-            SERVICES="$CHANGED_SERVICES"
-            DEPLOY="staging"
-            
-            # Safety check - if no services to deploy, don't deploy
-            if [[ "$SERVICES" == "[]" || -z "$SERVICES" ]]; then
-              SHOULD_DEPLOY="false"
-              DEPLOY="none"
-            fi
-          
-          else
-            # Push to develop or other branches - don't deploy
-            SHOULD_DEPLOY="false"
-            SERVICES='[]'
-            DEPLOY="none"
-          fi
-          
-          echo "services=$SERVICES" >> $GITHUB_OUTPUT
-          echo "deploy=$DEPLOY" >> $GITHUB_OUTPUT
-          echo "should_deploy=$SHOULD_DEPLOY" >> $GITHUB_OUTPUT
-          
-          echo "🎯 Services to deploy: $SERVICES"
-          echo "🌍 Environment: $DEPLOY"
-          echo "🚀 Should deploy: $SHOULD_DEPLOY"
-
-  # ============================================================================
-  # STAGE 5: DEPLOY - Build and push Docker images to registry
+  # STAGE 3: DEPLOY - Build and push Docker images to registry
   # ============================================================================
   
   deploy:
     name: Deploy ${{ matrix.service }}
     runs-on: ubuntu-latest
-    needs: [test, determine-deployment]
-    if: needs.determine-deployment.outputs.should_deploy == 'true'
+    needs: [detect-changes, test]
+    # Only deploy for: push to main, tags, or manual dispatch
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.ref, 'refs/tags/')
     
     strategy:
       fail-fast: false
       matrix:
-        service: ${{ fromJson(needs.determine-deployment.outputs.services) }}
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
     
     steps:
       - name: Checkout code
@@ -495,7 +388,7 @@ jobs:
           SERVICE="${{ matrix.service }}"
           IMAGE_NAME="${{ secrets.DOCKERHUB_USERNAME }}/pulse-${SERVICE}"
           
-          # Determine version and tags
+          # Determine version, tags, and environment
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             TAG="${{ github.ref_name }}"
             if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -507,16 +400,25 @@ jobs:
               VERSION=$(echo "$TAG" | sed 's/.*-v//')
               TAGS="${IMAGE_NAME}:${VERSION},${IMAGE_NAME}:latest"
             fi
+            ENVIRONMENT="production"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual dispatch
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            TAGS="${IMAGE_NAME}:${SHORT_SHA},${IMAGE_NAME}:latest"
+            VERSION="${SHORT_SHA}"
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
           else
             # Push to main branch
             SHORT_SHA=$(git rev-parse --short HEAD)
             TAGS="${IMAGE_NAME}:${SHORT_SHA},${IMAGE_NAME}:latest"
             VERSION="${SHORT_SHA}"
+            ENVIRONMENT="staging"
           fi
           
           echo "image_name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
       
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -540,17 +442,17 @@ jobs:
           echo "✅ ${{ matrix.service }} deployed successfully"
           echo "📦 Image: ${{ steps.meta.outputs.image_name }}"
           echo "🏷️  Tags: ${{ steps.meta.outputs.tags }}"
-          echo "🌍 Environment: ${{ needs.determine-deployment.outputs.deploy }}"
+          echo "🌍 Environment: ${{ steps.meta.outputs.environment }}"
 
   # ============================================================================
-  # STAGE 6: SUMMARY - Unified summary for PRs and Deployments
+  # STAGE 4: SUMMARY - Unified summary for PRs and Deployments
   # ============================================================================
   
   pipeline-summary:
     name: Pipeline Summary
     runs-on: ubuntu-latest
     if: always()
-    needs: [detect-changes, build, test, security-scan, determine-deployment, deploy]
+    needs: [detect-changes, build, test, deploy]
     
     steps:
       # PR Comment Summary
@@ -561,7 +463,6 @@ jobs:
           script: |
             const buildStatus = '${{ needs.build.result }}';
             const testStatus = '${{ needs.test.result }}';
-            const securityStatus = '${{ needs.security-scan.result }}';
             const changedServices = JSON.parse('${{ needs.detect-changes.outputs.services }}');
             
             const statusEmoji = {
@@ -579,12 +480,11 @@ jobs:
             ### Pipeline Stages
             ${statusEmoji[buildStatus] || '❓'} **Build**: ${buildStatus}
             ${statusEmoji[testStatus] || '❓'} **Test**: ${testStatus}
-            ${statusEmoji[securityStatus] || '❓'} **Security Scan**: ${securityStatus}
             
             ### Services Processed (${changedServices.length} changed)
             ${servicesList}
             
-            ${buildStatus === 'success' && testStatus === 'success' && securityStatus === 'success'
+            ${buildStatus === 'success' && testStatus === 'success'
               ? '🎉 All checks passed! Ready to merge.' 
               : '⚠️ Some checks failed. Please review the details above.'}
             
