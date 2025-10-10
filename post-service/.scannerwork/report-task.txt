@@ -1,0 +1,6 @@
+projectKey=pulse-post-service
+serverUrl=http://localhost:9001
+serverVersion=25.10.0.114319
+dashboardUrl=http://localhost:9001/dashboard?id=pulse-post-service
+ceTaskId=b97f0640-e92f-44ac-a5f5-38f2a123a183
+ceTaskUrl=http://localhost:9001/api/ce/task?id=b97f0640-e92f-44ac-a5f5-38f2a123a183

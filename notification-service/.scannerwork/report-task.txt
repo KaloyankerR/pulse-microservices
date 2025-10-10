@@ -2,5 +2,5 @@ projectKey=pulse-notification-service
 serverUrl=http://localhost:9001
 serverVersion=25.10.0.114319
 dashboardUrl=http://localhost:9001/dashboard?id=pulse-notification-service
-ceTaskId=8907e527-4c87-4927-a159-3953695bee30
-ceTaskUrl=http://localhost:9001/api/ce/task?id=8907e527-4c87-4927-a159-3953695bee30
+ceTaskId=a1f1e5dd-cb39-47bb-87d7-9408e1f952fb
+ceTaskUrl=http://localhost:9001/api/ce/task?id=a1f1e5dd-cb39-47bb-87d7-9408e1f952fb

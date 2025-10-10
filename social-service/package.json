@@ -9,6 +9,7 @@
     "test": "jest --forceExit",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --forceExit",
+    "sonar": "sonar-scanner",
     "lint": "eslint src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
     "format": "prettier --write src/ tests/",
@@ -49,7 +50,8 @@
     "eslint-plugin-import": "^2.29.0",
     "prettier": "^3.1.1",
     "husky": "^8.0.3",
-    "lint-staged": "^15.2.0"
+    "lint-staged": "^15.2.0",
+    "sonarqube-scanner": "^3.5.0"
   },
   "engines": {
     "node": ">=18.0.0"

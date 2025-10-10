@@ -1,0 +1,6 @@
+projectKey=pulse-messaging-service
+serverUrl=http://localhost:9001
+serverVersion=25.10.0.114319
+dashboardUrl=http://localhost:9001/dashboard?id=pulse-messaging-service
+ceTaskId=87d85019-4b04-4a0c-bc2e-8fb1cfdd93ca
+ceTaskUrl=http://localhost:9001/api/ce/task?id=87d85019-4b04-4a0c-bc2e-8fb1cfdd93ca

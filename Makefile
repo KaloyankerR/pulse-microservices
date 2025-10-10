@@ -42,10 +42,6 @@ test-coverage-user: ## Run user-service tests with coverage
 	@echo "Running user-service tests with coverage..."
 	@cd user-service && npm run test:coverage
 
-sonar-user: ## Run SonarQube analysis for user-service
-	@echo "Running SonarQube analysis for user-service..."
-	@cd user-service && npm run test:coverage && npm run sonar
-
 test-notification: ## Run notification-service tests
 	@echo "Running notification-service tests..."
 	@cd notification-service && npm test
@@ -53,6 +49,60 @@ test-notification: ## Run notification-service tests
 test-coverage-notification: ## Run notification-service tests with coverage
 	@echo "Running notification-service tests with coverage..."
 	@cd notification-service && npm run test:coverage
+
+test-social: ## Run social-service tests
+	@echo "Running social-service tests..."
+	@cd social-service && npm test
+
+test-coverage-social: ## Run social-service tests with coverage
+	@echo "Running social-service tests with coverage..."
+	@cd social-service && npm run test:coverage
+
+test-post: ## Run post-service tests
+	@echo "Running post-service tests..."
+	@cd post-service && go test ./... -v
+
+test-messaging: ## Run messaging-service tests
+	@echo "Running messaging-service tests..."
+	@cd messaging-service && go test ./... -v
+
+# SonarQube Analysis Commands
+sonar-all: ## Run SonarQube analysis for all services
+	@echo "🔍 Running SonarQube analysis for all microservices..."
+	@$(MAKE) sonar-user
+	@$(MAKE) sonar-notification
+	@$(MAKE) sonar-social
+	@$(MAKE) sonar-post
+	@$(MAKE) sonar-messaging
+	@echo "✅ All SonarQube analyses complete! View results at http://localhost:9001"
+
+sonar-user: ## Run SonarQube analysis for user-service
+	@echo "🔍 [1/5] Analyzing user-service..."
+	@cd user-service && npm run test:coverage && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f npm run sonar
+	@echo "✅ User service analysis complete"
+
+sonar-notification: ## Run SonarQube analysis for notification-service
+	@echo "🔍 [2/5] Analyzing notification-service..."
+	@cd notification-service && npm run test && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f npm run sonar
+	@echo "✅ Notification service analysis complete"
+
+sonar-social: ## Run SonarQube analysis for social-service
+	@echo "🔍 [3/5] Analyzing social-service..."
+	@cd social-service && npm run test:coverage || true
+	@cd social-service && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f npm run sonar
+	@echo "✅ Social service analysis complete"
+
+sonar-post: ## Run SonarQube analysis for post-service
+	@echo "🔍 [4/5] Analyzing post-service..."
+	@cd post-service && go test ./... -coverprofile=coverage.out || true
+	@cd post-service && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f sonar-scanner
+	@echo "✅ Post service analysis complete"
+
+sonar-messaging: ## Run SonarQube analysis for messaging-service
+	@echo "🔍 [5/5] Analyzing messaging-service..."
+	@cd messaging-service && go test ./... -coverprofile=coverage.out || true
+	@cd messaging-service && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f sonar-scanner
+	@echo "✅ Messaging service analysis complete"
 
 
 db-reset: db-reset-users db-reset-posts ## Reset all databases (drop and recreate)
