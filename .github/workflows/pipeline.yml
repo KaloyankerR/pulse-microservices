@@ -43,12 +43,67 @@ env:
 
 jobs:
   # ============================================================================
-  # STAGE 1: TEST - Always runs for all triggers
+  # STAGE 1: BUILD - Build all microservices
+  # ============================================================================
+  
+  build:
+    name: Build ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [user-service, social-service, notification-service, messaging-service, post-service]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Node.js services (user-service, social-service, notification-service)
+      - name: Setup Node.js
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install Node dependencies
+        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        working-directory: ./${{ matrix.service }}
+        run: npm ci
+      
+      - name: Generate Prisma Client
+        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        working-directory: ./${{ matrix.service }}
+        run: npm run db:generate
+      
+      # Go services (messaging-service, post-service)
+      - name: Setup Go
+        if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: ${{ matrix.service }}/go.sum
+      
+      - name: Build Go service
+        if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
+        working-directory: ./${{ matrix.service }}
+        run: |
+          go mod download
+          go mod verify
+          go build -v ./...
+      
+      - name: Build summary
+        run: |
+          echo "✅ ${{ matrix.service }} - Build completed successfully"
+
+  # ============================================================================
+  # STAGE 2: TEST - Run tests after successful build
   # ============================================================================
   
   test:
     name: Test ${{ matrix.service }}
     runs-on: ubuntu-latest
+    needs: build
     
     strategy:
       fail-fast: false
@@ -168,7 +223,7 @@ jobs:
           echo "✅ ${{ matrix.service }} - Tests passed"
 
   # ============================================================================
-  # STAGE 2: SECURITY SCAN - Only on pull requests
+  # STAGE 3: SECURITY SCAN - Only on pull requests
   # ============================================================================
   
   security-scan:
@@ -200,7 +255,7 @@ jobs:
         continue-on-error: true
 
   # ============================================================================
-  # STAGE 3: DETERMINE DEPLOYMENT - Decide which services to deploy
+  # STAGE 4: DETERMINE DEPLOYMENT - Decide which services to deploy
   # ============================================================================
   
   determine-deployment:
@@ -272,11 +327,11 @@ jobs:
           echo "🚀 Should deploy: $SHOULD_DEPLOY"
 
   # ============================================================================
-  # STAGE 4: BUILD & DEPLOY - Build and push Docker images
+  # STAGE 5: DEPLOY - Build and push Docker images to registry
   # ============================================================================
   
-  build-and-deploy:
-    name: Build & Deploy ${{ matrix.service }}
+  deploy:
+    name: Deploy ${{ matrix.service }}
     runs-on: ubuntu-latest
     needs: [test, determine-deployment]
     if: needs.determine-deployment.outputs.should_deploy == 'true'
@@ -356,20 +411,23 @@ jobs:
           echo "🌍 Environment: ${{ needs.determine-deployment.outputs.deploy }}"
 
   # ============================================================================
-  # STAGE 5: SUMMARY - PR comments and deployment summaries
+  # STAGE 6: SUMMARY - Unified summary for PRs and Deployments
   # ============================================================================
   
-  pr-summary:
-    name: PR Summary
+  pipeline-summary:
+    name: Pipeline Summary
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    needs: [test, security-scan]
+    if: always()
+    needs: [build, test, security-scan, determine-deployment, deploy]
     
     steps:
+      # PR Comment Summary
       - name: Comment on PR
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
+            const buildStatus = '${{ needs.build.result }}';
             const testStatus = '${{ needs.test.result }}';
             const securityStatus = '${{ needs.security-scan.result }}';
             
@@ -382,20 +440,19 @@ jobs:
             
             const body = `## 🚀 Microservices Pipeline Results
             
-            ### Tests
-            ${statusEmoji[testStatus] || '❓'} **Build & Test**: ${testStatus}
-            
-            ### Security
+            ### Pipeline Stages
+            ${statusEmoji[buildStatus] || '❓'} **Build**: ${buildStatus}
+            ${statusEmoji[testStatus] || '❓'} **Test**: ${testStatus}
             ${statusEmoji[securityStatus] || '❓'} **Security Scan**: ${securityStatus}
             
-            ### Services Tested
-            - ✅ user-service
-            - ✅ social-service
-            - ✅ notification-service
-            - ✅ messaging-service
-            - ✅ post-service
+            ### Services Processed
+            - 📦 user-service
+            - 📦 social-service
+            - 📦 notification-service
+            - 📦 messaging-service
+            - 📦 post-service
             
-            ${testStatus === 'success' && securityStatus === 'success'
+            ${buildStatus === 'success' && testStatus === 'success' && securityStatus === 'success'
               ? '🎉 All checks passed! Ready to merge.' 
               : '⚠️ Some checks failed. Please review the details above.'}
             
@@ -409,25 +466,30 @@ jobs:
               issue_number: context.issue.number,
               body: body
             });
-  
-  deployment-summary:
-    name: Deployment Summary
-    runs-on: ubuntu-latest
-    needs: [determine-deployment, build-and-deploy]
-    if: always() && needs.determine-deployment.outputs.should_deploy == 'true'
-    
-    steps:
+      
+      # Deployment Summary (for pushes to main and tags)
       - name: Create deployment summary
+        if: needs.determine-deployment.outputs.should_deploy == 'true'
         run: |
-          echo "# 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# 🚀 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Pipeline Stages
+          echo "## Pipeline Stages" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Build: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Test: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Deploy: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Deployment Information
+          echo "## Deployment Information" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Environment**: ${{ needs.determine-deployment.outputs.deploy }}" >> $GITHUB_STEP_SUMMARY
           echo "**Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "**SHA**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [[ "${{ needs.build-and-deploy.result }}" == "success" ]]; then
+          if [[ "${{ needs.deploy.result }}" == "success" ]]; then
             echo "✅ **Status**: All services deployed successfully!" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Status**: Some deployments failed" >> $GITHUB_STEP_SUMMARY
@@ -454,8 +516,22 @@ jobs:
           
           echo '```' >> $GITHUB_STEP_SUMMARY
       
+      # Generic summary for other cases (non-PR, non-deployment)
+      - name: Create generic summary
+        if: github.event_name != 'pull_request' && needs.determine-deployment.outputs.should_deploy != 'true'
+        run: |
+          echo "# 🚀 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Pipeline Stages" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Build: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Test: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+      
       - name: Notify on failure
-        if: needs.build-and-deploy.result == 'failure'
+        if: needs.deploy.result == 'failure'
         run: |
           echo "::error::Deployment failed for one or more services"
           exit 1
