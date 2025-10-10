@@ -43,17 +43,141 @@ env:
 
 jobs:
   # ============================================================================
+  # STAGE 0: DETECT CHANGES - Determine which services need to run
+  # ============================================================================
+  
+  detect-changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.services }}
+      user-service: ${{ steps.filter.outputs.user-service }}
+      social-service: ${{ steps.filter.outputs.social-service }}
+      notification-service: ${{ steps.filter.outputs.notification-service }}
+      messaging-service: ${{ steps.filter.outputs.messaging-service }}
+      post-service: ${{ steps.filter.outputs.post-service }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Detect service changes
+        id: filter
+        run: |
+          # For manual dispatch or tags, run all services
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "🎯 Manual trigger or tag detected - running all services"
+            echo "services=[\"user-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
+            echo "user-service=true" >> $GITHUB_OUTPUT
+            echo "social-service=true" >> $GITHUB_OUTPUT
+            echo "notification-service=true" >> $GITHUB_OUTPUT
+            echo "messaging-service=true" >> $GITHUB_OUTPUT
+            echo "post-service=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # For PRs and pushes, detect changes
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            # For pushes, compare with previous commit
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+          
+          echo "🔍 Comparing $BASE_SHA...$HEAD_SHA"
+          
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA)
+          
+          echo "📝 Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Check each service
+          SERVICES=()
+          
+          # Check for root-level changes that affect all services
+          ROOT_CHANGES=$(echo "$CHANGED_FILES" | grep -E '^(docker-compose|\.github|Makefile|config/)' || true)
+          if [[ -n "$ROOT_CHANGES" ]]; then
+            echo "🌍 Root-level changes detected - running all services"
+            echo "services=[\"user-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
+            echo "user-service=true" >> $GITHUB_OUTPUT
+            echo "social-service=true" >> $GITHUB_OUTPUT
+            echo "notification-service=true" >> $GITHUB_OUTPUT
+            echo "messaging-service=true" >> $GITHUB_OUTPUT
+            echo "post-service=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Check individual services
+          if echo "$CHANGED_FILES" | grep -q "^user-service/"; then
+            echo "✅ user-service changed"
+            SERVICES+=("user-service")
+            echo "user-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "user-service=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if echo "$CHANGED_FILES" | grep -q "^social-service/"; then
+            echo "✅ social-service changed"
+            SERVICES+=("social-service")
+            echo "social-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "social-service=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if echo "$CHANGED_FILES" | grep -q "^notification-service/"; then
+            echo "✅ notification-service changed"
+            SERVICES+=("notification-service")
+            echo "notification-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "notification-service=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if echo "$CHANGED_FILES" | grep -q "^messaging-service/"; then
+            echo "✅ messaging-service changed"
+            SERVICES+=("messaging-service")
+            echo "messaging-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "messaging-service=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if echo "$CHANGED_FILES" | grep -q "^post-service/"; then
+            echo "✅ post-service changed"
+            SERVICES+=("post-service")
+            echo "post-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "post-service=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # If no services changed, run all (safety fallback)
+          if [ ${#SERVICES[@]} -eq 0 ]; then
+            echo "⚠️ No service changes detected - running all services as fallback"
+            echo "services=[\"user-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
+          else
+            # Convert array to JSON
+            SERVICES_JSON=$(printf '%s\n' "${SERVICES[@]}" | jq -R . | jq -s -c .)
+            echo "services=$SERVICES_JSON" >> $GITHUB_OUTPUT
+            echo "🎯 Services to run: $SERVICES_JSON"
+          fi
+
+  # ============================================================================
   # STAGE 1: BUILD - Build all microservices
   # ============================================================================
   
   build:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services != '[]'
     
     strategy:
       fail-fast: false
       matrix:
-        service: [user-service, social-service, notification-service, messaging-service, post-service]
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
     
     steps:
       - name: Checkout code
@@ -103,12 +227,13 @@ jobs:
   test:
     name: Test ${{ matrix.service }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [detect-changes, build]
+    if: needs.detect-changes.outputs.services != '[]'
     
     strategy:
       fail-fast: false
       matrix:
-        service: [user-service, social-service, notification-service, messaging-service, post-service]
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
     
     services:
       postgres:
@@ -229,13 +354,13 @@ jobs:
   security-scan:
     name: Security Scan ${{ matrix.service }}
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    needs: test
+    if: github.event_name == 'pull_request' && needs.detect-changes.outputs.services != '[]'
+    needs: [detect-changes, test]
     
     strategy:
       fail-fast: false
       matrix:
-        service: [user-service, social-service, notification-service, messaging-service, post-service]
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
     
     steps:
       - name: Checkout code
@@ -261,7 +386,7 @@ jobs:
   determine-deployment:
     name: Determine Deployment
     runs-on: ubuntu-latest
-    needs: test
+    needs: [detect-changes, test]
     # Only run for: push to main, tags, or manual dispatch
     if: |
       github.event_name == 'push' || 
@@ -283,9 +408,10 @@ jobs:
         id: set-services
         run: |
           SHOULD_DEPLOY="true"
+          CHANGED_SERVICES='${{ needs.detect-changes.outputs.services }}'
           
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # Manual trigger
+            # Manual trigger - use user input
             if [[ "${{ github.event.inputs.service }}" == "all" ]]; then
               SERVICES='["user-service","social-service","notification-service","messaging-service","post-service"]'
             else
@@ -307,9 +433,15 @@ jobs:
             DEPLOY="production"
           
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            # Push to main - deploy all services
-            SERVICES='["user-service","social-service","notification-service","messaging-service","post-service"]'
+            # Push to main - deploy only changed services
+            SERVICES="$CHANGED_SERVICES"
             DEPLOY="staging"
+            
+            # Safety check - if no services to deploy, don't deploy
+            if [[ "$SERVICES" == "[]" || -z "$SERVICES" ]]; then
+              SHOULD_DEPLOY="false"
+              DEPLOY="none"
+            fi
           
           else
             # Push to develop or other branches - don't deploy
@@ -418,7 +550,7 @@ jobs:
     name: Pipeline Summary
     runs-on: ubuntu-latest
     if: always()
-    needs: [build, test, security-scan, determine-deployment, deploy]
+    needs: [detect-changes, build, test, security-scan, determine-deployment, deploy]
     
     steps:
       # PR Comment Summary
@@ -430,6 +562,7 @@ jobs:
             const buildStatus = '${{ needs.build.result }}';
             const testStatus = '${{ needs.test.result }}';
             const securityStatus = '${{ needs.security-scan.result }}';
+            const changedServices = JSON.parse('${{ needs.detect-changes.outputs.services }}');
             
             const statusEmoji = {
               'success': '✅',
@@ -438,6 +571,9 @@ jobs:
               'skipped': '⏭️'
             };
             
+            // Build services list
+            const servicesList = changedServices.map(s => `- 📦 ${s}`).join('\n            ');
+            
             const body = `## 🚀 Microservices Pipeline Results
             
             ### Pipeline Stages
@@ -445,12 +581,8 @@ jobs:
             ${statusEmoji[testStatus] || '❓'} **Test**: ${testStatus}
             ${statusEmoji[securityStatus] || '❓'} **Security Scan**: ${securityStatus}
             
-            ### Services Processed
-            - 📦 user-service
-            - 📦 social-service
-            - 📦 notification-service
-            - 📦 messaging-service
-            - 📦 post-service
+            ### Services Processed (${changedServices.length} changed)
+            ${servicesList}
             
             ${buildStatus === 'success' && testStatus === 'success' && securityStatus === 'success'
               ? '🎉 All checks passed! Ready to merge.' 
@@ -481,6 +613,14 @@ jobs:
           echo "- ✅ Deploy: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
+          # Changed Services
+          CHANGED_SERVICES='${{ needs.detect-changes.outputs.services }}'
+          echo "## Changed Services" >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_SERVICES" | jq -r '.[]' | while read service; do
+            echo "- 🔄 \`${service}\`" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
           # Deployment Information
           echo "## Deployment Information" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
@@ -505,7 +645,7 @@ jobs:
           done
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## Pull Commands" >> $GITHUB_STEP_SUMMARY
+          echo "## Docker Pull Commands" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           
@@ -526,6 +666,15 @@ jobs:
           echo "- ✅ Build: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Test: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Changed Services
+          CHANGED_SERVICES='${{ needs.detect-changes.outputs.services }}'
+          echo "## Changed Services" >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_SERVICES" | jq -r '.[]' | while read service; do
+            echo "- 🔄 \`${service}\`" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
           echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
           echo "**SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
