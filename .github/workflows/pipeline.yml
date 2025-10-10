@@ -498,10 +498,13 @@ jobs:
               issue_number: context.issue.number,
               body: body
             });
-      
+  
       # Deployment Summary (for pushes to main and tags)
       - name: Create deployment summary
-        if: needs.determine-deployment.outputs.should_deploy == 'true'
+        if: |
+          github.event_name != 'pull_request' && 
+          needs.deploy.result != 'skipped' &&
+          (needs.deploy.result == 'success' || needs.deploy.result == 'failure')
         run: |
           echo "# 🚀 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -521,10 +524,19 @@ jobs:
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           
+          # Determine environment based on trigger
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            ENVIRONMENT="production"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          else
+            ENVIRONMENT="staging"
+          fi
+          
           # Deployment Information
           echo "## Deployment Information" >> $GITHUB_STEP_SUMMARY
           echo "**Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment**: ${{ needs.determine-deployment.outputs.deploy }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment**: $ENVIRONMENT" >> $GITHUB_STEP_SUMMARY
           echo "**Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
           echo "**SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -539,7 +551,7 @@ jobs:
           echo "## Deployed Services" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          SERVICES='${{ needs.determine-deployment.outputs.services }}'
+          SERVICES='${{ needs.detect-changes.outputs.services }}'
           echo "$SERVICES" | jq -r '.[]' | while read service; do
             echo "- 📦 \`${service}\`: https://hub.docker.com/r/kal0yan/pulse-${service}" >> $GITHUB_STEP_SUMMARY
           done
@@ -549,7 +561,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           
-          SERVICES='${{ needs.determine-deployment.outputs.services }}'
+          SERVICES='${{ needs.detect-changes.outputs.services }}'
           echo "$SERVICES" | jq -r '.[]' | while read service; do
             echo "docker pull kal0yan/pulse-${service}:latest" >> $GITHUB_STEP_SUMMARY
           done
@@ -558,7 +570,9 @@ jobs:
       
       # Generic summary for other cases (non-PR, non-deployment)
       - name: Create generic summary
-        if: github.event_name != 'pull_request' && needs.determine-deployment.outputs.should_deploy != 'true'
+        if: |
+          github.event_name != 'pull_request' && 
+          (needs.deploy.result == 'skipped' || needs.deploy.result == 'cancelled')
         run: |
           echo "# 🚀 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
