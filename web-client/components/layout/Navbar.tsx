@@ -11,8 +11,8 @@ import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, logout } = useAuthStore();
-  const { count: unreadCount } = useUnreadCount();
+  const { user, isAuthenticated, logout } = useAuthStore();
+  const { count: unreadCount } = useUnreadCount(isAuthenticated);
 
   const navItems = [
     { href: '/feed', icon: Home, label: 'Feed' },

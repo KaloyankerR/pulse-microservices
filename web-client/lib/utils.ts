@@ -7,17 +7,23 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: string | Date): string {
+  if (!date) return 'Unknown date';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) return 'Unknown date';
   return format(dateObj, 'MMM d, yyyy');
 }
 
 export function formatDateTime(date: string | Date): string {
+  if (!date) return 'Unknown date';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) return 'Unknown date';
   return format(dateObj, 'MMM d, yyyy h:mm a');
 }
 
 export function formatRelativeTime(date: string | Date): string {
+  if (!date) return 'Unknown';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) return 'Unknown';
   return formatDistanceToNow(dateObj, { addSuffix: true });
 }
 

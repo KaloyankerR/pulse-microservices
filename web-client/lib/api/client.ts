@@ -17,12 +17,25 @@ class ApiClient {
     this.client.interceptors.request.use(
       (config) => {
         const token = this.getToken();
+        
+        // Debug logging
+        console.log('[API Client] Request:', {
+          url: config.url,
+          method: config.method,
+          hasToken: !!token,
+          tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
+        });
+        
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
+        } else if (!token) {
+          console.warn('[API Client] No token found in localStorage');
         }
+        
         return config;
       },
       (error) => {
+        console.error('[API Client] Request error:', error);
         return Promise.reject(error);
       }
     );
@@ -123,6 +136,10 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
+      console.log('[API Client] Tokens saved:', {
+        accessTokenPreview: `${accessToken.substring(0, 20)}...`,
+        refreshTokenPreview: `${refreshToken.substring(0, 20)}...`
+      });
     }
   }
 

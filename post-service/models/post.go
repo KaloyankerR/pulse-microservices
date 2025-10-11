@@ -10,52 +10,52 @@ import (
 // Post represents a post in the system following DATABASE&SCHEMAS.md
 type Post struct {
 	ID           uuid.UUID  `json:"id" db:"id"`
-	AuthorID     uuid.UUID  `json:"authorId" db:"author_id"`
+	AuthorID     uuid.UUID  `json:"author_id" db:"author_id"`
 	Content      string     `json:"content" db:"content"`
-	EventID      *uuid.UUID `json:"eventId,omitempty" db:"event_id"`
-	LikeCount    int        `json:"likeCount" db:"like_count"`
-	CommentCount int        `json:"commentCount" db:"comment_count"`
-	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt    time.Time  `json:"updatedAt" db:"updated_at"`
+	EventID      *uuid.UUID `json:"event_id,omitempty" db:"event_id"`
+	LikeCount    int        `json:"like_count" db:"like_count"`
+	CommentCount int        `json:"comment_count" db:"comment_count"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // PostLike represents a like on a post following DATABASE&SCHEMAS.md
 type PostLike struct {
 	ID        uuid.UUID `json:"id" db:"id"`
-	PostID    uuid.UUID `json:"postId" db:"post_id"`
-	UserID    uuid.UUID `json:"userId" db:"user_id"`
-	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	PostID    uuid.UUID `json:"post_id" db:"post_id"`
+	UserID    uuid.UUID `json:"user_id" db:"user_id"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 // UserCache represents cached user data following DATABASE&SCHEMAS.md
 type UserCache struct {
 	ID          uuid.UUID `json:"id" db:"id"`
 	Username    string    `json:"username" db:"username"`
-	DisplayName *string   `json:"displayName,omitempty" db:"display_name"`
-	AvatarURL   *string   `json:"avatarUrl,omitempty" db:"avatar_url"`
+	DisplayName *string   `json:"display_name,omitempty" db:"display_name"`
+	AvatarURL   *string   `json:"avatar_url,omitempty" db:"avatar_url"`
 	Verified    bool      `json:"verified" db:"verified"`
-	LastSynced  time.Time `json:"lastSynced" db:"last_synced"`
-	UpdatedAt   time.Time `json:"updatedAt" db:"updated_at"`
+	LastSynced  time.Time `json:"last_synced" db:"last_synced"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // CreatePostRequest represents the request to create a new post
 type CreatePostRequest struct {
 	Content string     `json:"content" validate:"required,max=280"`
-	EventID *uuid.UUID `json:"eventId,omitempty"`
+	EventID *uuid.UUID `json:"event_id,omitempty"`
 }
 
 // PostResponse represents the response for a post with author information
 type PostResponse struct {
 	ID           uuid.UUID  `json:"id"`
-	AuthorID     uuid.UUID  `json:"authorId"`
+	AuthorID     uuid.UUID  `json:"author_id"`
 	Content      string     `json:"content"`
-	EventID      *uuid.UUID `json:"eventId,omitempty"`
-	LikeCount    int        `json:"likeCount"`
-	CommentCount int        `json:"commentCount"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    time.Time  `json:"updatedAt"`
+	EventID      *uuid.UUID `json:"event_id,omitempty"`
+	LikeCount    int        `json:"likes_count"`
+	CommentCount int        `json:"comments_count"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 	Author       *UserCache `json:"author,omitempty"`
-	IsLiked      bool       `json:"isLiked,omitempty"`
+	IsLiked      bool       `json:"is_liked,omitempty"`
 }
 
 // PaginatedPostsResponse represents a paginated response for posts
@@ -63,8 +63,8 @@ type PaginatedPostsResponse struct {
 	Posts      []PostResponse `json:"posts"`
 	Page       int            `json:"page"`
 	Size       int            `json:"size"`
-	TotalPosts int            `json:"totalPosts"`
-	TotalPages int            `json:"totalPages"`
+	TotalPosts int            `json:"total_posts"`
+	TotalPages int            `json:"total_pages"`
 }
 
 // JWTClaims represents the JWT token claims from user-service

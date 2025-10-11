@@ -73,12 +73,19 @@ export function useFollowStatus(userId: string) {
   };
 }
 
-export function useRecommendations(limit = 10) {
+export function useRecommendations(limit = 10, enabled = true) {
   const [recommendations, setRecommendations] = useState<UserWithSocial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Only fetch if enabled (authenticated)
+    if (!enabled) {
+      setIsLoading(false);
+      setRecommendations([]);
+      return;
+    }
+
     const fetchRecommendations = async () => {
       try {
         setIsLoading(true);
@@ -96,7 +103,7 @@ export function useRecommendations(limit = 10) {
     };
 
     fetchRecommendations();
-  }, [limit]);
+  }, [limit, enabled]);
 
   return { recommendations, isLoading, error };
 }

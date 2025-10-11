@@ -11,7 +11,7 @@ import { useState } from 'react';
 
 export function Sidebar() {
   const { user, isAuthenticated } = useAuthStore();
-  const { recommendations, isLoading } = useRecommendations(5);
+  const { recommendations, isLoading } = useRecommendations(5, isAuthenticated);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
 
   // Don't render sidebar if not authenticated

@@ -58,13 +58,13 @@ export const socialApi = {
   },
 
   async getRecommendations(limit = 10): Promise<UserWithSocial[]> {
-    const response = await apiClient.get<ApiResponse<UserWithSocial[]>>(
+    const response = await apiClient.get<ApiResponse<{ recommendations: UserWithSocial[] }>>(
       API_ENDPOINTS.social.recommendations,
       {
         params: { limit },
       }
     );
-    return response.data!;
+    return response.data?.recommendations || [];
   },
 };
 

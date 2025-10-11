@@ -43,17 +43,44 @@ export const authApi = {
 
   async logout(): Promise<void> {
     try {
-      await apiClient.post(API_ENDPOINTS.auth.logout);
+      // Only call API if we have a token
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (token) {
+        await apiClient.post(API_ENDPOINTS.auth.logout);
+      }
+    } catch (error) {
+      console.log('[Auth API] Logout API error (ignored):', error);
     } finally {
+      // Always clear tokens from localStorage
       apiClient.logout();
     }
   },
 
   async getCurrentUser(): Promise<User> {
-    const response = await apiClient.get<ApiResponse<User>>(
-      API_ENDPOINTS.auth.me
-    );
-    return response.data!;
+    try {
+      const response = await apiClient.get<ApiResponse<{ user: User }>>(
+        API_ENDPOINTS.auth.me
+      );
+      
+      console.log('getCurrentUser response:', response);
+      
+      // Handle different response structures
+      if (response.data && response.data.user) {
+        return response.data.user;
+      } else if ((response as any).user) {
+        // Direct user property (without data wrapper)
+        return (response as any).user;
+      } else if (response.data && !response.data.user) {
+        // User data directly in response.data
+        return response.data as unknown as User;
+      }
+      
+      console.error('Unexpected response structure:', response);
+      throw new Error('Invalid response structure from /api/v1/users/profile');
+    } catch (error) {
+      console.error('Error in getCurrentUser:', error);
+      throw error;
+    }
   },
 
   async refreshToken(refreshToken: string): Promise<AuthResponse> {

@@ -81,8 +81,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     try {
+      // Try to call the logout endpoint, but don't fail if it errors
       await authApi.logout();
+    } catch (error) {
+      // Ignore errors - we'll clear local state anyway
+      console.log('[Auth Store] Logout API call failed (ignored):', error);
     } finally {
+      // Always clear local state and tokens
       set({
         user: null,
         isAuthenticated: false,
@@ -109,12 +114,20 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       set({ isLoading: true });
       const user = await authApi.getCurrentUser();
+      
+      // Validate user data
+      if (!user || !user.id || !user.username) {
+        console.error('Auth check failed: Invalid user data received', user);
+        throw new Error('Invalid user data received');
+      }
+      
       set({
         user,
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Auth check failed:', error);
       // Clear tokens on auth check failure
       if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken');

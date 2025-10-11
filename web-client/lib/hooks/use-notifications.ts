@@ -55,29 +55,39 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
   };
 }
 
-export function useUnreadCount() {
+export function useUnreadCount(enabled = true) {
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchCount = useCallback(async () => {
+    // Only fetch if enabled (authenticated)
+    if (!enabled) {
+      setIsLoading(false);
+      setCount(0);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const unreadCount = await notificationsApi.getUnreadCount();
       setCount(unreadCount);
     } catch (err) {
       console.error('Failed to fetch unread count:', err);
+      setCount(0);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     fetchCount();
     
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchCount, 30000);
-    return () => clearInterval(interval);
-  }, [fetchCount]);
+    // Poll for updates every 30 seconds only if enabled
+    if (enabled) {
+      const interval = setInterval(fetchCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchCount, enabled]);
 
   return { count, isLoading, refetch: fetchCount };
 }
