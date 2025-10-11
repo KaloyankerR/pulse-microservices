@@ -8,14 +8,23 @@ Microservices platform with API Gateway, user authentication, post management, a
 
 ## Services
 
+### Backend Services
 - **Kong API Gateway** (port 8000) - Routes all requests
-- **User Service** (Node.js) - Authentication & user management
-- **Social Service** (Node.js) - Follow relationships & recommendations
-- **Messaging Service** (Go) - Real-time messaging & WebSocket support
-- **Post Service** (Go) - Posts, likes, and user cache
-- **Notification Service** (Node.js) - Push notifications & user preferences
+- **User Service** (Node.js) - Authentication & user management (port 8081)
+- **Post Service** (Go) - Posts, likes, and user cache (port 8082)
+- **Messaging Service** (Go) - Real-time messaging & WebSocket support (port 8084)
+- **Social Service** (Node.js) - Follow relationships & recommendations (port 8085)
+- **Notification Service** (Node.js) - Push notifications & user preferences (port 8086)
+
+### Frontend
+- **Web Client** (Next.js) - Frontend application (port 3000)
+
+### Infrastructure
 - **Prometheus** (port 9090) - Metrics collection & monitoring
 - **Grafana** (port 3001) - Metrics visualization & dashboards
+- **Redis** (port 6379) - Caching & session storage
+- **RabbitMQ** (port 5672/15672) - Message broker
+- **MongoDB** (port 27017) - Document database
 
 
 ## Prerequisites
@@ -29,15 +38,21 @@ Microservices platform with API Gateway, user authentication, post management, a
 # 1. Setup databases (first time only)
 make db-setup
 
-# 2. Start all services
+# 2. Start all services (including web client)
 make up
 
-# 3. Test
+# 3. Access the application
+# Frontend: http://localhost:3000
+# API Gateway: http://localhost:8000
+
+# 4. Test API
 curl http://localhost:8000/health
 curl http://localhost:8000/api/v1/posts
 ```
 
-All requests go through Kong Gateway at **http://localhost:8000**
+- **Frontend Application**: http://localhost:3000
+- **API Gateway (Kong)**: http://localhost:8000
+- All API requests from the frontend go through Kong Gateway
 
 ## Common Commands
 
@@ -102,12 +117,21 @@ Import `POSTMAN_COLLECTION.json` for complete API documentation.
 
 ```
 pulse-microservices/
-├── docker-compose.yml          # All services
-├── Makefile                    # Commands
-├── config/kong.yml             # Kong routes
+├── docker-compose.yml          # All services orchestration
+├── Makefile                    # Common commands
+├── config/
+│   ├── kong.yml               # Kong Gateway routes
+│   ├── prometheus.yml         # Prometheus configuration
+│   └── grafana/               # Grafana dashboards
+├── web-client/                 # Next.js frontend
 ├── user-service/               # Node.js + Prisma
 ├── post-service/               # Go service
-├── docs/DATABASE&SCHEMAS.md    # Schema reference
+├── social-service/             # Node.js service
+├── messaging-service/          # Go service
+├── notification-service/       # Node.js service
+├── docs/                       # Documentation
+│   ├── DATABASE&SCHEMAS.md    # Database schemas
+│   └── ...                    # Additional docs
 └── POSTMAN_COLLECTION.json     # API tests
 ```
 
@@ -275,6 +299,30 @@ curl http://localhost:8081/metrics
 
 For detailed monitoring documentation, see [docs/MONITORING.md](docs/MONITORING.md)
 
+## Web Client
+
+The frontend application is located in the `web-client/` directory. It's a Next.js application that communicates with the backend microservices through Kong Gateway.
+
+### Quick Start
+
+```bash
+# From project root - starts everything including web client
+docker-compose up -d web-client
+
+# Or develop locally
+cd web-client
+npm install
+npm run dev
+```
+
+### Documentation
+
+- **[Web Client README](web-client/README.md)** - Frontend setup and overview
+- **[Integration Guide](web-client/WEB_CLIENT_INTEGRATION.md)** - Complete integration documentation
+- **[Microservices Config](web-client/config/microservices.config.ts)** - Backend endpoint configuration
+
+For detailed information about frontend development, API integration, and deployment, see the [Web Client Integration Guide](web-client/WEB_CLIENT_INTEGRATION.md).
+
 ## Troubleshooting
 
 ```bash
@@ -282,5 +330,9 @@ make logs              # View all logs
 make ps                # Check service status
 make db-reset          # Reset databases
 docker-compose restart # Restart services
+
+# Web client specific
+docker-compose logs -f web-client
+docker-compose restart web-client
 ```
 

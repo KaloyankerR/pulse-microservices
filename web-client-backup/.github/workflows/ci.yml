@@ -1,0 +1,106 @@
+name: CI - Code Quality & Build
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean up conflicting lock files
+        run: |
+          # Remove yarn.lock if package-lock.json exists to avoid conflicts
+          if [ -f "package-lock.json" ] && [ -f "yarn.lock" ]; then
+            echo "Both package-lock.json and yarn.lock found. Removing yarn.lock to use npm."
+            rm yarn.lock
+          fi
+
+      - name: Normalize line endings
+        run: |
+          # Ensure consistent line endings for all text files
+          find . -type f -name "*.md" -o -name "*.js" -o -name "*.jsx" -o -name "*.ts" -o -name "*.tsx" -o -name "*.json" -o -name "*.yml" -o -name "*.yaml" | xargs dos2unix 2>/dev/null || true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          # Try npm ci first, fallback to npm install if lock files are out of sync
+          npm ci || (echo "npm ci failed, falling back to npm install..." && npm install)
+
+      - name: TypeScript type checking
+        run: npm run type-check
+
+      - name: ESLint check
+        run: npm run lint
+
+      - name: Prettier format check
+        run: |
+          # Set consistent line endings for the CI environment
+          git config core.autocrlf false
+          # Run format check, and if it fails, show which files need formatting
+          npm run format:check || (echo "Formatting issues found. Running format to show what would be changed:" && npm run format -- --check --list-different)
+
+      - name: Build application
+        run: npm run build
+        env:
+          # Add any required environment variables for build
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'dummy-secret-for-build' }}
+          NEXTAUTH_JWT_SECRET: ${{ secrets.NEXTAUTH_JWT_SECRET || 'dummy-jwt-secret-for-build' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'mongodb://localhost:27017/dummy' }}
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Clean up conflicting lock files
+        run: |
+          # Remove yarn.lock if package-lock.json exists to avoid conflicts
+          if [ -f "package-lock.json" ] && [ -f "yarn.lock" ]; then
+            echo "Both package-lock.json and yarn.lock found. Removing yarn.lock to use npm."
+            rm yarn.lock
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          # Try npm ci first, fallback to npm install if lock files are out of sync
+          npm ci || (echo "npm ci failed, falling back to npm install..." && npm install)
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate

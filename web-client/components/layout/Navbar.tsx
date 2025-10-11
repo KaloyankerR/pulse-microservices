@@ -1,0 +1,104 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Bell, Home, MessageCircle, Search, User } from 'lucide-react';
+import { Avatar } from '@/components/ui/Avatar';
+import { Button } from '@/components/ui/Button';
+import { useAuthStore } from '@/lib/stores/auth-store';
+import { useUnreadCount } from '@/lib/hooks/use-notifications';
+import { cn } from '@/lib/utils';
+
+export function Navbar() {
+  const pathname = usePathname();
+  const { user, logout } = useAuthStore();
+  const { count: unreadCount } = useUnreadCount();
+
+  const navItems = [
+    { href: '/feed', icon: Home, label: 'Feed' },
+    { href: '/search', icon: Search, label: 'Search' },
+    { href: '/messages', icon: MessageCircle, label: 'Messages' },
+    { href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount },
+  ];
+
+  return (
+    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <Link href="/feed" className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">P</span>
+            </div>
+            <span className="text-xl font-bold text-gray-900">Pulse</span>
+          </Link>
+
+          {/* Navigation Items */}
+          <div className="flex items-center space-x-4">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'relative p-2 rounded-lg transition-colors',
+                    isActive
+                      ? 'text-blue-600 bg-blue-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  )}
+                >
+                  <Icon className="w-6 h-6" />
+                  {item.badge && item.badge > 0 ? (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            })}
+
+            {/* Profile Dropdown */}
+            <div className="relative group">
+              <button className="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-50">
+                <Avatar
+                  src={user?.avatar_url}
+                  name={user?.display_name || user?.username}
+                  size="md"
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <div className="p-3 border-b border-gray-200">
+                  <p className="font-semibold text-gray-900">
+                    {user?.display_name || user?.username}
+                  </p>
+                  <p className="text-sm text-gray-500">@{user?.username}</p>
+                </div>
+                <div className="py-2">
+                  <Link
+                    href={`/profile/${user?.id}`}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <User className="w-4 h-4 inline mr-2" />
+                    Profile
+                  </Link>
+                  <button
+                    onClick={() => logout()}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
