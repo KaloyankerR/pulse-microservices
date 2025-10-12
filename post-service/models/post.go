@@ -27,6 +27,15 @@ type PostLike struct {
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
+// PostComment represents a comment on a post
+type PostComment struct {
+	ID        uuid.UUID `json:"id" db:"id"`
+	PostID    uuid.UUID `json:"post_id" db:"post_id"`
+	AuthorID  uuid.UUID `json:"author_id" db:"author_id"`
+	Content   string    `json:"content" db:"content"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
 // UserCache represents cached user data following DATABASE&SCHEMAS.md
 type UserCache struct {
 	ID          uuid.UUID `json:"id" db:"id"`
@@ -65,6 +74,21 @@ type PaginatedPostsResponse struct {
 	Size       int            `json:"size"`
 	TotalPosts int            `json:"total_posts"`
 	TotalPages int            `json:"total_pages"`
+}
+
+// CreateCommentRequest represents the request to create a new comment
+type CreateCommentRequest struct {
+	Content string `json:"content" validate:"required,max=500"`
+}
+
+// CommentResponse represents the response for a comment with author information
+type CommentResponse struct {
+	ID        uuid.UUID  `json:"id"`
+	PostID    uuid.UUID  `json:"post_id"`
+	AuthorID  uuid.UUID  `json:"author_id"`
+	Content   string     `json:"content"`
+	CreatedAt time.Time  `json:"created_at"`
+	Author    *UserCache `json:"author,omitempty"`
 }
 
 // JWTClaims represents the JWT token claims from user-service

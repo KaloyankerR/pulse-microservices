@@ -27,6 +27,8 @@ export const API_ENDPOINTS = {
     byId: (id: string) => `/api/v1/posts/${id}`,
     byAuthor: (authorId: string) => `/api/v1/posts/author/${authorId}`,
     like: (id: string) => `/api/v1/posts/${id}/like`,
+    comments: (postId: string) => `/api/v1/posts/${postId}/comments`,
+    deleteComment: (postId: string, commentId: string) => `/api/v1/posts/${postId}/comments/${commentId}`,
   },
   // Social endpoints
   social: {

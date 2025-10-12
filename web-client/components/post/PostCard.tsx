@@ -1,13 +1,16 @@
 'use client';
 
-import { Post } from '@/types';
+import { useState } from 'react';
+import { Post, Comment } from '@/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Heart, MessageCircle, Trash2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/Textarea';
+import { Heart, MessageCircle, Trash2, Send } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/utils';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/stores/auth-store';
+import { commentsApi } from '@/lib/api/comments';
 
 interface PostCardProps {
   post: Post;
@@ -19,6 +22,11 @@ interface PostCardProps {
 export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
   const { user } = useAuthStore();
   const isOwnPost = user?.id === post.author_id;
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentContent, setCommentContent] = useState('');
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const handleLikeToggle = () => {
     if (post.is_liked) {
@@ -28,8 +36,56 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
     }
   };
 
+  const fetchComments = async () => {
+    if (isLoadingComments) return;
+    
+    try {
+      setIsLoadingComments(true);
+      const fetchedComments = await commentsApi.getCommentsByPostId(post.id);
+      setComments(fetchedComments);
+    } catch (error) {
+      console.error('[PostCard] Failed to fetch comments:', error);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
+  const handleToggleComments = () => {
+    setShowComments(!showComments);
+    if (!showComments && comments.length === 0) {
+      fetchComments();
+    }
+  };
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentContent.trim() || isSubmittingComment) return;
+
+    try {
+      setIsSubmittingComment(true);
+      const newComment = await commentsApi.createComment(post.id, {
+        content: commentContent.trim(),
+      });
+      setComments([...comments, newComment]);
+      setCommentContent('');
+    } catch (error) {
+      console.error('[PostCard] Failed to create comment:', error);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await commentsApi.deleteComment(post.id, commentId);
+      setComments(comments.filter((c) => c.id !== commentId));
+    } catch (error) {
+      console.error('[PostCard] Failed to delete comment:', error);
+    }
+  };
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card>
       <CardContent className="p-4">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
@@ -81,11 +137,99 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
             <span className="text-sm font-medium">{post.likes_count}</span>
           </button>
 
-          <button className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors">
+          <button
+            onClick={handleToggleComments}
+            className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
+          >
             <MessageCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">Comment</span>
+            <span className="text-sm font-medium">
+              {post.comments_count || 0} {post.comments_count === 1 ? 'Comment' : 'Comments'}
+            </span>
           </button>
         </div>
+
+        {/* Comments Section */}
+        {showComments && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            {/* Comments List */}
+            {isLoadingComments ? (
+              <div className="text-center py-4">
+                <span className="text-sm text-gray-500">Loading comments...</span>
+              </div>
+            ) : comments.length > 0 ? (
+              <div className="space-y-3 mb-4">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="flex space-x-2">
+                    <Link href={`/profile/${comment.author_id}`}>
+                      <Avatar
+                        src={comment.author?.avatar_url}
+                        name={comment.author?.display_name || comment.author?.username}
+                        size="sm"
+                      />
+                    </Link>
+                    <div className="flex-1 bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <Link
+                          href={`/profile/${comment.author_id}`}
+                          className="font-semibold text-sm text-gray-900 hover:underline"
+                        >
+                          {comment.author?.display_name || comment.author?.username}
+                        </Link>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500">
+                            {formatRelativeTime(comment.created_at)}
+                          </span>
+                          {user?.id === comment.author_id && (
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-900">{comment.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <span className="text-sm text-gray-500">No comments yet</span>
+              </div>
+            )}
+
+            {/* Comment Form */}
+            {user && (
+              <form onSubmit={handleSubmitComment} className="flex space-x-2">
+                <Avatar
+                  src={user.avatar_url}
+                  name={user.display_name || user.username}
+                  size="sm"
+                />
+                <div className="flex-1 flex space-x-2">
+                  <Textarea
+                    value={commentContent}
+                    onChange={(e) => setCommentContent(e.target.value)}
+                    placeholder="Write a comment..."
+                    rows={1}
+                    className="flex-1 resize-none"
+                    maxLength={500}
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!commentContent.trim() || isSubmittingComment}
+                    isLoading={isSubmittingComment}
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

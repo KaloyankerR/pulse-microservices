@@ -46,6 +46,7 @@ export interface Post {
   created_at: string;
   updated_at: string;
   likes_count: number;
+  comments_count: number;
   is_liked?: boolean;
   author?: {
     id: string;
@@ -56,6 +57,25 @@ export interface Post {
 }
 
 export interface CreatePostRequest {
+  content: string;
+}
+
+// Comment types
+export interface Comment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  author?: {
+    id: string;
+    username: string;
+    display_name?: string;
+    avatar_url?: string;
+  };
+}
+
+export interface CreateCommentRequest {
   content: string;
 }
 

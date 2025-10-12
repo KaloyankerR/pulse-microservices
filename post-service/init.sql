@@ -22,6 +22,15 @@ CREATE TABLE IF NOT EXISTS post_likes (
     UNIQUE(post_id, user_id)
 );
 
+-- Create post_comments table
+CREATE TABLE IF NOT EXISTS post_comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    author_id UUID NOT NULL,
+    content TEXT NOT NULL CHECK (length(content) <= 500),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Create user_cache table following DATABASE&SCHEMAS.md
 CREATE TABLE IF NOT EXISTS user_cache (
     id UUID PRIMARY KEY,
@@ -39,6 +48,9 @@ CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_event ON posts(event_id);
 CREATE INDEX IF NOT EXISTS idx_post_likes_post ON post_likes(post_id);
 CREATE INDEX IF NOT EXISTS idx_post_likes_user ON post_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_post ON post_comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_author ON post_comments(author_id);
+CREATE INDEX IF NOT EXISTS idx_post_comments_created_at ON post_comments(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_cache_username ON user_cache(username);
 
 -- Create function to update updated_at timestamp
@@ -76,6 +88,27 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_like_count_trigger
     AFTER INSERT OR DELETE ON post_likes
     FOR EACH ROW EXECUTE FUNCTION update_post_like_count();
+
+-- Create function to update post comment count
+CREATE OR REPLACE FUNCTION update_post_comment_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE posts SET comment_count = comment_count + 1 WHERE id = NEW.post_id;
+        RETURN NEW;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE posts SET comment_count = GREATEST(comment_count - 1, 0) WHERE id = OLD.post_id;
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$ language 'plpgsql';
+
+-- Create trigger to automatically update comment count
+DROP TRIGGER IF EXISTS update_comment_count_trigger ON post_comments;
+CREATE TRIGGER update_comment_count_trigger
+    AFTER INSERT OR DELETE ON post_comments
+    FOR EACH ROW EXECUTE FUNCTION update_post_comment_count();
 
 -- Insert sample data for testing
 INSERT INTO user_cache (id, username, display_name, avatar_url, verified) VALUES

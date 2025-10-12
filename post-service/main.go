@@ -38,14 +38,17 @@ func main() {
 	userCacheRepo := repository.NewUserCacheRepository(db, logger)
 	postRepo := repository.NewPostRepository(db, logger)
 	postLikeRepo := repository.NewPostLikeRepository(db, logger)
+	commentRepo := repository.NewCommentRepository(db)
 
 	// Initialize services
 	userService := service.NewUserService(userCacheRepo, logger)
 	postService := service.NewPostService(postRepo, postLikeRepo, userService, logger)
+	commentService := service.NewCommentService(commentRepo, postRepo, userService, logger)
 
 	// Initialize handlers
 	authMiddleware := middleware.NewAuthMiddleware(logger)
 	postHandler := handlers.NewPostHandler(postService, logger)
+	commentHandler := handlers.NewCommentHandler(commentService, logger)
 
 	// Setup routes
 	router := mux.NewRouter()
@@ -71,6 +74,11 @@ func main() {
 	api.HandleFunc("/posts/author/{authorId}", postHandler.GetPostsByAuthor).Methods("GET")
 	api.HandleFunc("/posts/{id}/like", authMiddleware.RequireAuth(postHandler.LikePost)).Methods("POST")
 	api.HandleFunc("/posts/{id}/like", authMiddleware.RequireAuth(postHandler.UnlikePost)).Methods("DELETE")
+
+	// Comment endpoints
+	api.HandleFunc("/posts/{postId}/comments", commentHandler.GetCommentsByPostID).Methods("GET")
+	api.HandleFunc("/posts/{postId}/comments", authMiddleware.RequireAuth(commentHandler.CreateComment)).Methods("POST")
+	api.HandleFunc("/posts/{postId}/comments/{commentId}", authMiddleware.RequireAuth(commentHandler.DeleteComment)).Methods("DELETE")
 
 	// CORS configuration
 	c := cors.New(cors.Options{
