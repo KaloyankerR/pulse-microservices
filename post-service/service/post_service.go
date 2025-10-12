@@ -238,6 +238,23 @@ func (s *PostService) CreatePost(authorID uuid.UUID, req *models.CreatePostReque
 	return response, nil
 }
 
+// CreatePostWithUserInfo creates a new post and syncs user info from JWT claims
+func (s *PostService) CreatePostWithUserInfo(authorID uuid.UUID, req *models.CreatePostRequest, userClaims *models.JWTClaims) (*models.PostResponse, error) {
+	// Sync user info from JWT claims to user cache first
+	if userClaims != nil && userClaims.Username != "" {
+		userCache := &models.UserCache{
+			ID:       authorID,
+			Username: userClaims.Username,
+		}
+		if err := s.userService.SyncUserFromClaims(userCache); err != nil {
+			s.logger.Warnf("Failed to sync user from claims: %v", err)
+		}
+	}
+
+	// Use existing CreatePost logic
+	return s.CreatePost(authorID, req)
+}
+
 // DeletePost deletes a post (only by author)
 func (s *PostService) DeletePost(id uuid.UUID, userID uuid.UUID) error {
 	// First check if the post exists and get author info

@@ -138,6 +138,12 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get user claims from context to sync user info
+	userClaims, ok := middleware.GetUserClaimsFromContext(r.Context())
+	if !ok {
+		h.logger.Warn("User claims not found in context")
+	}
+
 	// Parse request body
 	var req models.CreatePostRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -156,8 +162,8 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create post
-	post, err := h.postService.CreatePost(userID, &req)
+	// Create post with user claims for caching
+	post, err := h.postService.CreatePostWithUserInfo(userID, &req, userClaims)
 	if err != nil {
 		h.logger.Errorf("Failed to create post: %v", err)
 		h.writeErrorResponse(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create post")

@@ -95,3 +95,18 @@ func (s *UserService) SyncUserFromUserService(userID uuid.UUID) (*models.UserCac
 	// For now, just return the cached user or create minimal one
 	return s.GetUserByID(userID)
 }
+
+// SyncUserFromClaims syncs user information from JWT claims to cache
+func (s *UserService) SyncUserFromClaims(user *models.UserCache) error {
+	// Update last_synced and updated_at fields
+	user.LastSynced = time.Now()
+	user.UpdatedAt = time.Now()
+
+	// Create or update user in cache
+	if err := s.userCacheRepo.CreateOrUpdateUser(user); err != nil {
+		return fmt.Errorf("failed to sync user from claims: %w", err)
+	}
+
+	s.logger.Infof("Synced user %s (%s) from JWT claims", user.ID.String(), user.Username)
+	return nil
+}
