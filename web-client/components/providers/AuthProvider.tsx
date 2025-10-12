@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { Spinner } from '@/components/ui/Spinner';
 
-const publicRoutes = ['/auth/login', '/auth/register', '/auth/callback', '/'];
+const publicRoutes = ['/auth/login', '/auth/register', '/auth/callback', '/', '/feed'];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -46,12 +46,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       initialCheckDone
     });
 
-    if (!isAuthenticated && !isPublicRoute) {
+    // Redirect root path to feed for all users
+    if (pathname === '/') {
+      console.log('[AuthProvider] Redirecting to feed from root');
+      router.replace('/feed');
+    } else if (!isAuthenticated && !isPublicRoute) {
       console.log('[AuthProvider] Redirecting to login - not authenticated');
       router.replace('/auth/login');
-    } else if (isAuthenticated && pathname === '/') {
-      console.log('[AuthProvider] Redirecting to feed - authenticated user on home');
-      router.replace('/feed');
     }
   }, [isAuthenticated, isLoading, pathname, router, initialCheckDone]);
 

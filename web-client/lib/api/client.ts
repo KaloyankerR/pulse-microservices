@@ -107,28 +107,94 @@ class ApiClient {
 
   // Public methods
   async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.get<T>(url, config);
-    return response.data;
+    try {
+      const response = await this.client.get<T>(url, config);
+      console.log(`[API Client] GET ${url} - Success:`, {
+        status: response.status,
+        data: response.data
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`[API Client] GET ${url} - Error:`, {
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data
+      });
+      throw error;
+    }
   }
 
   async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.post<T>(url, data, config);
-    return response.data;
+    try {
+      const response = await this.client.post<T>(url, data, config);
+      console.log(`[API Client] POST ${url} - Success:`, {
+        status: response.status,
+        data: response.data
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`[API Client] POST ${url} - Error:`, {
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data,
+        requestData: data
+      });
+      throw error;
+    }
   }
 
   async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.put<T>(url, data, config);
-    return response.data;
+    try {
+      const response = await this.client.put<T>(url, data, config);
+      console.log(`[API Client] PUT ${url} - Success:`, {
+        status: response.status,
+        data: response.data
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`[API Client] PUT ${url} - Error:`, {
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data
+      });
+      throw error;
+    }
   }
 
   async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.patch<T>(url, data, config);
-    return response.data;
+    try {
+      const response = await this.client.patch<T>(url, data, config);
+      console.log(`[API Client] PATCH ${url} - Success:`, {
+        status: response.status,
+        data: response.data
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`[API Client] PATCH ${url} - Error:`, {
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data
+      });
+      throw error;
+    }
   }
 
   async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.delete<T>(url, config);
-    return response.data;
+    try {
+      const response = await this.client.delete<T>(url, config);
+      console.log(`[API Client] DELETE ${url} - Success:`, {
+        status: response.status,
+        data: response.data
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error(`[API Client] DELETE ${url} - Error:`, {
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data
+      });
+      throw error;
+    }
   }
 
   // Helper to set tokens after login

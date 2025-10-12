@@ -9,6 +9,18 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
   const [hasMore, setHasMore] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
+    // Check if token exists before making API call
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setIsLoading(false);
+        setError('Authentication required');
+        setNotifications([]);
+        setHasMore(false);
+        return;
+      }
+    }
+
     try {
       setIsLoading(true);
       setError(null);

@@ -2,20 +2,42 @@ import { useState, useEffect, useCallback } from 'react';
 import { postsApi } from '../api/posts';
 import { Post, CreatePostRequest } from '@/types';
 
-export function usePosts(page = 1, size = 20) {
+export function usePosts(page = 0, size = 20) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPosts = useCallback(async () => {
+    console.log('[usePosts] Starting to fetch posts:', { page, size });
+    
+    // Check if token exists before making API call
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        console.log('[usePosts] No token found, skipping fetch');
+        setIsLoading(false);
+        setError('Authentication required');
+        setPosts([]);
+        return;
+      }
+    }
+
     try {
       setIsLoading(true);
       setError(null);
       const data = await postsApi.getPosts(page, size);
+      
+      console.log('[usePosts] Posts fetched successfully:', {
+        count: data.length,
+        isArray: Array.isArray(data)
+      });
+      
       // Ensure we always set an array
       setPosts(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch posts');
+      console.error('[usePosts] Failed to fetch posts:', err);
+      const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to fetch posts';
+      setError(errorMessage);
       // Set empty array on error to prevent .map() issues
       setPosts([]);
     } finally {
@@ -28,36 +50,64 @@ export function usePosts(page = 1, size = 20) {
   }, [fetchPosts]);
 
   const createPost = async (data: CreatePostRequest) => {
-    const newPost = await postsApi.createPost(data);
-    setPosts((prev) => [newPost, ...prev]);
-    return newPost;
+    console.log('[usePosts] Creating post:', { contentLength: data.content.length });
+    try {
+      const newPost = await postsApi.createPost(data);
+      console.log('[usePosts] Post created successfully:', { postId: newPost.id });
+      setPosts((prev) => [newPost, ...prev]);
+      return newPost;
+    } catch (error) {
+      console.error('[usePosts] Failed to create post:', error);
+      throw error;
+    }
   };
 
   const likePost = async (postId: string) => {
-    await postsApi.likePost(postId);
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId
-          ? { ...post, is_liked: true, likes_count: post.likes_count + 1 }
-          : post
-      )
-    );
+    console.log('[usePosts] Liking post:', postId);
+    try {
+      await postsApi.likePost(postId);
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? { ...post, is_liked: true, likes_count: post.likes_count + 1 }
+            : post
+        )
+      );
+      console.log('[usePosts] Post liked successfully:', postId);
+    } catch (error) {
+      console.error('[usePosts] Failed to like post:', error);
+      throw error;
+    }
   };
 
   const unlikePost = async (postId: string) => {
-    await postsApi.unlikePost(postId);
-    setPosts((prev) =>
-      prev.map((post) =>
-        post.id === postId
-          ? { ...post, is_liked: false, likes_count: post.likes_count - 1 }
-          : post
-      )
-    );
+    console.log('[usePosts] Unliking post:', postId);
+    try {
+      await postsApi.unlikePost(postId);
+      setPosts((prev) =>
+        prev.map((post) =>
+          post.id === postId
+            ? { ...post, is_liked: false, likes_count: post.likes_count - 1 }
+            : post
+        )
+      );
+      console.log('[usePosts] Post unliked successfully:', postId);
+    } catch (error) {
+      console.error('[usePosts] Failed to unlike post:', error);
+      throw error;
+    }
   };
 
   const deletePost = async (postId: string) => {
-    await postsApi.deletePost(postId);
-    setPosts((prev) => prev.filter((post) => post.id !== postId));
+    console.log('[usePosts] Deleting post:', postId);
+    try {
+      await postsApi.deletePost(postId);
+      setPosts((prev) => prev.filter((post) => post.id !== postId));
+      console.log('[usePosts] Post deleted successfully:', postId);
+    } catch (error) {
+      console.error('[usePosts] Failed to delete post:', error);
+      throw error;
+    }
   };
 
   return {
@@ -79,6 +129,17 @@ export function useUserPosts(userId: string, page = 1, size = 20) {
 
   useEffect(() => {
     const fetchPosts = async () => {
+      // Check if token exists before making API call
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          setIsLoading(false);
+          setError('Authentication required');
+          setPosts([]);
+          return;
+        }
+      }
+
       try {
         setIsLoading(true);
         setError(null);
