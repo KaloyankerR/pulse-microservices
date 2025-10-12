@@ -1,6 +1,46 @@
 import { useState, useEffect, useCallback } from 'react';
 import { postsApi } from '../api/posts';
+import { usersApi } from '../api/users';
 import { Post, CreatePostRequest } from '@/types';
+
+// Helper function to enrich posts with author information
+const enrichPostsWithAuthors = async (posts: Post[]): Promise<Post[]> => {
+  const enrichedPosts = await Promise.all(
+    posts.map(async (post) => {
+      // If author info is already present, return as is
+      if (post.author?.username) {
+        return post;
+      }
+
+      try {
+        // Fetch author information from user service
+        const author = await usersApi.getUserById(post.author_id);
+        return {
+          ...post,
+          author: {
+            id: author.id,
+            username: author.username,
+            display_name: author.display_name || author.full_name,
+            avatar_url: author.avatar_url,
+          },
+        };
+      } catch (error) {
+        console.warn(`[usePosts] Failed to fetch author info for post ${post.id}:`, error);
+        // Return post with fallback author info
+        return {
+          ...post,
+          author: {
+            id: post.author_id,
+            username: 'unknown_user',
+            display_name: 'Unknown User',
+            avatar_url: undefined,
+          },
+        };
+      }
+    })
+  );
+  return enrichedPosts;
+};
 
 export function usePosts(page = 0, size = 20) {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -33,7 +73,11 @@ export function usePosts(page = 0, size = 20) {
       });
       
       // Ensure we always set an array
-      setPosts(Array.isArray(data) ? data : []);
+      const postsArray = Array.isArray(data) ? data : [];
+      
+      // Enrich posts with author information
+      const enrichedPosts = await enrichPostsWithAuthors(postsArray);
+      setPosts(enrichedPosts);
     } catch (err: any) {
       console.error('[usePosts] Failed to fetch posts:', err);
       const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to fetch posts';
@@ -54,8 +98,13 @@ export function usePosts(page = 0, size = 20) {
     try {
       const newPost = await postsApi.createPost(data);
       console.log('[usePosts] Post created successfully:', { postId: newPost.id });
-      setPosts((prev) => [newPost, ...prev]);
-      return newPost;
+      
+      // Enrich the new post with author information
+      const enrichedPosts = await enrichPostsWithAuthors([newPost]);
+      const enrichedPost = enrichedPosts[0];
+      
+      setPosts((prev) => [enrichedPost, ...prev]);
+      return enrichedPost;
     } catch (error) {
       console.error('[usePosts] Failed to create post:', error);
       throw error;
@@ -145,7 +194,11 @@ export function useUserPosts(userId: string, page = 1, size = 20) {
         setError(null);
         const data = await postsApi.getPostsByAuthor(userId, page, size);
         // Ensure we always set an array
-        setPosts(Array.isArray(data) ? data : []);
+        const postsArray = Array.isArray(data) ? data : [];
+        
+        // Enrich posts with author information
+        const enrichedPosts = await enrichPostsWithAuthors(postsArray);
+        setPosts(enrichedPosts);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch posts');
         // Set empty array on error to prevent .map() issues

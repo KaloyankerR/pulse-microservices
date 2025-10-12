@@ -66,7 +66,6 @@ export function CreatePost({ onPostCreate }: CreatePostProps) {
                 placeholder="What's on your mind?"
                 rows={3}
                 className="mb-2"
-                color="black"
               />
               <div className="flex items-center justify-between">
                 <span
