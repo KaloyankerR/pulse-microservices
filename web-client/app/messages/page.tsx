@@ -32,7 +32,6 @@ export default function MessagesPage() {
         const data = await messagesApi.getConversations();
         setConversations(data);
       } catch (error) {
-        console.error('Failed to fetch conversations:', error);
       } finally {
         setIsLoading(false);
       }
@@ -50,7 +49,6 @@ export default function MessagesPage() {
           );
           setMessages(data);
         } catch (error) {
-          console.error('Failed to fetch messages:', error);
         }
       };
 
@@ -72,7 +70,6 @@ export default function MessagesPage() {
       setMessages((prev) => [...prev, newMessage]);
       setMessageText('');
     } catch (error) {
-      console.error('Failed to send message:', error);
     } finally {
       setIsSending(false);
     }
@@ -85,7 +82,7 @@ export default function MessagesPage() {
     const otherParticipant = conversation.participant_details?.find(
       (p) => p.id !== user?.id
     );
-    return otherParticipant?.display_name || otherParticipant?.username || 'Chat';
+    return otherParticipant?.displayName || otherParticipant?.username || 'Chat';
   };
 
   // Show authentication message if not authenticated
@@ -229,7 +226,7 @@ export default function MessagesPage() {
                               isOwnMessage ? 'text-blue-100' : 'text-gray-500'
                             }`}
                           >
-                            {formatRelativeTime(message.created_at)}
+                            {formatRelativeTime(message.createdAt)}
                           </p>
                         </div>
                       </div>

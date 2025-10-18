@@ -24,6 +24,20 @@ restart: ## Restart all services
 rebuild: ## Rebuild and restart all services
 	docker-compose up -d --build
 
+rebuild-no-cache: ## Force rebuild all services without cache
+	docker-compose build --no-cache
+	docker-compose up -d
+
+rebuild-web: ## Rebuild only web-client
+	docker-compose build --no-cache web-client
+	docker-compose up -d web-client
+
+dev: ## Start development environment with hot reload
+	docker-compose --profile dev up -d web-client-dev
+
+dev-stop: ## Stop development environment
+	docker-compose --profile dev down web-client-dev
+
 clean: ## Stop services and remove volumes
 	docker-compose down -v
 

@@ -35,7 +35,6 @@ export default function SearchPage() {
       const response = await usersApi.searchUsers(query);
       setResults(response.data.items);
     } catch (error) {
-      console.error('Search failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +45,6 @@ export default function SearchPage() {
       await socialApi.followUser(userId);
       setFollowingIds((prev) => new Set(prev).add(userId));
     } catch (error) {
-      console.error('Failed to follow user:', error);
     }
   };
 
@@ -59,7 +57,6 @@ export default function SearchPage() {
         return newSet;
       });
     } catch (error) {
-      console.error('Failed to unfollow user:', error);
     }
   };
 
@@ -155,13 +152,13 @@ export default function SearchPage() {
                         className="flex items-center space-x-3 flex-1"
                       >
                         <Avatar
-                          src={user.avatar_url}
-                          name={user.display_name || user.username}
+                          src={user.avatarUrl}
+                          name={user.displayName || user.username}
                           size="md"
                         />
                         <div>
                           <p className="font-semibold text-gray-900">
-                            {user.display_name || user.username}
+                            {user.displayName || user.username}
                           </p>
                           <p className="text-sm text-gray-500">
                             @{user.username}

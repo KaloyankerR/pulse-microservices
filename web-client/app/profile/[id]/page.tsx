@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { User } from '@/types';
 import { usersApi } from '@/lib/api/users';
 import { useUserPosts } from '@/lib/hooks/use-posts';
-import { useSocialStats, useFollowStatus } from '@/lib/hooks/use-social';
+import { useFollowStatus } from '@/lib/hooks/use-social';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { formatNumber } from '@/lib/utils';
 
@@ -23,8 +23,17 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const { posts, isLoading: postsLoading } = useUserPosts(userId);
-  const { stats } = useSocialStats(userId);
-  const { status, follow, unfollow } = useFollowStatus(userId);
+  const { follow: followUser, unfollow: unfollowUser } = useFollowStatus(userId);
+
+  const follow = async () => {
+    await followUser();
+    setUser(prev => prev ? { ...prev, isFollowing: true, followersCount: (prev.followersCount || 0) + 1 } : null);
+  };
+
+  const unfollow = async () => {
+    await unfollowUser();
+    setUser(prev => prev ? { ...prev, isFollowing: false, followersCount: Math.max((prev.followersCount || 0) - 1, 0) } : null);
+  };
 
   const isOwnProfile = currentUser?.id === userId;
 
@@ -34,8 +43,8 @@ export default function ProfilePage() {
         setIsLoading(true);
         const data = await usersApi.getUserById(userId);
         setUser(data);
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
+      } catch (error: any) {
+        // Handle error silently or show user-friendly message
       } finally {
         setIsLoading(false);
       }
@@ -63,6 +72,8 @@ export default function ProfilePage() {
         <Navbar />
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">User not found</p>
+          <p className="text-gray-400 text-sm mt-2">User ID: {userId}</p>
+          <p className="text-gray-400 text-sm">Loading: {isLoading ? 'true' : 'false'}</p>
         </div>
       </div>
     );
@@ -78,24 +89,24 @@ export default function ProfilePage() {
           <CardContent className="p-6">
             <div className="flex items-start space-x-4">
               <Avatar
-                src={user.avatar_url}
-                name={user.display_name || user.username}
+                src={user.avatarUrl}
+                name={user.displayName || user.username}
                 size="xl"
               />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <div>
                     <h1 className="text-2xl font-bold text-gray-900">
-                      {user.display_name || user.username}
+                      {user.displayName || user.username}
                     </h1>
                     <p className="text-gray-500">@{user.username}</p>
                   </div>
                   {!isOwnProfile && (
                     <Button
-                      onClick={status?.is_following ? unfollow : follow}
-                      variant={status?.is_following ? 'secondary' : 'primary'}
+                      onClick={user.isFollowing ? unfollow : follow}
+                      variant={user.isFollowing ? 'secondary' : 'primary'}
                     >
-                      {status?.is_following ? 'Following' : 'Follow'}
+                      {user.isFollowing ? 'Following' : 'Follow'}
                     </Button>
                   )}
                 </div>
@@ -107,13 +118,13 @@ export default function ProfilePage() {
                 <div className="flex items-center space-x-6 mt-4">
                   <div>
                     <span className="font-bold text-gray-900">
-                      {formatNumber(stats?.followers_count || 0)}
+                      {formatNumber(user.followersCount || 0)}
                     </span>
                     <span className="text-gray-500 ml-1">Followers</span>
                   </div>
                   <div>
                     <span className="font-bold text-gray-900">
-                      {formatNumber(stats?.following_count || 0)}
+                      {formatNumber(user.followingCount || 0)}
                     </span>
                     <span className="text-gray-500 ml-1">Following</span>
                   </div>

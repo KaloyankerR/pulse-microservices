@@ -18,24 +18,13 @@ class ApiClient {
       (config) => {
         const token = this.getToken();
         
-        // Debug logging
-        console.log('[API Client] Request:', {
-          url: config.url,
-          method: config.method,
-          hasToken: !!token,
-          tokenPreview: token ? `${token.substring(0, 20)}...` : 'none'
-        });
-        
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
-        } else if (!token) {
-          console.warn('[API Client] No token found in localStorage');
         }
         
         return config;
       },
       (error) => {
-        console.error('[API Client] Request error:', error);
         return Promise.reject(error);
       }
     );
@@ -109,17 +98,8 @@ class ApiClient {
   async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await this.client.get<T>(url, config);
-      console.log(`[API Client] GET ${url} - Success:`, {
-        status: response.status,
-        data: response.data
-      });
       return response.data;
     } catch (error: any) {
-      console.error(`[API Client] GET ${url} - Error:`, {
-        status: error.response?.status,
-        message: error.message,
-        data: error.response?.data
-      });
       throw error;
     }
   }
@@ -127,18 +107,8 @@ class ApiClient {
   async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await this.client.post<T>(url, data, config);
-      console.log(`[API Client] POST ${url} - Success:`, {
-        status: response.status,
-        data: response.data
-      });
       return response.data;
     } catch (error: any) {
-      console.error(`[API Client] POST ${url} - Error:`, {
-        status: error.response?.status,
-        message: error.message,
-        data: error.response?.data,
-        requestData: data
-      });
       throw error;
     }
   }
@@ -146,17 +116,8 @@ class ApiClient {
   async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await this.client.put<T>(url, data, config);
-      console.log(`[API Client] PUT ${url} - Success:`, {
-        status: response.status,
-        data: response.data
-      });
       return response.data;
     } catch (error: any) {
-      console.error(`[API Client] PUT ${url} - Error:`, {
-        status: error.response?.status,
-        message: error.message,
-        data: error.response?.data
-      });
       throw error;
     }
   }
@@ -164,17 +125,8 @@ class ApiClient {
   async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await this.client.patch<T>(url, data, config);
-      console.log(`[API Client] PATCH ${url} - Success:`, {
-        status: response.status,
-        data: response.data
-      });
       return response.data;
     } catch (error: any) {
-      console.error(`[API Client] PATCH ${url} - Error:`, {
-        status: error.response?.status,
-        message: error.message,
-        data: error.response?.data
-      });
       throw error;
     }
   }
@@ -182,17 +134,8 @@ class ApiClient {
   async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
     try {
       const response = await this.client.delete<T>(url, config);
-      console.log(`[API Client] DELETE ${url} - Success:`, {
-        status: response.status,
-        data: response.data
-      });
       return response.data;
     } catch (error: any) {
-      console.error(`[API Client] DELETE ${url} - Error:`, {
-        status: error.response?.status,
-        message: error.message,
-        data: error.response?.data
-      });
       throw error;
     }
   }
@@ -202,10 +145,6 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
-      console.log('[API Client] Tokens saved:', {
-        accessTokenPreview: `${accessToken.substring(0, 20)}...`,
-        refreshTokenPreview: `${refreshToken.substring(0, 20)}...`
-      });
     }
   }
 

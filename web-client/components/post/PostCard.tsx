@@ -44,7 +44,6 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
       const fetchedComments = await commentsApi.getCommentsByPostId(post.id);
       setComments(fetchedComments);
     } catch (error) {
-      console.error('[PostCard] Failed to fetch comments:', error);
     } finally {
       setIsLoadingComments(false);
     }
@@ -69,7 +68,6 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
       setComments([...comments, newComment]);
       setCommentContent('');
     } catch (error) {
-      console.error('[PostCard] Failed to create comment:', error);
     } finally {
       setIsSubmittingComment(false);
     }
@@ -80,7 +78,6 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
       await commentsApi.deleteComment(post.id, commentId);
       setComments(comments.filter((c) => c.id !== commentId));
     } catch (error) {
-      console.error('[PostCard] Failed to delete comment:', error);
     }
   };
 
@@ -94,16 +91,16 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
             className="flex items-center space-x-3 flex-1"
           >
             <Avatar
-              src={post.author?.avatar_url}
-              name={post.author?.display_name || post.author?.username}
+              src={post.author?.avatarUrl}
+              name={post.author?.displayName || post.author?.username}
               size="md"
             />
             <div>
               <p className="font-semibold text-gray-900 hover:underline">
-                {post.author?.display_name || post.author?.username}
+                {post.author?.displayName || post.author?.username}
               </p>
               <p className="text-sm text-gray-500">
-                @{post.author?.username} · {formatRelativeTime(post.created_at)}
+                @{post.author?.username} · {formatRelativeTime(post.createdAt)}
               </p>
             </div>
           </Link>
@@ -162,8 +159,8 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
                   <div key={comment.id} className="flex space-x-2">
                     <Link href={`/profile/${comment.author_id}`}>
                       <Avatar
-                        src={comment.author?.avatar_url}
-                        name={comment.author?.display_name || comment.author?.username}
+                        src={comment.author?.avatarUrl}
+                        name={comment.author?.displayName || comment.author?.username}
                         size="sm"
                       />
                     </Link>
@@ -173,11 +170,11 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
                           href={`/profile/${comment.author_id}`}
                           className="font-semibold text-sm text-gray-900 hover:underline"
                         >
-                          {comment.author?.display_name || comment.author?.username}
+                          {comment.author?.displayName || comment.author?.username}
                         </Link>
                         <div className="flex items-center space-x-2">
                           <span className="text-xs text-gray-500">
-                            {formatRelativeTime(comment.created_at)}
+                            {formatRelativeTime(comment.createdAt)}
                           </span>
                           {user?.id === comment.author_id && (
                             <button
@@ -204,8 +201,8 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
             {user && (
               <form onSubmit={handleSubmitComment} className="flex space-x-2">
                 <Avatar
-                  src={user.avatar_url}
-                  name={user.display_name || user.username}
+                  src={user.avatarUrl}
+                  name={user.displayName || user.username}
                   size="sm"
                 />
                 <div className="flex-1 flex space-x-2">

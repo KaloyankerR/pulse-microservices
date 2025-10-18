@@ -24,7 +24,6 @@ export function Sidebar() {
       await socialApi.followUser(userId);
       setFollowingIds((prev) => new Set(prev).add(userId));
     } catch (error) {
-      console.error('Failed to follow user:', error);
     }
   };
 
@@ -36,13 +35,13 @@ export function Sidebar() {
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
               <Avatar
-                src={user?.avatar_url}
-                name={user?.display_name || user?.username}
+                src={user?.avatarUrl}
+                name={user?.displayName || user?.username}
                 size="lg"
               />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 truncate">
-                  {user?.display_name || user?.username}
+                  {user?.displayName || user?.username}
                 </p>
                 <p className="text-sm text-gray-500 truncate">@{user?.username}</p>
               </div>
@@ -72,13 +71,13 @@ export function Sidebar() {
                     className="flex items-center space-x-3 flex-1 min-w-0"
                   >
                     <Avatar
-                      src={rec.avatar_url}
-                      name={rec.display_name || rec.username}
+                      src={rec.avatarUrl}
+                      name={rec.displayName || rec.username}
                       size="md"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 truncate">
-                        {rec.display_name || rec.username}
+                        {rec.displayName || rec.username}
                       </p>
                       <p className="text-sm text-gray-500 truncate">
                         @{rec.username}

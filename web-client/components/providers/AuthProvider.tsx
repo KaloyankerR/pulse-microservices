@@ -38,20 +38,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return pathname?.startsWith(route);
     });
 
-    console.log('[AuthProvider] Routing check:', {
-      pathname,
-      isAuthenticated,
-      isPublicRoute,
-      isLoading,
-      initialCheckDone
-    });
 
     // Redirect root path to feed for all users
     if (pathname === '/') {
-      console.log('[AuthProvider] Redirecting to feed from root');
       router.replace('/feed');
     } else if (!isAuthenticated && !isPublicRoute) {
-      console.log('[AuthProvider] Redirecting to login - not authenticated');
       router.replace('/auth/login');
     }
   }, [isAuthenticated, isLoading, pathname, router, initialCheckDone]);

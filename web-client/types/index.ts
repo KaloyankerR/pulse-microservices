@@ -1,14 +1,17 @@
 // User types
 export interface User {
   id: string;
-  email: string;
+  email?: string;
   username: string;
-  full_name?: string;
-  display_name?: string;
-  avatar_url?: string;
+  fullName?: string;
+  displayName?: string;
+  avatarUrl?: string;
   bio?: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
+  followersCount?: number;
+  followingCount?: number;
+  isFollowing?: boolean;
 }
 
 // Auth types
@@ -43,16 +46,16 @@ export interface Post {
   id: string;
   author_id: string;
   content: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   likes_count: number;
   comments_count: number;
   is_liked?: boolean;
   author?: {
     id: string;
     username: string;
-    display_name?: string;
-    avatar_url?: string;
+    displayName?: string;
+    avatarUrl?: string;
   };
 }
 
@@ -66,12 +69,12 @@ export interface Comment {
   post_id: string;
   author_id: string;
   content: string;
-  created_at: string;
+  createdAt: string;
   author?: {
     id: string;
     username: string;
-    display_name?: string;
-    avatar_url?: string;
+    displayName?: string;
+    avatarUrl?: string;
   };
 }
 
@@ -102,13 +105,13 @@ export interface Message {
   conversation_id: string;
   sender_id: string;
   content: string;
-  created_at: string;
+  createdAt: string;
   read_at?: string;
   sender?: {
     id: string;
     username: string;
-    display_name?: string;
-    avatar_url?: string;
+    displayName?: string;
+    avatarUrl?: string;
   };
 }
 
@@ -122,8 +125,8 @@ export interface Conversation {
     timestamp: string;
     sender_id: string;
   };
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   name?: string;
 }
 
@@ -153,12 +156,12 @@ export interface Notification {
   reference_id?: string;
   reference_type?: string;
   read: boolean;
-  created_at: string;
+  createdAt: string;
   metadata?: Record<string, any>;
   sender?: {
     id: string;
     username: string;
-    avatar_url?: string;
+    avatarUrl?: string;
   };
 }
 

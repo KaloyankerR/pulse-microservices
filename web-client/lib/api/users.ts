@@ -1,20 +1,29 @@
 import { apiClient } from './client';
 import { API_ENDPOINTS } from '../config';
 import { User, ApiResponse, PaginatedResponse } from '@/types';
+import { cleanAvatarUrl } from '../utils';
 
 export const usersApi = {
   async getProfile(): Promise<User> {
     const response = await apiClient.get<ApiResponse<User>>(
       API_ENDPOINTS.users.profile
     );
-    return response.data!;
+    const user = response.data!;
+    return {
+      ...user,
+      avatarUrl: cleanAvatarUrl(user.avatarUrl)
+    };
   },
 
   async getUserById(id: string): Promise<User> {
-    const response = await apiClient.get<ApiResponse<User>>(
+    const response = await apiClient.get<ApiResponse<{ user: User }>>(
       API_ENDPOINTS.users.byId(id)
     );
-    return response.data!;
+    const user = response.data!.user;
+    return {
+      ...user,
+      avatarUrl: cleanAvatarUrl(user.avatarUrl)
+    };
   },
 
   async updateProfile(data: Partial<User>): Promise<User> {
@@ -22,7 +31,11 @@ export const usersApi = {
       API_ENDPOINTS.users.updateProfile,
       data
     );
-    return response.data!;
+    const user = response.data!;
+    return {
+      ...user,
+      avatarUrl: cleanAvatarUrl(user.avatarUrl)
+    };
   },
 
   async searchUsers(query: string, page = 1, limit = 20): Promise<PaginatedResponse<User>> {

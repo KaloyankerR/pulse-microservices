@@ -84,7 +84,6 @@ export function useUnreadCount(enabled = true) {
       const unreadCount = await notificationsApi.getUnreadCount();
       setCount(unreadCount);
     } catch (err) {
-      console.error('Failed to fetch unread count:', err);
       setCount(0);
     } finally {
       setIsLoading(false);

@@ -115,7 +115,7 @@ export default function NotificationsPage() {
                       {notification.sender ? (
                         <Link href={`/profile/${notification.sender.id}`}>
                           <Avatar
-                            src={notification.sender.avatar_url}
+                            src={notification.sender.avatarUrl}
                             name={notification.sender.username}
                             size="md"
                           />
@@ -134,7 +134,7 @@ export default function NotificationsPage() {
                           {notification.message}
                         </p>
                         <p className="text-gray-500 text-xs mt-2">
-                          {formatRelativeTime(notification.created_at)}
+                          {formatRelativeTime(notification.createdAt)}
                         </p>
                       </div>
 

@@ -27,7 +27,6 @@ export default function AuthCallbackPage() {
 
         if (accessToken && refreshToken) {
           // Tokens provided directly in URL
-          console.log('[Auth Callback] Tokens received in URL');
           apiClient.setAuthTokens(accessToken, refreshToken);
           await checkAuth();
           router.push('/feed');
@@ -36,7 +35,6 @@ export default function AuthCallbackPage() {
 
         if (code) {
           // Exchange authorization code for tokens
-          console.log('[Auth Callback] Exchanging auth code for tokens');
           const response = await apiClient.post<{
             success: boolean;
             data: {
@@ -58,7 +56,6 @@ export default function AuthCallbackPage() {
         }
 
         // If we get here, try to get user profile (maybe session-based auth)
-        console.log('[Auth Callback] Checking for existing session');
         try {
           await checkAuth();
           const token = localStorage.getItem('accessToken');
@@ -71,7 +68,6 @@ export default function AuthCallbackPage() {
           throw new Error('Failed to establish authenticated session');
         }
       } catch (err: any) {
-        console.error('[Auth Callback] Error:', err);
         setError(err.message || 'Authentication failed');
         setTimeout(() => {
           router.push('/auth/login');

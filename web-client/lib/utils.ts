@@ -51,3 +51,31 @@ export function formatNumber(num: number): string {
   return num.toString();
 }
 
+export function cleanAvatarUrl(avatarUrl?: string): string | undefined {
+  if (!avatarUrl) return undefined;
+  
+  // Check for common placeholder URLs and avatar services
+  const placeholderPatterns = [
+    'example.com',
+    'placeholder',
+    'default-avatar',
+    'no-avatar',
+    'avatar-placeholder',
+    'gravatar.com/avatar',
+    'ui-avatars.com',
+    'via.placeholder.com',
+    'dummyimage.com',
+    'picsum.photos',
+    'loremflickr.com',
+    'placekitten.com',
+    'placehold.it',
+    'placehold.co'
+  ];
+  
+  const isPlaceholder = placeholderPatterns.some(pattern => 
+    avatarUrl.toLowerCase().includes(pattern.toLowerCase())
+  );
+  
+  return isPlaceholder ? undefined : avatarUrl;
+}
+

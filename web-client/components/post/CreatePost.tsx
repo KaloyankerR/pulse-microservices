@@ -23,14 +23,11 @@ export function CreatePost({ onPostCreate }: CreatePostProps) {
     if (!content.trim() || content.length > 280) return;
 
     try {
-      console.log('[CreatePost] Submitting post');
       setIsSubmitting(true);
       setError(null);
       await onPostCreate?.(content);
       setContent('');
-      console.log('[CreatePost] Post created successfully');
     } catch (error: any) {
-      console.error('[CreatePost] Failed to create post:', error);
       const errorMessage = error.response?.data?.error?.message || error.message || 'Failed to create post';
       setError(errorMessage);
     } finally {
@@ -52,8 +49,8 @@ export function CreatePost({ onPostCreate }: CreatePostProps) {
           )}
           <div className="flex space-x-3">
             <Avatar
-              src={user?.avatar_url}
-              name={user?.display_name || user?.username}
+              src={user?.avatarUrl}
+              name={user?.displayName || user?.username}
               size="md"
             />
             <div className="flex-1">
