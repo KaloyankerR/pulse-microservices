@@ -22,9 +22,33 @@ export function formatDateTime(date: string | Date): string {
 
 export function formatRelativeTime(date: string | Date): string {
   if (!date) return 'Unknown';
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(dateObj.getTime())) return 'Unknown';
-  return formatDistanceToNow(dateObj, { addSuffix: true });
+
+  let dateObj: Date;
+  if (typeof date === 'string') {
+    // For UTC timestamps, parse them correctly by treating UTC as local time
+    if (date.includes('T') && date.includes('Z')) {
+      // Remove the 'Z' and parse as local time to avoid timezone conversion
+      const localString = date.replace('Z', '');
+      dateObj = new Date(localString);
+    } else {
+      dateObj = new Date(date);
+    }
+  } else {
+    dateObj = date;
+  }
+
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    console.warn('Invalid date provided to formatRelativeTime:', date);
+    return 'Unknown';
+  }
+
+  try {
+    return formatDistanceToNow(dateObj, { addSuffix: true });
+  } catch (error) {
+    console.warn('Error formatting relative time:', error, 'for date:', date);
+    return 'Unknown';
+  }
 }
 
 export function truncateText(text: string, maxLength: number): string {

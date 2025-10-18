@@ -129,7 +129,7 @@ export default function SearchPage() {
             <Spinner size="lg" />
           </div>
         ) : hasSearched ? (
-          results.length === 0 ? (
+          (results && results.length === 0) ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="text-gray-500 text-lg">No users found</p>
@@ -140,7 +140,7 @@ export default function SearchPage() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {results.map((user) => (
+              {results && results.map((user) => (
                 <Card
                   key={user.id}
                   className="hover:shadow-md transition-shadow"

@@ -99,3 +99,5 @@ temp/
 user-service/logs/
 post-service/logs/
 swagger-gateway/logs/
+
+.vscode

@@ -98,6 +98,7 @@ export default function RegisterPage() {
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
+              showPasswordToggle={true}
               required
               helperText="Must be at least 8 characters"
             />

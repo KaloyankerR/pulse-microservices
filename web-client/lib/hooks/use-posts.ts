@@ -174,7 +174,8 @@ export function useUserPosts(userId: string, page = 1, size = 20) {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await postsApi.getPostsByAuthor(userId, page, size);
+        // Convert 1-indexed page to 0-indexed for API
+        const data = await postsApi.getPostsByAuthor(userId, page - 1, size);
         // Ensure we always set an array
         const postsArray = Array.isArray(data) ? data : [];
         

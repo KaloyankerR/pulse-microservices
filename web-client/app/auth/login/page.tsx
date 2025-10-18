@@ -70,6 +70,7 @@ export default function LoginPage() {
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
+              showPasswordToggle={true}
               required
             />
 

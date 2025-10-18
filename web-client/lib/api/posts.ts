@@ -25,7 +25,18 @@ export const postsApi = {
       return [];
     }
     
-    return response.posts || [];
+    // Transform snake_case to camelCase for frontend compatibility
+    const transformedPosts = response.posts.map(post => ({
+      ...post,
+      createdAt: post.created_at,
+      updatedAt: post.updated_at,
+      authorId: post.author_id,
+      likesCount: post.likes_count,
+      commentsCount: post.comments_count,
+      isLiked: post.is_liked
+    }));
+    
+    return transformedPosts;
   },
 
   async getPostById(id: string): Promise<Post> {
@@ -34,7 +45,16 @@ export const postsApi = {
     const response = await apiClient.get<Post>(API_ENDPOINTS.posts.byId(id));
     
     
-    return response;
+    // Transform snake_case to camelCase for frontend compatibility
+    return {
+      ...response,
+      createdAt: response.created_at,
+      updatedAt: response.updated_at,
+      authorId: response.author_id,
+      likesCount: response.likes_count,
+      commentsCount: response.comments_count,
+      isLiked: response.is_liked
+    };
   },
 
   async getPostsByAuthor(authorId: string, page = 0, size = 20): Promise<Post[]> {
@@ -53,7 +73,18 @@ export const postsApi = {
       return [];
     }
     
-    return response.posts || [];
+    // Transform snake_case to camelCase for frontend compatibility
+    const transformedPosts = response.posts.map(post => ({
+      ...post,
+      createdAt: post.created_at,
+      updatedAt: post.updated_at,
+      authorId: post.author_id,
+      likesCount: post.likes_count,
+      commentsCount: post.comments_count,
+      isLiked: post.is_liked
+    }));
+    
+    return transformedPosts;
   },
 
   async createPost(data: CreatePostRequest): Promise<Post> {
@@ -65,7 +96,16 @@ export const postsApi = {
     );
     
     
-    return response;
+    // Transform snake_case to camelCase for frontend compatibility
+    return {
+      ...response,
+      createdAt: response.created_at,
+      updatedAt: response.updated_at,
+      authorId: response.author_id,
+      likesCount: response.likes_count,
+      commentsCount: response.comments_count,
+      isLiked: response.is_liked
+    };
   },
 
   async deletePost(id: string): Promise<void> {

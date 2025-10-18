@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { User } from '@/types';
 import { usersApi } from '@/lib/api/users';
 import { useUserPosts } from '@/lib/hooks/use-posts';
-import { useFollowStatus } from '@/lib/hooks/use-social';
+import { useFollowStatus, useSocialStats } from '@/lib/hooks/use-social';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { formatNumber } from '@/lib/utils';
 
@@ -22,17 +22,42 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { posts, isLoading: postsLoading } = useUserPosts(userId);
+  const { posts, isLoading: postsLoading, error: postsError } = useUserPosts(userId);
   const { follow: followUser, unfollow: unfollowUser } = useFollowStatus(userId);
+  const { stats: socialStats, isLoading: statsLoading, refetch: refetchStats } = useSocialStats(userId);
 
   const follow = async () => {
-    await followUser();
-    setUser(prev => prev ? { ...prev, isFollowing: true, followersCount: (prev.followersCount || 0) + 1 } : null);
+    try {
+      await followUser();
+      setUser(prev => prev ? { ...prev, isFollowing: true, followersCount: (prev.followersCount || 0) + 1 } : null);
+      // Refetch social stats to get updated counts
+      refetchStats();
+    } catch (error: any) {
+      // Handle 409 - already following (this is expected behavior)
+      if (error.response?.status === 409) {
+        setUser(prev => prev ? { ...prev, isFollowing: true } : null);
+        refetchStats();
+        return;
+      }
+      console.error('Failed to follow user:', error);
+    }
   };
 
   const unfollow = async () => {
-    await unfollowUser();
-    setUser(prev => prev ? { ...prev, isFollowing: false, followersCount: Math.max((prev.followersCount || 0) - 1, 0) } : null);
+    try {
+      await unfollowUser();
+      setUser(prev => prev ? { ...prev, isFollowing: false, followersCount: Math.max((prev.followersCount || 0) - 1, 0) } : null);
+      // Refetch social stats to get updated counts
+      refetchStats();
+    } catch (error: any) {
+      // Handle 404 - not following (this is expected behavior)
+      if (error.response?.status === 404) {
+        setUser(prev => prev ? { ...prev, isFollowing: false } : null);
+        refetchStats();
+        return;
+      }
+      console.error('Failed to unfollow user:', error);
+    }
   };
 
   const isOwnProfile = currentUser?.id === userId;
@@ -118,13 +143,13 @@ export default function ProfilePage() {
                 <div className="flex items-center space-x-6 mt-4">
                   <div>
                     <span className="font-bold text-gray-900">
-                      {formatNumber(user.followersCount || 0)}
+                      {formatNumber(socialStats?.followers_count || user.followersCount || 0)}
                     </span>
                     <span className="text-gray-500 ml-1">Followers</span>
                   </div>
                   <div>
                     <span className="font-bold text-gray-900">
-                      {formatNumber(user.followingCount || 0)}
+                      {formatNumber(socialStats?.following_count || user.followingCount || 0)}
                     </span>
                     <span className="text-gray-500 ml-1">Following</span>
                   </div>
@@ -148,6 +173,12 @@ export default function ProfilePage() {
             <div className="flex justify-center py-12">
               <Spinner size="lg" />
             </div>
+          ) : postsError ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-red-500">Error loading posts: {postsError}</p>
+              </CardContent>
+            </Card>
           ) : posts.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">

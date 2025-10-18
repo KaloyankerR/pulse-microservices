@@ -7,26 +7,26 @@ export function useSocialStats(userId: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await socialApi.getSocialStats(userId);
-        setStats(data);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch social stats');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (userId) {
-      fetchStats();
+  const fetchStats = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await socialApi.getSocialStats(userId);
+      setStats(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch social stats');
+    } finally {
+      setIsLoading(false);
     }
   }, [userId]);
 
-  return { stats, isLoading, error };
+  useEffect(() => {
+    if (userId) {
+      fetchStats();
+    }
+  }, [userId, fetchStats]);
+
+  return { stats, isLoading, error, refetch: fetchStats };
 }
 
 export function useFollowStatus(userId: string) {
@@ -54,13 +54,31 @@ export function useFollowStatus(userId: string) {
   }, [userId, fetchStatus]);
 
   const follow = async () => {
-    await socialApi.followUser(userId);
-    setStatus((prev) => (prev ? { ...prev, is_following: true } : null));
+    try {
+      await socialApi.followUser(userId);
+      setStatus((prev) => (prev ? { ...prev, is_following: true } : null));
+    } catch (error: any) {
+      // Handle 409 - already following (this is expected behavior)
+      if (error.response?.status === 409) {
+        setStatus((prev) => (prev ? { ...prev, is_following: true } : null));
+        return; // Don't throw error for already following
+      }
+      throw error; // Re-throw other errors
+    }
   };
 
   const unfollow = async () => {
-    await socialApi.unfollowUser(userId);
-    setStatus((prev) => (prev ? { ...prev, is_following: false } : null));
+    try {
+      await socialApi.unfollowUser(userId);
+      setStatus((prev) => (prev ? { ...prev, is_following: false } : null));
+    } catch (error: any) {
+      // Handle 404 - not following (this is expected behavior)
+      if (error.response?.status === 404) {
+        setStatus((prev) => (prev ? { ...prev, is_following: false } : null));
+        return; // Don't throw error for not following
+      }
+      throw error; // Re-throw other errors
+    }
   };
 
   return {
