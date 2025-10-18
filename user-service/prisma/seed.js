@@ -14,11 +14,10 @@ async function main() {
     create: {
       email: 'admin@pulse.com',
       username: 'admin',
-      password: adminPassword,
+      passwordHash: adminPassword,
       displayName: 'Admin User',
       bio: 'System administrator',
       verified: true,
-      status: 'ACTIVE',
     },
   });
 
@@ -29,38 +28,34 @@ async function main() {
     {
       email: 'john.doe@example.com',
       username: 'johndoe',
-      password: await bcrypt.hash('Password123!', 12),
+      passwordHash: await bcrypt.hash('Password123!', 12),
       displayName: 'John Doe',
       bio: 'Software developer passionate about technology',
       verified: false,
-      status: 'ACTIVE',
     },
     {
       email: 'jane.smith@example.com',
       username: 'janesmith',
-      password: await bcrypt.hash('Password123!', 12),
+      passwordHash: await bcrypt.hash('Password123!', 12),
       displayName: 'Jane Smith',
       bio: 'UI/UX Designer with a love for beautiful interfaces',
       verified: true,
-      status: 'ACTIVE',
     },
     {
       email: 'mike.johnson@example.com',
       username: 'mikej',
-      password: await bcrypt.hash('Password123!', 12),
+      passwordHash: await bcrypt.hash('Password123!', 12),
       displayName: 'Mike Johnson',
       bio: 'Product manager and coffee enthusiast',
       verified: false,
-      status: 'ACTIVE',
     },
     {
       email: 'sarah.wilson@example.com',
       username: 'sarahw',
-      password: await bcrypt.hash('Password123!', 12),
+      passwordHash: await bcrypt.hash('Password123!', 12),
       displayName: 'Sarah Wilson',
       bio: 'Marketing specialist and social media expert',
       verified: true,
-      status: 'ACTIVE',
     },
   ];
 

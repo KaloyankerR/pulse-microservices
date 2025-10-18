@@ -412,14 +412,31 @@ class NotificationService {
   // Invalidate user notification cache
   async invalidateUserNotificationCache(userId) {
     try {
-      const pattern = `notifications:${userId}:*`;
       const unreadKey = `unread_count:${userId}`;
       
-      // Note: Redis doesn't support pattern deletion in a single command
-      // In a production environment, you might want to use Redis SCAN
+      // Delete unread count cache
       await redis.del(unreadKey);
       
-      logger.logCacheOperation('invalidate', `pattern:${pattern}`, 'success');
+      // Delete common notification cache keys
+      // Since we know the cache key pattern, we can delete the most common ones
+      const commonCacheKeys = [
+        `notifications:${userId}:1:20:all:false`,
+        `notifications:${userId}:1:20:all:true`,
+        `notifications:${userId}:1:50:all:false`,
+        `notifications:${userId}:1:50:all:true`,
+      ];
+      
+      // Delete each common cache key
+      for (const key of commonCacheKeys) {
+        try {
+          await redis.del(key);
+        } catch (keyError) {
+          // Ignore errors for individual keys
+          logger.warn('Failed to delete cache key', { key, error: keyError.message });
+        }
+      }
+      
+      logger.logCacheOperation('invalidate', `user:${userId}`, 'success', { deletedKeys: commonCacheKeys.length });
     } catch (error) {
       logger.logError(error, { action: 'invalidateUserNotificationCache', userId });
     }

@@ -75,7 +75,7 @@ export default function NotificationsPage() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          {notifications.some((n) => !n.read) && (
+          {notifications.some((n) => !n.is_read) && (
             <Button variant="outline" size="sm" onClick={markAllAsRead}>
               Mark all as read
             </Button>
@@ -104,11 +104,11 @@ export default function NotificationsPage() {
 
               return (
                 <Card
-                  key={notification.id}
+                  key={notification._id}
                   className={`cursor-pointer hover:shadow-md transition-shadow ${
-                    !notification.read ? 'bg-blue-50 border-blue-200' : ''
+                    !notification.is_read ? 'bg-blue-50 border-blue-200' : ''
                   }`}
-                  onClick={() => !notification.read && markAsRead(notification.id)}
+                  onClick={() => !notification.is_read && markAsRead(notification._id)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-3">
@@ -134,11 +134,11 @@ export default function NotificationsPage() {
                           {notification.message}
                         </p>
                         <p className="text-gray-500 text-xs mt-2">
-                          {formatRelativeTime(notification.createdAt)}
+                          {formatRelativeTime(notification.created_at)}
                         </p>
                       </div>
 
-                      {!notification.read && (
+                      {!notification.is_read && (
                         <div className="w-2 h-2 bg-blue-600 rounded-full" />
                       )}
                     </div>

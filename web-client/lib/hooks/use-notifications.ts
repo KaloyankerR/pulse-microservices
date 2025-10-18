@@ -26,8 +26,8 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
       setError(null);
       const response = await notificationsApi.getNotifications(page, limit, unreadOnly);
       // Ensure we always set an array
-      setNotifications(Array.isArray(response?.data?.items) ? response.data.items : []);
-      setHasMore(response?.data?.pagination?.page < response?.data?.pagination?.total_pages);
+      setNotifications(Array.isArray(response?.data?.notifications) ? response.data.notifications : []);
+      setHasMore(response?.data?.pagination?.has_next || false);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch notifications');
       // Set empty array on error to prevent .map() issues
@@ -46,14 +46,14 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
     await notificationsApi.markAsRead(notificationId);
     setNotifications((prev) =>
       prev.map((notif) =>
-        notif.id === notificationId ? { ...notif, read: true } : notif
+        notif._id === notificationId ? { ...notif, is_read: true } : notif
       )
     );
   };
 
   const markAllAsRead = async () => {
     await notificationsApi.markAllAsRead();
-    setNotifications((prev) => prev.map((notif) => ({ ...notif, read: true })));
+    setNotifications((prev) => prev.map((notif) => ({ ...notif, is_read: true })));
   };
 
   return {

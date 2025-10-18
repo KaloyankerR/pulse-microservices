@@ -147,7 +147,8 @@ export type NotificationType =
   | 'POST_SHARE';
 
 export interface Notification {
-  id: string;
+  _id: string;
+  id?: string;
   recipient_id: string;
   sender_id?: string;
   type: NotificationType;
@@ -155,8 +156,11 @@ export interface Notification {
   message: string;
   reference_id?: string;
   reference_type?: string;
-  read: boolean;
-  createdAt: string;
+  is_read: boolean;
+  read_at?: string;
+  priority?: string;
+  created_at: string;
+  updated_at?: string;
   metadata?: Record<string, any>;
   sender?: {
     id: string;
@@ -191,12 +195,14 @@ export interface ApiResponse<T = any> {
 export interface PaginatedResponse<T> {
   success: boolean;
   data: {
-    items: T[];
+    notifications: T[];
     pagination: {
       page: number;
       limit: number;
       total: number;
-      total_pages: number;
+      pages: number;
+      has_next: boolean;
+      has_prev: boolean;
     };
   };
   meta?: {

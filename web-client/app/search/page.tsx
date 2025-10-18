@@ -10,7 +10,6 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Spinner } from '@/components/ui/Spinner';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { usersApi } from '@/lib/api/users';
-import { socialApi } from '@/lib/api/social';
 import { UserWithSocial } from '@/types';
 import Link from 'next/link';
 import { Search } from 'lucide-react';
@@ -22,7 +21,6 @@ export default function SearchPage() {
   const [results, setResults] = useState<UserWithSocial[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,31 +30,15 @@ export default function SearchPage() {
     try {
       setIsLoading(true);
       setHasSearched(true);
+      
       const response = await usersApi.searchUsers(query);
-      setResults(response.data.items);
+      const users = response.data.users;
+      setResults(users);
+      
     } catch (error) {
+      console.error('Search error:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleFollow = async (userId: string) => {
-    try {
-      await socialApi.followUser(userId);
-      setFollowingIds((prev) => new Set(prev).add(userId));
-    } catch (error) {
-    }
-  };
-
-  const handleUnfollow = async (userId: string) => {
-    try {
-      await socialApi.unfollowUser(userId);
-      setFollowingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
-      });
-    } catch (error) {
     }
   };
 
@@ -171,23 +153,6 @@ export default function SearchPage() {
                         </div>
                       </Link>
 
-                      <Button
-                        size="sm"
-                        variant={
-                          followingIds.has(user.id) || user.is_following
-                            ? 'secondary'
-                            : 'primary'
-                        }
-                        onClick={() =>
-                          followingIds.has(user.id) || user.is_following
-                            ? handleUnfollow(user.id)
-                            : handleFollow(user.id)
-                        }
-                      >
-                        {followingIds.has(user.id) || user.is_following
-                          ? 'Following'
-                          : 'Follow'}
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
