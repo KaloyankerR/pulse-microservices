@@ -50,6 +50,11 @@ func (s *UserService) GetUserByID(id uuid.UUID) (*models.UserCache, error) {
 		return minimalUser, nil
 	}
 
+	// Apply consistent fallback logic for displayName
+	if user.DisplayName == nil || *user.DisplayName == "" {
+		user.DisplayName = &user.Username
+	}
+
 	return user, nil
 }
 
@@ -78,6 +83,13 @@ func (s *UserService) GetUsersByIDs(ids []uuid.UUID) (map[uuid.UUID]*models.User
 			}
 
 			users[id] = minimalUser
+		}
+	}
+
+	// Apply consistent fallback logic for displayName for all users
+	for _, user := range users {
+		if user.DisplayName == nil || *user.DisplayName == "" {
+			user.DisplayName = &user.Username
 		}
 	}
 

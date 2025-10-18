@@ -23,22 +23,15 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const { posts, isLoading: postsLoading, error: postsError } = useUserPosts(userId);
-  const { follow: followUser, unfollow: unfollowUser } = useFollowStatus(userId);
+  const { status: followStatus, follow: followUser, unfollow: unfollowUser, isLoading: followStatusLoading } = useFollowStatus(userId);
   const { stats: socialStats, isLoading: statsLoading, refetch: refetchStats } = useSocialStats(userId);
 
   const follow = async () => {
     try {
       await followUser();
-      setUser(prev => prev ? { ...prev, isFollowing: true, followersCount: (prev.followersCount || 0) + 1 } : null);
       // Refetch social stats to get updated counts
       refetchStats();
     } catch (error: any) {
-      // Handle 409 - already following (this is expected behavior)
-      if (error.response?.status === 409) {
-        setUser(prev => prev ? { ...prev, isFollowing: true } : null);
-        refetchStats();
-        return;
-      }
       console.error('Failed to follow user:', error);
     }
   };
@@ -46,16 +39,9 @@ export default function ProfilePage() {
   const unfollow = async () => {
     try {
       await unfollowUser();
-      setUser(prev => prev ? { ...prev, isFollowing: false, followersCount: Math.max((prev.followersCount || 0) - 1, 0) } : null);
       // Refetch social stats to get updated counts
       refetchStats();
     } catch (error: any) {
-      // Handle 404 - not following (this is expected behavior)
-      if (error.response?.status === 404) {
-        setUser(prev => prev ? { ...prev, isFollowing: false } : null);
-        refetchStats();
-        return;
-      }
       console.error('Failed to unfollow user:', error);
     }
   };
@@ -128,10 +114,11 @@ export default function ProfilePage() {
                   </div>
                   {!isOwnProfile && (
                     <Button
-                      onClick={user.isFollowing ? unfollow : follow}
-                      variant={user.isFollowing ? 'secondary' : 'primary'}
+                      onClick={followStatus?.is_following ? unfollow : follow}
+                      variant={followStatus?.is_following ? 'secondary' : 'primary'}
+                      disabled={followStatusLoading}
                     >
-                      {user.isFollowing ? 'Following' : 'Follow'}
+                      {followStatusLoading ? 'Loading...' : (followStatus?.is_following ? 'Following' : 'Follow')}
                     </Button>
                   )}
                 </div>

@@ -187,9 +187,9 @@ class SocialController {
       res.status(200).json({
         success: true,
         data: {
-          isFollowing,
-          isFollowedBy,
-          isBlocked,
+          is_following: isFollowing,
+          is_followed_by: isFollowedBy,
+          is_blocked: isBlocked,
         },
         meta: {
           timestamp: new Date().toISOString(),

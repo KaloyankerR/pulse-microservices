@@ -462,9 +462,9 @@ class SocialService {
     }
 
     const result = {
-      followersCount: stats.followersCount,
-      followingCount: stats.followingCount,
-      postsCount: stats.postsCount,
+      followers_count: stats.followersCount,
+      following_count: stats.followingCount,
+      posts_count: stats.postsCount,
     };
 
     // Cache result

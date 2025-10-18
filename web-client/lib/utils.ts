@@ -25,11 +25,16 @@ export function formatRelativeTime(date: string | Date): string {
 
   let dateObj: Date;
   if (typeof date === 'string') {
-    // For UTC timestamps, parse them correctly by treating UTC as local time
+    // For UTC timestamps, manually parse to avoid timezone conversion
     if (date.includes('T') && date.includes('Z')) {
-      // Remove the 'Z' and parse as local time to avoid timezone conversion
-      const localString = date.replace('Z', '');
-      dateObj = new Date(localString);
+      // Parse UTC timestamp manually to avoid timezone issues
+      const utcString = date.replace('Z', '');
+      const [datePart, timePart] = utcString.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute, second] = timePart.split(':').map(Number);
+      
+      // Create date in local timezone (treat UTC time as local time)
+      dateObj = new Date(year, month - 1, day, hour, minute, second);
     } else {
       dateObj = new Date(date);
     }
