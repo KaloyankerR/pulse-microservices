@@ -107,6 +107,7 @@ func main() {
 		api.PUT("/messages/:id/read", messageHandler.MarkMessageRead)
 
 		// Conversation endpoints
+		api.POST("/messages/conversations", conversationHandler.CreateConversation)
 		api.GET("/messages/conversations", conversationHandler.GetConversations)
 		api.GET("/messages/conversations/:id", conversationHandler.GetConversation)
 		api.GET("/messages/conversations/:id/messages", messageHandler.GetConversationMessages)

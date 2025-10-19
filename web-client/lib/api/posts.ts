@@ -26,17 +26,20 @@ export const postsApi = {
     }
     
     // Transform snake_case to camelCase for frontend compatibility
-    const transformedPosts = response.posts.map(post => ({
+    return response.posts.map((post: any) => ({
       ...post,
       createdAt: post.created_at,
       updatedAt: post.updated_at,
       authorId: post.author_id,
       likesCount: post.likes_count,
       commentsCount: post.comments_count,
-      isLiked: post.is_liked
+      isLiked: post.is_liked,
+      author: post.author ? {
+        ...post.author,
+        displayName: post.author.display_name,
+        avatarUrl: post.author.avatar_url
+      } : undefined
     }));
-    
-    return transformedPosts;
   },
 
   async getPostById(id: string): Promise<Post> {
@@ -53,7 +56,12 @@ export const postsApi = {
       authorId: response.author_id,
       likesCount: response.likes_count,
       commentsCount: response.comments_count,
-      isLiked: response.is_liked
+      isLiked: response.is_liked,
+      author: response.author ? {
+        ...response.author,
+        displayName: response.author.display_name,
+        avatarUrl: response.author.avatar_url
+      } : undefined
     };
   },
 
@@ -74,17 +82,20 @@ export const postsApi = {
     }
     
     // Transform snake_case to camelCase for frontend compatibility
-    const transformedPosts = response.posts.map(post => ({
+    return response.posts.map((post: any) => ({
       ...post,
       createdAt: post.created_at,
       updatedAt: post.updated_at,
       authorId: post.author_id,
       likesCount: post.likes_count,
       commentsCount: post.comments_count,
-      isLiked: post.is_liked
+      isLiked: post.is_liked,
+      author: post.author ? {
+        ...post.author,
+        displayName: post.author.display_name,
+        avatarUrl: post.author.avatar_url
+      } : undefined
     }));
-    
-    return transformedPosts;
   },
 
   async createPost(data: CreatePostRequest): Promise<Post> {
@@ -104,7 +115,12 @@ export const postsApi = {
       authorId: response.author_id,
       likesCount: response.likes_count,
       commentsCount: response.comments_count,
-      isLiked: response.is_liked
+      isLiked: response.is_liked,
+      author: response.author ? {
+        ...response.author,
+        displayName: response.author.display_name,
+        avatarUrl: response.author.avatar_url
+      } : undefined
     };
   },
 

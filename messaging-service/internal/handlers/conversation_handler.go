@@ -65,6 +65,30 @@ func (h *ConversationHandler) GetConversation(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": conversation})
 }
 
+// POST /api/messages/conversations
+func (h *ConversationHandler) CreateConversation(c *gin.Context) {
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	var req models.CreateConversationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	conversation, err := h.conversationService.CreateConversation(c.Request.Context(), userID, &req)
+	if err != nil {
+		h.logger.Error("Failed to create conversation", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create conversation"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": conversation})
+}
+
 // POST /api/messages/group
 func (h *ConversationHandler) CreateGroup(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
@@ -88,5 +112,3 @@ func (h *ConversationHandler) CreateGroup(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"data": conversation})
 }
-
-

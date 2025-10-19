@@ -37,7 +37,5 @@ type CreateConversationRequest struct {
 
 type CreateGroupRequest struct {
 	Name         string   `json:"name" binding:"required,min=1,max=100"`
-	Participants []string `json:"participants" binding:"required,min=2"`
+	Participants []string `json:"participants" binding:"required,min=1"`
 }
-
-

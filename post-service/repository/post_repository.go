@@ -119,8 +119,8 @@ func (r *PostRepository) CreatePost(post *models.Post) error {
 	`
 
 	post.ID = uuid.New()
-	post.CreatedAt = time.Now()
-	post.UpdatedAt = time.Now()
+	post.CreatedAt = time.Now().UTC()
+	post.UpdatedAt = time.Now().UTC()
 
 	_, err := r.db.Exec(query,
 		post.ID, post.AuthorID, post.Content, post.EventID,

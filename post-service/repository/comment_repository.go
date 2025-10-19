@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pulse/post-service-go/models"
@@ -21,9 +22,13 @@ func NewCommentRepository(db *sql.DB) *CommentRepository {
 func (r *CommentRepository) CreateComment(ctx context.Context, comment *models.PostComment) error {
 	query := `
 		INSERT INTO post_comments (id, post_id, author_id, content, created_at)
-		VALUES ($1, $2, $3, $4, NOW())
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING created_at
 	`
+
+	// Set the timestamp in UTC to ensure consistency
+	comment.CreatedAt = time.Now().UTC()
+
 	return r.db.QueryRowContext(
 		ctx,
 		query,
@@ -31,6 +36,7 @@ func (r *CommentRepository) CreateComment(ctx context.Context, comment *models.P
 		comment.PostID,
 		comment.AuthorID,
 		comment.Content,
+		comment.CreatedAt,
 	).Scan(&comment.CreatedAt)
 }
 

@@ -55,7 +55,7 @@ services:
     routes:
       - name: messaging-service-routes
         paths:
-          - /api/v1/messages
+          - /api/messages
           - /ws
         methods:
           - GET

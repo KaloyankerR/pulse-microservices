@@ -38,8 +38,8 @@ export const usersApi = {
     };
   },
 
-  async searchUsers(query: string, page = 1, limit = 20): Promise<PaginatedResponse<User>> {
-    return apiClient.get<PaginatedResponse<User>>(
+  async searchUsers(query: string, page = 1, limit = 20): Promise<{ data: { users: User[]; pagination: any } }> {
+    return apiClient.get<{ data: { users: User[]; pagination: any } }>(
       API_ENDPOINTS.users.search,
       {
         params: { q: query, page, limit },

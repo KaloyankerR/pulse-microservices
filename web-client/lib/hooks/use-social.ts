@@ -138,8 +138,8 @@ export function useFollowers(userId: string, page = 1, limit = 20) {
         setIsLoading(true);
         setError(null);
         const response = await socialApi.getFollowers(userId, page, limit);
-        setFollowers(response.data.items);
-        setHasMore(response.data.pagination.page < response.data.pagination.total_pages);
+        setFollowers(response.data.notifications);
+        setHasMore(response.data.pagination.page < response.data.pagination.pages);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch followers');
       } finally {
@@ -167,8 +167,8 @@ export function useFollowing(userId: string, page = 1, limit = 20) {
         setIsLoading(true);
         setError(null);
         const response = await socialApi.getFollowing(userId, page, limit);
-        setFollowing(response.data.items);
-        setHasMore(response.data.pagination.page < response.data.pagination.total_pages);
+        setFollowing(response.data.notifications);
+        setHasMore(response.data.pagination.page < response.data.pagination.pages);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch following');
       } finally {

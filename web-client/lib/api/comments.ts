@@ -19,7 +19,7 @@ export const commentsApi = {
     }
     
         // Transform snake_case to camelCase for frontend compatibility
-        return comments.map(comment => ({
+        return comments.map((comment: any) => ({
           ...comment,
           createdAt: comment.created_at,
           postId: comment.post_id,

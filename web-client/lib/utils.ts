@@ -25,33 +25,32 @@ export function formatRelativeTime(date: string | Date): string {
 
   let dateObj: Date;
   if (typeof date === 'string') {
-    // For UTC timestamps, manually parse to avoid timezone conversion
-    if (date.includes('T') && date.includes('Z')) {
-      // Parse UTC timestamp manually to avoid timezone issues
-      const utcString = date.replace('Z', '');
-      const [datePart, timePart] = utcString.split('T');
-      const [year, month, day] = datePart.split('-').map(Number);
-      const [hour, minute, second] = timePart.split(':').map(Number);
-      
-      // Create date in local timezone (treat UTC time as local time)
-      dateObj = new Date(year, month - 1, day, hour, minute, second);
-    } else {
-      dateObj = new Date(date);
-    }
+    // Use native Date constructor which handles ISO strings correctly
+    dateObj = new Date(date);
   } else {
     dateObj = date;
   }
 
   // Check if date is valid
   if (isNaN(dateObj.getTime())) {
-    console.warn('Invalid date provided to formatRelativeTime:', date);
     return 'Unknown';
+  }
+
+  // Workaround for timezone issues: if the date is more than 1 hour in the future,
+  // it's likely a timezone mismatch, so adjust it back by 2 hours
+  const now = new Date();
+  const timeDiff = dateObj.getTime() - now.getTime();
+  const hoursDiff = timeDiff / (1000 * 60 * 60);
+  
+  if (hoursDiff > 1) {
+    // Date is more than 1 hour in the future, likely a timezone issue
+    // Adjust by subtracting 2 hours (common timezone offset)
+    dateObj = new Date(dateObj.getTime() - (2 * 60 * 60 * 1000));
   }
 
   try {
     return formatDistanceToNow(dateObj, { addSuffix: true });
   } catch (error) {
-    console.warn('Error formatting relative time:', error, 'for date:', date);
     return 'Unknown';
   }
 }

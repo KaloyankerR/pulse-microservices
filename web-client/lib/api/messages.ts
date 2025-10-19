@@ -48,6 +48,18 @@ export const messagesApi = {
     await apiClient.put(API_ENDPOINTS.messages.markRead(messageId));
   },
 
+  async createConversation(participantIds: string[], type: 'DIRECT' | 'GROUP', name?: string): Promise<Conversation> {
+    const response = await apiClient.post<ApiResponse<Conversation>>(
+      API_ENDPOINTS.messages.createConversation,
+      {
+        type,
+        participants: participantIds,
+        name,
+      }
+    );
+    return response.data!;
+  },
+
   async createGroup(participantIds: string[], name?: string): Promise<Conversation> {
     const response = await apiClient.post<ApiResponse<Conversation>>(
       API_ENDPOINTS.messages.createGroup,

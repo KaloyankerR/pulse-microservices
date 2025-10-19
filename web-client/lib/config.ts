@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
     conversationById: (id: string) => `/api/messages/conversations/${id}`,
     conversationMessages: (id: string) => `/api/messages/conversations/${id}/messages`,
     markRead: (id: string) => `/api/messages/${id}/read`,
+    createConversation: '/api/messages/conversations',
     createGroup: '/api/messages/group',
   },
   // Notification endpoints
