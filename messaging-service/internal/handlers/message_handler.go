@@ -27,9 +27,12 @@ func NewMessageHandler(messageService service.MessageService, logger *zap.Logger
 func (h *MessageHandler) CreateMessage(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		h.logger.Error("Failed to get user ID", zap.Error(err))
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+
+	h.logger.Info("Creating message for user", zap.String("user_id", userID))
 
 	var req models.CreateMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -43,6 +46,12 @@ func (h *MessageHandler) CreateMessage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create message"})
 		return
 	}
+
+	h.logger.Info("Returning message to client",
+		zap.String("message_id", message.ID.Hex()),
+		zap.String("sender_id", message.SenderID),
+		zap.String("content", message.Content),
+	)
 
 	middleware.IncrementMessagesProcessed()
 	c.JSON(http.StatusCreated, gin.H{"data": message})
@@ -89,10 +98,19 @@ func (h *MessageHandler) GetConversationMessages(c *gin.Context) {
 		return
 	}
 
+	// Debug: Log the first few messages to see their sender_id
+	for i, msg := range messages {
+		if i < 3 { // Only log first 3 messages to avoid spam
+			h.logger.Info("Retrieved message",
+				zap.String("message_id", msg.ID.Hex()),
+				zap.String("sender_id", msg.SenderID),
+				zap.String("content", msg.Content),
+			)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"data":  messages,
 		"count": len(messages),
 	})
 }
-
-

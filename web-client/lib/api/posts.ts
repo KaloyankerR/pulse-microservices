@@ -45,7 +45,7 @@ export const postsApi = {
   async getPostById(id: string): Promise<Post> {
     
     // Single post is returned directly (not in a wrapper)
-    const response = await apiClient.get<Post>(API_ENDPOINTS.posts.byId(id));
+    const response = await apiClient.get<any>(API_ENDPOINTS.posts.byId(id));
     
     
     // Transform snake_case to camelCase for frontend compatibility
@@ -101,7 +101,7 @@ export const postsApi = {
   async createPost(data: CreatePostRequest): Promise<Post> {
     
     // Created post is returned directly (not wrapped)
-    const response = await apiClient.post<Post>(
+    const response = await apiClient.post<any>(
       API_ENDPOINTS.posts.create,
       data
     );

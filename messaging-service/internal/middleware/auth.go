@@ -10,7 +10,8 @@ import (
 )
 
 type Claims struct {
-	UserID string `json:"user_id"`
+	UserID string `json:"userId"`
+	ID     string `json:"id"`
 	Email  string `json:"email"`
 	jwt.RegisteredClaims
 }
@@ -49,7 +50,12 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-			c.Set("user_id", claims.UserID)
+			// Use UserID if available, otherwise fall back to ID
+			userID := claims.UserID
+			if userID == "" {
+				userID = claims.ID
+			}
+			c.Set("user_id", userID)
 			c.Set("email", claims.Email)
 			c.Next()
 		} else {
@@ -72,5 +78,3 @@ func GetUserID(c *gin.Context) (string, error) {
 
 	return userIDStr, nil
 }
-
-

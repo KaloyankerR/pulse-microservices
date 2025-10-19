@@ -112,3 +112,26 @@ func (h *ConversationHandler) CreateGroup(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{"data": conversation})
 }
+
+// DELETE /api/messages/conversations/:id
+func (h *ConversationHandler) DeleteConversation(c *gin.Context) {
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	conversationID := c.Param("id")
+	if conversationID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Conversation ID required"})
+		return
+	}
+
+	if err := h.conversationService.DeleteConversation(c.Request.Context(), userID, conversationID); err != nil {
+		h.logger.Error("Failed to delete conversation", zap.Error(err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete conversation"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Conversation deleted successfully"})
+}

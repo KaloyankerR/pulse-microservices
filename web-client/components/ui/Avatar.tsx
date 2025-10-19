@@ -49,10 +49,6 @@ export function Avatar({ src, alt, name, size = 'md', className }: AvatarProps) 
   // Clean the avatar URL to remove placeholder URLs
   const cleanSrc = cleanAvatarUrl(src);
 
-  // Debug logging (remove in production)
-  if (process.env.NODE_ENV === 'development' && src) {
-    console.log('Avatar Debug:', { src, cleanSrc, name, shouldShowFallback: !cleanSrc || imageError });
-  }
 
   // Show fallback if no src, image failed to load, or src is invalid
   const shouldShowFallback = !cleanSrc || imageError;

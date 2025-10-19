@@ -25,6 +25,10 @@ export function formatRelativeTime(date: string | Date): string {
 
   let dateObj: Date;
   if (typeof date === 'string') {
+    // Handle different date formats
+    if (date === 'Unknown' || date === '') {
+      return 'Unknown';
+    }
     // Use native Date constructor which handles ISO strings correctly
     dateObj = new Date(date);
   } else {
@@ -36,16 +40,14 @@ export function formatRelativeTime(date: string | Date): string {
     return 'Unknown';
   }
 
-  // Workaround for timezone issues: if the date is more than 1 hour in the future,
-  // it's likely a timezone mismatch, so adjust it back by 2 hours
+  // Check if date is too far in the past (likely invalid)
   const now = new Date();
-  const timeDiff = dateObj.getTime() - now.getTime();
-  const hoursDiff = timeDiff / (1000 * 60 * 60);
+  const timeDiff = now.getTime() - dateObj.getTime();
+  const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
   
-  if (hoursDiff > 1) {
-    // Date is more than 1 hour in the future, likely a timezone issue
-    // Adjust by subtracting 2 hours (common timezone offset)
-    dateObj = new Date(dateObj.getTime() - (2 * 60 * 60 * 1000));
+  if (daysDiff > 365) {
+    // Date is more than a year old, likely invalid
+    return 'Unknown';
   }
 
   try {

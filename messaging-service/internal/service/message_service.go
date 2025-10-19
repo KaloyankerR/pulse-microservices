@@ -75,9 +75,21 @@ func (s *messageService) CreateMessage(ctx context.Context, userID string, req *
 		Mentions:       req.Mentions,
 	}
 
+	s.logger.Info("Creating message with sender ID",
+		zap.String("sender_id", userID),
+		zap.String("content", req.Content),
+		zap.String("conversation_id", req.ConversationID),
+	)
+
 	if err := s.messageRepo.Create(ctx, message); err != nil {
 		return nil, fmt.Errorf("failed to create message: %w", err)
 	}
+
+	s.logger.Info("Message created successfully",
+		zap.String("message_id", message.ID.Hex()),
+		zap.String("sender_id", message.SenderID),
+		zap.String("content", message.Content),
+	)
 
 	// Update conversation's last message
 	lastMessage := &models.LastMessage{

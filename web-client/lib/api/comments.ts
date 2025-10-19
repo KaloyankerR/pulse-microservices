@@ -29,7 +29,7 @@ export const commentsApi = {
 
   async createComment(postId: string, data: CreateCommentRequest): Promise<Comment> {
     
-    const response = await apiClient.post<Comment>(
+    const response = await apiClient.post<any>(
       API_ENDPOINTS.posts.comments(postId),
       data
     );

@@ -59,7 +59,10 @@ func (r *conversationRepository) GetByUserID(ctx context.Context, userID string,
 		SetSkip(int64(offset))
 
 	filter := bson.M{
-		"participants": userID,
+		"$and": []bson.M{
+			{"participants": userID},
+			{"participants": bson.M{"$ne": ""}}, // Exclude conversations with empty participant strings
+		},
 	}
 
 	cursor, err := r.collection.Find(ctx, filter, opts)
@@ -113,5 +116,3 @@ func (r *conversationRepository) Delete(ctx context.Context, id primitive.Object
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }
-
-

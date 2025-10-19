@@ -110,6 +110,7 @@ func main() {
 		api.POST("/messages/conversations", conversationHandler.CreateConversation)
 		api.GET("/messages/conversations", conversationHandler.GetConversations)
 		api.GET("/messages/conversations/:id", conversationHandler.GetConversation)
+		api.DELETE("/messages/conversations/:id", conversationHandler.DeleteConversation)
 		api.GET("/messages/conversations/:id/messages", messageHandler.GetConversationMessages)
 		api.POST("/messages/group", conversationHandler.CreateGroup)
 	}

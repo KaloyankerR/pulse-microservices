@@ -105,7 +105,7 @@ export interface Message {
   conversation_id: string;
   sender_id: string;
   content: string;
-  createdAt: string;
+  created_at: string;
   read_at?: string;
   sender?: {
     id: string;
@@ -125,8 +125,8 @@ export interface Conversation {
     timestamp: string;
     sender_id: string;
   };
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
   name?: string;
 }
 

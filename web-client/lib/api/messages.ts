@@ -12,7 +12,7 @@ export const messagesApi = {
     const response = await apiClient.get<ApiResponse<Conversation[]>>(
       API_ENDPOINTS.messages.conversations
     );
-    return response.data!;
+    return response.data || [];
   },
 
   async getConversation(id: string): Promise<Conversation> {
@@ -33,7 +33,7 @@ export const messagesApi = {
         params: { page, limit },
       }
     );
-    return response.data!;
+    return response.data || [];
   },
 
   async sendMessage(data: CreateMessageRequest): Promise<Message> {
@@ -69,6 +69,10 @@ export const messagesApi = {
       }
     );
     return response.data!;
+  },
+
+  async deleteConversation(conversationId: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.messages.conversationById(conversationId));
   },
 };
 

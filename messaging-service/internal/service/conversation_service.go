@@ -16,6 +16,7 @@ type ConversationService interface {
 	GetConversation(ctx context.Context, conversationID string) (*models.Conversation, error)
 	GetUserConversations(ctx context.Context, userID string, limit, offset int) ([]*models.Conversation, error)
 	GetOrCreateDirectConversation(ctx context.Context, user1, user2 string) (*models.Conversation, error)
+	DeleteConversation(ctx context.Context, userID string, conversationID string) error
 }
 
 type conversationService struct {
@@ -34,9 +35,17 @@ func NewConversationService(
 }
 
 func (s *conversationService) CreateConversation(ctx context.Context, userID string, req *models.CreateConversationRequest) (*models.Conversation, error) {
+	// Validate userID
+	if userID == "" {
+		return nil, fmt.Errorf("user ID cannot be empty")
+	}
+
 	// Add creator to participants if not already included
 	participantSet := make(map[string]bool)
 	for _, p := range req.Participants {
+		if p == "" {
+			return nil, fmt.Errorf("participant ID cannot be empty")
+		}
 		participantSet[p] = true
 	}
 	participantSet[userID] = true
@@ -82,10 +91,18 @@ func (s *conversationService) CreateConversation(ctx context.Context, userID str
 }
 
 func (s *conversationService) CreateGroupConversation(ctx context.Context, userID string, req *models.CreateGroupRequest) (*models.Conversation, error) {
+	// Validate userID
+	if userID == "" {
+		return nil, fmt.Errorf("user ID cannot be empty")
+	}
+
 	// Add creator to participants
 	participantSet := make(map[string]bool)
 	participantSet[userID] = true
 	for _, p := range req.Participants {
+		if p == "" {
+			return nil, fmt.Errorf("participant ID cannot be empty")
+		}
 		participantSet[p] = true
 	}
 
@@ -167,4 +184,40 @@ func (s *conversationService) GetOrCreateDirectConversation(ctx context.Context,
 	return s.CreateConversation(ctx, user1, req)
 }
 
+func (s *conversationService) DeleteConversation(ctx context.Context, userID string, conversationID string) error {
+	// Parse conversation ID
+	id, err := primitive.ObjectIDFromHex(conversationID)
+	if err != nil {
+		return fmt.Errorf("invalid conversation ID: %w", err)
+	}
 
+	// Get conversation to verify user is a participant
+	conversation, err := s.conversationRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("conversation not found: %w", err)
+	}
+
+	// Check if user is a participant
+	isParticipant := false
+	for _, p := range conversation.Participants {
+		if p == userID {
+			isParticipant = true
+			break
+		}
+	}
+	if !isParticipant {
+		return fmt.Errorf("user is not a participant in this conversation")
+	}
+
+	// Delete the conversation
+	if err := s.conversationRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete conversation: %w", err)
+	}
+
+	s.logger.Info("Conversation deleted",
+		zap.String("conversation_id", conversationID),
+		zap.String("user_id", userID),
+	)
+
+	return nil
+}
