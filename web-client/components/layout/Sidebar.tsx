@@ -48,7 +48,7 @@ export function Sidebar() {
               </div>
             </div>
             <Link href={`/profile/${user?.id}`}>
-              <Button variant="outline" size="sm" className="w-full mt-3">
+              <Button variant="secondary" size="sm" className="w-full mt-3">
                 View Profile
               </Button>
             </Link>
