@@ -4,11 +4,33 @@ const logger = require('../utils/logger');
 
 class EventService {
   async publishUserFollowed(followerId, followingId) {
-    await publishEvent('user.followed', {
-      followerId,
-      followingId,
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      logger.info('Publishing user.followed event', { followerId, followingId });
+      
+      // Get user information for notification
+      const followerUser = await prisma.userCache.findUnique({
+        where: { id: followerId }
+      });
+
+      const eventData = {
+        follower_id: followerId,
+        following_id: followingId,
+        follower_username: followerUser?.username || 'Someone',
+        timestamp: new Date().toISOString(),
+      };
+
+      logger.info('Event data prepared', eventData);
+
+      const result = await publishEvent('user.followed', eventData);
+      
+      if (result) {
+        logger.info('Event published successfully', { eventType: 'user.followed', followerId, followingId });
+      } else {
+        logger.warn('Event publishing failed', { eventType: 'user.followed', followerId, followingId });
+      }
+    } catch (error) {
+      logger.error('Error publishing user.followed event', { error: error.message, followerId, followingId });
+    }
   }
 
   async publishUserBlocked(blockerId, blockedId) {

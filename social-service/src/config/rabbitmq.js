@@ -37,8 +37,10 @@ const connectRabbitMQ = async () => {
 
 const publishEvent = async (eventType, data) => {
   try {
+    logger.info('Attempting to publish event', { eventType, data });
+    
     if (!channel) {
-      logger.debug('RabbitMQ channel not available, skipping event publish');
+      logger.warn('RabbitMQ channel not available, skipping event publish', { eventType });
       return false;
     }
 
@@ -49,15 +51,26 @@ const publishEvent = async (eventType, data) => {
       service: 'social-service',
     };
 
-    channel.publish(
+    logger.info('Publishing message to RabbitMQ', { 
+      exchange: 'pulse.events', 
+      routingKey: eventType, 
+      message: message 
+    });
+
+    const result = channel.publish(
       'pulse.events',
       eventType,
       Buffer.from(JSON.stringify(message)),
       { persistent: true }
     );
 
-    logger.info(`Event published: ${eventType}`, { data });
-    return true;
+    if (result) {
+      logger.info(`Event published successfully: ${eventType}`, { data });
+    } else {
+      logger.warn(`Event publish failed (channel full): ${eventType}`, { data });
+    }
+    
+    return result;
   } catch (error) {
     logger.error('Failed to publish event:', error);
     return false;

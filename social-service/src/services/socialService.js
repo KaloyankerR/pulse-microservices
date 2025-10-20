@@ -53,7 +53,9 @@ class SocialService {
       await cacheService.delete(cacheService.getSocialStatsKey(followingId));
 
       // Publish event
+      logger.info('About to publish user.followed event', { followerId, followingId });
       await eventService.publishUserFollowed(followerId, followingId);
+      logger.info('Finished publishing user.followed event', { followerId, followingId });
 
       // Track metrics
       followOperationsTotal.inc({ operation: 'follow', status: 'success' });

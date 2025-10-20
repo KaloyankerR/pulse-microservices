@@ -2,6 +2,7 @@ const Notification = require('../models/notification');
 const UserCache = require('../models/userCache');
 const NotificationPreferences = require('../models/notificationPreferences');
 const redis = require('../config/redis');
+const rabbitmq = require('../config/rabbitmq');
 const logger = require('../utils/logger');
 const metrics = require('../config/metrics');
 
@@ -24,6 +25,9 @@ class NotificationService {
 
       // Invalidate cache for user notifications
       await this.invalidateUserNotificationCache(notificationData.recipient_id);
+
+      // Publish notification.created event for real-time delivery
+      await this.publishNotificationCreatedEvent(savedNotification);
 
       return savedNotification;
     } catch (error) {
@@ -439,6 +443,54 @@ class NotificationService {
       logger.logCacheOperation('invalidate', `user:${userId}`, 'success', { deletedKeys: commonCacheKeys.length });
     } catch (error) {
       logger.logError(error, { action: 'invalidateUserNotificationCache', userId });
+    }
+  }
+
+  // Publish notification.created event for real-time delivery
+  async publishNotificationCreatedEvent(notification) {
+    try {
+      // Get sender information if available
+      let senderInfo = null;
+      if (notification.sender_id) {
+        const userCache = await UserCache.findByUserId(notification.sender_id);
+        if (userCache) {
+          senderInfo = {
+            id: userCache.user_id,
+            username: userCache.username,
+            avatarUrl: userCache.avatar_url,
+          };
+        }
+      }
+
+      const eventData = {
+        _id: notification._id.toString(),
+        recipient_id: notification.recipient_id,
+        sender_id: notification.sender_id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        reference_id: notification.reference_id,
+        reference_type: notification.reference_type,
+        is_read: notification.is_read,
+        priority: notification.priority,
+        created_at: notification.created_at.toISOString(),
+        metadata: notification.metadata || {},
+        sender: senderInfo,
+      };
+
+      await rabbitmq.publish('notification_events', 'notification.created', eventData);
+      
+      logger.info('Notification created event published', {
+        notificationId: notification._id,
+        recipientId: notification.recipient_id,
+        type: notification.type,
+      });
+    } catch (error) {
+      logger.logError(error, { 
+        action: 'publishNotificationCreatedEvent', 
+        notificationId: notification._id 
+      });
+      // Don't throw error - notification was still created successfully
     }
   }
 

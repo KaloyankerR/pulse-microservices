@@ -113,7 +113,7 @@ class EventService {
     for (const event of socialEvents) {
       await rabbitmq.setupConsumer(
         `notification-service.social.${event.routingKey}`,
-        'social_events',
+        'pulse.events',
         event.routingKey,
         event.handler
       );
@@ -425,16 +425,19 @@ class EventService {
     try {
       logger.logEventProcessing('user.followed', 'started', { data });
       
+      // Extract the actual data from the nested structure
+      const eventData = data.data || data;
+      
       await NotificationService.processEvent({
         event_type: 'user.followed',
         data: {
-          follower_id: data.follower_id,
-          follower_username: data.follower_username,
-          following_id: data.following_id,
+          follower_id: eventData.follower_id,
+          follower_username: eventData.follower_username,
+          following_id: eventData.following_id,
         },
       });
 
-      logger.logEventProcessing('user.followed', 'completed', { followerId: data.follower_id, followingId: data.following_id });
+      logger.logEventProcessing('user.followed', 'completed', { followerId: eventData.follower_id, followingId: eventData.following_id });
       metrics.incrementEventProcessingCounter('user.followed', 'success');
     } catch (error) {
       logger.logError(error, { action: 'handleUserFollowed', data });
@@ -491,18 +494,21 @@ class EventService {
     try {
       logger.logEventProcessing('message.sent', 'started', { data });
       
+      // Extract the actual data from the nested structure
+      const eventData = data.data || data;
+      
       await NotificationService.processEvent({
         event_type: 'message.sent',
         data: {
-          conversation_id: data.conversation_id,
-          message_id: data.message_id,
-          sender_id: data.sender_id,
-          sender_username: data.sender_username,
-          recipient_id: data.recipient_id,
+          conversation_id: eventData.conversation_id,
+          message_id: eventData.message_id,
+          sender_id: eventData.sender_id,
+          sender_username: eventData.sender_username,
+          recipient_id: eventData.recipient_id,
         },
       });
 
-      logger.logEventProcessing('message.sent', 'completed', { messageId: data.message_id, conversationId: data.conversation_id });
+      logger.logEventProcessing('message.sent', 'completed', { messageId: eventData.message_id, conversationId: eventData.conversation_id });
       metrics.incrementEventProcessingCounter('message.sent', 'success');
     } catch (error) {
       logger.logError(error, { action: 'handleMessageSent', data });

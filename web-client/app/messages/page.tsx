@@ -675,7 +675,7 @@ export default function MessagesPage() {
                 <div className="flex space-x-3">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     onClick={handleCloseModal}
                     className="flex-1"
                   >

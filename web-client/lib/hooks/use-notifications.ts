@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { notificationsApi } from '../api/notifications';
 import { Notification } from '@/types';
+import { useNotificationStore } from '../stores/notification-store';
 
 export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
+  const storeNotifications = useNotificationStore((state) => state.notifications);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,9 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
   }, [fetchNotifications]);
 
   const markAsRead = async (notificationId: string) => {
+    const { markAsRead: markAsReadStore } = useNotificationStore.getState();
     await notificationsApi.markAsRead(notificationId);
+    markAsReadStore(notificationId);
     setNotifications((prev) =>
       prev.map((notif) =>
         notif._id === notificationId ? { ...notif, is_read: true } : notif
@@ -52,7 +56,9 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
   };
 
   const markAllAsRead = async () => {
+    const { markAllAsRead: markAllAsReadStore } = useNotificationStore.getState();
     await notificationsApi.markAllAsRead();
+    markAllAsReadStore();
     setNotifications((prev) => prev.map((notif) => ({ ...notif, is_read: true })));
   };
 
@@ -68,6 +74,7 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
 }
 
 export function useUnreadCount(enabled = true) {
+  const storeUnreadCount = useNotificationStore((state) => state.unreadCount);
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -83,6 +90,7 @@ export function useUnreadCount(enabled = true) {
       setIsLoading(true);
       const unreadCount = await notificationsApi.getUnreadCount();
       setCount(unreadCount);
+      useNotificationStore.getState().setUnreadCount(unreadCount);
     } catch (err) {
       setCount(0);
     } finally {
@@ -100,6 +108,9 @@ export function useUnreadCount(enabled = true) {
     }
   }, [fetchCount, enabled]);
 
-  return { count, isLoading, refetch: fetchCount };
+  // Use store value if available, otherwise use fetched value
+  const currentCount = storeUnreadCount > 0 ? storeUnreadCount : count;
+
+  return { count: currentCount, isLoading, refetch: fetchCount };
 }
 

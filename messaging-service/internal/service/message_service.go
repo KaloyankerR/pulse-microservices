@@ -101,9 +101,10 @@ func (s *messageService) CreateMessage(ctx context.Context, userID string, req *
 		s.logger.Warn("Failed to update last message", zap.Error(err))
 	}
 
-	// Publish event
+	// Publish events
 	if s.eventPublisher != nil {
 		s.eventPublisher.PublishMessageSent(message, conversation.Participants)
+		s.eventPublisher.PublishMessageNotification(message, conversation.Participants)
 	}
 
 	s.logger.Info("Message created",
@@ -202,6 +203,32 @@ func (e *EventPublisher) PublishMessageSent(message *models.Message, participant
 	}
 
 	e.publish("message.sent", event)
+}
+
+// PublishMessageNotification sends notification events for each participant (except sender)
+func (e *EventPublisher) PublishMessageNotification(message *models.Message, participants []string) {
+	for _, participantID := range participants {
+		// Don't send notification to the sender
+		if participantID == message.SenderID {
+			continue
+		}
+
+		event := models.Event{
+			Type:      "message.sent",
+			Timestamp: time.Now(),
+			Data: map[string]interface{}{
+				"message_id":      message.ID.Hex(),
+				"conversation_id": message.ConversationID.Hex(),
+				"sender_id":       message.SenderID,
+				"sender_username": "", // Will be populated by notification service from user cache
+				"recipient_id":    participantID,
+				"content":         message.Content,
+				"created_at":      message.CreatedAt,
+			},
+		}
+
+		e.publish("message.sent", event)
+	}
 }
 
 func (e *EventPublisher) PublishMessageRead(messageID, userID string) {

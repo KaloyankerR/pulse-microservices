@@ -27,15 +27,16 @@ var upgrader = websocket.Upgrader{
 }
 
 type WebSocketHandler struct {
-	messageService  service.MessageService
-	presenceRepo    repository.PresenceRepository
-	eventPublisher  *service.EventPublisher
-	logger          *zap.Logger
-	jwtSecret       string
-	clients         map[string]*Client
-	clientsMutex    sync.RWMutex
-	broadcast       chan *models.WSMessage
-	typingIndicator chan *models.TypingIndicator
+	messageService     service.MessageService
+	presenceRepo       repository.PresenceRepository
+	eventPublisher     *service.EventPublisher
+	logger             *zap.Logger
+	jwtSecret          string
+	clients            map[string]*Client
+	clientsMutex       sync.RWMutex
+	broadcast          chan *models.WSMessage
+	typingIndicator    chan *models.TypingIndicator
+	notificationEvents chan *models.NotificationEvent
 }
 
 type Client struct {
@@ -55,21 +56,38 @@ func NewWebSocketHandler(
 	jwtSecret string,
 ) *WebSocketHandler {
 	handler := &WebSocketHandler{
-		messageService:  messageService,
-		presenceRepo:    presenceRepo,
-		eventPublisher:  eventPublisher,
-		logger:          logger,
-		jwtSecret:       jwtSecret,
-		clients:         make(map[string]*Client),
-		broadcast:       make(chan *models.WSMessage, 256),
-		typingIndicator: make(chan *models.TypingIndicator, 256),
+		messageService:     messageService,
+		presenceRepo:       presenceRepo,
+		eventPublisher:     eventPublisher,
+		logger:             logger,
+		jwtSecret:          jwtSecret,
+		clients:            make(map[string]*Client),
+		broadcast:          make(chan *models.WSMessage, 256),
+		typingIndicator:    make(chan *models.TypingIndicator, 256),
+		notificationEvents: make(chan *models.NotificationEvent, 256),
 	}
 
 	// Start broadcast goroutine
 	go handler.handleBroadcast()
 	go handler.handleTypingIndicators()
+	go handler.handleNotificationEvents()
 
 	return handler
+}
+
+// SendNotification sends a notification event to the WebSocket handler
+func (h *WebSocketHandler) SendNotification(notification *models.NotificationEvent) {
+	select {
+	case h.notificationEvents <- notification:
+		h.logger.Debug("Notification event queued for WebSocket delivery",
+			zap.String("notification_id", notification.ID),
+			zap.String("recipient_id", notification.RecipientID),
+		)
+	default:
+		h.logger.Warn("Notification event channel full, dropping notification",
+			zap.String("notification_id", notification.ID),
+		)
+	}
 }
 
 func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
@@ -190,6 +208,37 @@ func (h *WebSocketHandler) handleTypingIndicators() {
 	}
 }
 
+func (h *WebSocketHandler) handleNotificationEvents() {
+	for notification := range h.notificationEvents {
+		// Send notification to the specific recipient
+		h.clientsMutex.RLock()
+		for _, client := range h.clients {
+			if client.UserID == notification.RecipientID {
+				select {
+				case client.Send <- &models.WSMessage{
+					Type: models.WSMessageTypeNotification,
+					Payload: map[string]interface{}{
+						"type": "notification.created",
+						"data": notification,
+					},
+				}:
+					h.logger.Info("Notification sent to client",
+						zap.String("client_id", client.ID),
+						zap.String("user_id", client.UserID),
+						zap.String("notification_id", notification.ID),
+					)
+				default:
+					h.logger.Warn("Failed to send notification to client",
+						zap.String("client_id", client.ID),
+						zap.String("user_id", client.UserID),
+					)
+				}
+			}
+		}
+		h.clientsMutex.RUnlock()
+	}
+}
+
 // Client read pump
 func (c *Client) readPump() {
 	defer func() {
@@ -266,5 +315,3 @@ func (c *Client) writePump() {
 		}
 	}
 }
-
-

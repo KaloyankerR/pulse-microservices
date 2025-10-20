@@ -78,6 +78,12 @@ func main() {
 	healthHandler := handlers.NewHealthHandler(mongodb, redisClient, logger)
 	wsHandler := handlers.NewWebSocketHandler(messageService, presenceRepo, eventPublisher, logger, cfg.JWTSecret)
 
+	// Initialize notification consumer
+	notificationConsumer := service.NewNotificationConsumer(rabbitmq.Channel, wsHandler, logger)
+	if err := notificationConsumer.StartConsuming(); err != nil {
+		logger.Fatal("Failed to start notification consumer", zap.Error(err))
+	}
+
 	// Setup Gin router
 	if cfg.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
