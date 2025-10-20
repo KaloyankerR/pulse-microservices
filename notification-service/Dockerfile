@@ -24,10 +24,7 @@ RUN npm install && npm cache clean --force
 COPY . .
 
 # Create logs directory
-RUN mkdir -p logs && chown -R nodejs:nodejs logs
-
-# Set ownership of app directory
-RUN chown -R nodejs:nodejs /app
+RUN mkdir -p logs
 
 # Switch to non-root user
 USER nodejs
@@ -55,10 +52,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY . .
 
 # Create logs directory
-RUN mkdir -p logs && chown -R nodejs:nodejs logs
-
-# Set ownership of app directory
-RUN chown -R nodejs:nodejs /app
+RUN mkdir -p logs
 
 # Switch to non-root user
 USER nodejs

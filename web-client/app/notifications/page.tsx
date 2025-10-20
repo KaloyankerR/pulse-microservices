@@ -117,6 +117,7 @@ export default function NotificationsPage() {
                           <Avatar
                             src={notification.sender.avatarUrl}
                             name={notification.sender.username}
+                            username={notification.sender.username}
                             size="md"
                           />
                         </Link>

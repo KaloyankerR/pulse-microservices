@@ -29,7 +29,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-RUN chown -R nextjs:nodejs /app
+# Ownership will be set by the user directive
 
 USER nextjs
 

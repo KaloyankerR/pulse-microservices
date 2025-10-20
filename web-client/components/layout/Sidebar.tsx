@@ -37,6 +37,7 @@ export function Sidebar() {
               <Avatar
                 src={user?.avatarUrl}
                 name={user?.displayName || user?.username}
+                username={user?.username}
                 size="lg"
               />
               <div className="flex-1 min-w-0">
@@ -73,6 +74,7 @@ export function Sidebar() {
                     <Avatar
                       src={rec.avatarUrl}
                       name={rec.displayName || rec.username}
+                      username={rec.username}
                       size="md"
                     />
                     <div className="flex-1 min-w-0">

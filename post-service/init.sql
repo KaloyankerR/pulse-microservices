@@ -110,16 +110,6 @@ CREATE TRIGGER update_comment_count_trigger
     AFTER INSERT OR DELETE ON post_comments
     FOR EACH ROW EXECUTE FUNCTION update_post_comment_count();
 
--- Insert sample data for testing
-INSERT INTO user_cache (id, username, display_name, avatar_url, verified) VALUES
-    ('123e4567-e89b-12d3-a456-426614174000', 'testuser', 'Test User', 'https://example.com/avatar1.jpg', true),
-    ('123e4567-e89b-12d3-a456-426614174001', 'johndoe', 'John Doe', 'https://example.com/avatar2.jpg', false)
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO posts (id, author_id, content, like_count, comment_count) VALUES
-    ('223e4567-e89b-12d3-a456-426614174000', '123e4567-e89b-12d3-a456-426614174000', 'Welcome to Pulse Go Service! This is my first post. 🎉', 5, 2),
-    ('223e4567-e89b-12d3-a456-426614174001', '123e4567-e89b-12d3-a456-426614174001', 'Just had an amazing day at the beach! 🌊', 12, 3)
-ON CONFLICT (id) DO NOTHING;
 
 -- Grant permissions
 GRANT ALL PRIVILEGES ON DATABASE pulse_posts TO pulse_user;

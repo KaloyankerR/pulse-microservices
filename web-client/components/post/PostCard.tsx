@@ -93,6 +93,7 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
             <Avatar
               src={post.author?.avatarUrl}
               name={post.author?.displayName || post.author?.username}
+              username={post.author?.username}
               size="md"
             />
             <div>
@@ -161,6 +162,7 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
                       <Avatar
                         src={comment.author?.avatarUrl}
                         name={comment.author?.displayName || comment.author?.username}
+                        username={comment.author?.username}
                         size="sm"
                       />
                     </Link>
@@ -203,6 +205,7 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
                 <Avatar
                   src={user.avatarUrl}
                   name={user.displayName || user.username}
+                  username={user.username}
                   size="sm"
                 />
                 <div className="flex-1 flex space-x-2">

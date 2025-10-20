@@ -54,8 +54,7 @@ COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/package*.json ./
 
 # Create logs directory and set permissions
-RUN mkdir -p logs && \
-    chown -R nodejs:nodejs /app
+RUN mkdir -p logs
 
 # Switch to non-root user
 USER nodejs
@@ -78,8 +77,7 @@ FROM build AS development
 RUN npm install -g nodemon
 
 # Create logs directory and set permissions
-RUN mkdir -p logs && \
-    chown -R nodejs:nodejs /app
+RUN mkdir -p logs
 
 # Switch to non-root user
 USER nodejs

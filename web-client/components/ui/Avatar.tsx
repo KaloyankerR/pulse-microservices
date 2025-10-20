@@ -5,6 +5,7 @@ interface AvatarProps {
   src?: string;
   alt?: string;
   name?: string;
+  username?: string; // Add username prop for consistent color generation
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
@@ -36,7 +37,7 @@ function getAvatarColor(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function Avatar({ src, alt, name, size = 'md', className }: AvatarProps) {
+export function Avatar({ src, alt, name, username, size = 'md', className }: AvatarProps) {
   const [imageError, setImageError] = useState(false);
   
   const sizes = {
@@ -48,7 +49,6 @@ export function Avatar({ src, alt, name, size = 'md', className }: AvatarProps) 
 
   // Clean the avatar URL to remove placeholder URLs
   const cleanSrc = cleanAvatarUrl(src);
-
 
   // Show fallback if no src, image failed to load, or src is invalid
   const shouldShowFallback = !cleanSrc || imageError;
@@ -68,8 +68,10 @@ export function Avatar({ src, alt, name, size = 'md', className }: AvatarProps) 
     );
   }
 
+  // Use username for consistent color generation, fallback to name
+  const colorKey = username || name || '';
   const initials = name ? getInitials(name) : '?';
-  const colorClass = getAvatarColor(name || '');
+  const colorClass = getAvatarColor(colorKey);
 
   return (
     <div

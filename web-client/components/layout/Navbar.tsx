@@ -89,6 +89,7 @@ export function Navbar() {
                 <Avatar
                   src={user?.avatarUrl}
                   name={user?.displayName || user?.username}
+                  username={user?.username}
                   size="md"
                 />
               </button>

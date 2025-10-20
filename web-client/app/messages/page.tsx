@@ -411,6 +411,7 @@ export default function MessagesPage() {
                       <Avatar
                         name={getConversationName(conversation)}
                         src={getOtherParticipant(conversation)?.avatarUrl}
+                        username={getOtherParticipant(conversation)?.username}
                         size="md"
                       />
                       <div className="flex-1 min-w-0 text-left">
@@ -453,6 +454,7 @@ export default function MessagesPage() {
                   <Avatar
                     name={getConversationName(selectedConversation)}
                     src={getOtherParticipant(selectedConversation)?.avatarUrl}
+                    username={getOtherParticipant(selectedConversation)?.username}
                     size="md"
                   />
                   <h3 className="font-bold text-gray-900">
@@ -612,6 +614,7 @@ export default function MessagesPage() {
                           >
                             <Avatar
                               name={suggestion.displayName || suggestion.username}
+                              username={suggestion.username}
                               size="sm"
                             />
                             <div className="flex-1 min-w-0">
@@ -643,6 +646,7 @@ export default function MessagesPage() {
                     <div className="flex items-center space-x-3">
                       <Avatar
                         name={selectedUser.displayName || selectedUser.username}
+                        username={selectedUser.username}
                         size="md"
                       />
                       <div className="flex-1">

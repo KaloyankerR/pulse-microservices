@@ -119,17 +119,17 @@ sonar-messaging: ## Run SonarQube analysis for messaging-service
 	@echo "✅ Messaging service analysis complete"
 
 
-db-reset: db-reset-users db-reset-posts ## Reset all databases (drop and recreate)
-	@echo "✅ All databases reset complete!"
+db-reset: db-reset-all ## Reset all databases (drop and recreate) - alias for db-reset-all
 
-db-reset-users: ## Reset user service database
+# Legacy individual database reset commands (kept for granular control)
+db-reset-users: ## Reset user service database only
 	@echo "Resetting pulse_users database..."
 	@psql -U pulse_user -d pulse_users -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" 2>/dev/null || true
 	@psql -U pulse_user -d pulse_users -c "GRANT ALL ON SCHEMA public TO pulse_user;"
-	@cd user-service && npx prisma db push --skip-generate
+	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_users" npx prisma db push --skip-generate
 	@echo "✅ User database reset complete"
 
-db-reset-posts: ## Reset post service database
+db-reset-posts: ## Reset post service database only
 	@echo "Resetting pulse_posts database..."
 	@psql -U pulse_user -d pulse_posts -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO pulse_user;" 2>/dev/null || true
 	@psql -U pulse_user -d pulse_posts -f post-service/init.sql
@@ -143,6 +143,38 @@ db-setup: ## Create databases for the first time
 	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_users TO pulse_user;"
 	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_posts TO pulse_user;"
 	@echo "Initializing schemas..."
-	@cd user-service && npx prisma db push --skip-generate
+	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_users" npx prisma db push --skip-generate
 	@psql -U pulse_user -d pulse_posts -f post-service/init.sql
 	@echo "✅ Database setup complete!"
+
+# Database Reset Commands
+db-drop-all: ## Drop all databases (PostgreSQL + MongoDB)
+	@echo "🗑️  Dropping all databases..."
+	@echo "Dropping PostgreSQL databases..."
+	@psql -d postgres -c "DROP DATABASE IF EXISTS pulse_users WITH (FORCE);" 2>/dev/null || true
+	@psql -d postgres -c "DROP DATABASE IF EXISTS pulse_posts WITH (FORCE);" 2>/dev/null || true
+	@psql -d postgres -c "DROP DATABASE IF EXISTS pulse_social WITH (FORCE);" 2>/dev/null || true
+	@echo "Dropping MongoDB databases..."
+	@mongosh --eval "db = db.getSiblingDB('pulse_notifications'); db.dropDatabase();" 2>/dev/null || true
+	@mongosh --eval "db = db.getSiblingDB('messaging_db'); db.dropDatabase();" 2>/dev/null || true
+	@echo "✅ All databases dropped!"
+
+db-build-all: ## Build all databases (PostgreSQL + MongoDB)
+	@echo "🏗️  Building all databases..."
+	@echo "Creating PostgreSQL databases..."
+	@psql -d postgres -c "CREATE DATABASE pulse_users OWNER pulse_user;" 2>/dev/null || echo "pulse_users already exists"
+	@psql -d postgres -c "CREATE DATABASE pulse_posts OWNER pulse_user;" 2>/dev/null || echo "pulse_posts already exists"
+	@psql -d postgres -c "CREATE DATABASE pulse_social OWNER pulse_user;" 2>/dev/null || echo "pulse_social already exists"
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_users TO pulse_user;"
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_posts TO pulse_user;"
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_social TO pulse_user;"
+	@echo "Applying PostgreSQL schemas..."
+	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_users" npx prisma db push --skip-generate
+	@cd social-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_social" npx prisma db push --skip-generate
+	@psql -U pulse_user -d pulse_posts -f post-service/init.sql
+	@echo "Creating MongoDB databases and collections..."
+	@mongosh < config/mongodb/init.js 2>/dev/null || echo "MongoDB initialization completed"
+	@echo "✅ All databases built!"
+
+db-reset-all: db-drop-all db-build-all ## Drop and rebuild all databases (PostgreSQL + MongoDB)
+	@echo "✅ Database reset complete!"

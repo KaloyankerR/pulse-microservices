@@ -51,6 +51,7 @@ export function CreatePost({ onPostCreate }: CreatePostProps) {
             <Avatar
               src={user?.avatarUrl}
               name={user?.displayName || user?.username}
+              username={user?.username}
               size="md"
             />
             <div className="flex-1">

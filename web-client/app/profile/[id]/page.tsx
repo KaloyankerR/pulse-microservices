@@ -102,6 +102,7 @@ export default function ProfilePage() {
               <Avatar
                 src={user.avatarUrl}
                 name={user.displayName || user.username}
+                username={user.username}
                 size="xl"
               />
               <div className="flex-1">
