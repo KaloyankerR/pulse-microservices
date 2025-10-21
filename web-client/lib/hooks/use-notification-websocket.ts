@@ -8,8 +8,6 @@ export function useNotificationWebSocket() {
 
   const { isConnected, error } = useWebSocket({
     onMessage: (message) => {
-      console.log('WebSocket message received:', message);
-      
       switch (message.type) {
         case 'notification.created':
           if (message.data) {
@@ -47,17 +45,17 @@ export function useNotificationWebSocket() {
           break;
         
         default:
-          console.log('Unknown WebSocket message type:', message.type);
+          break;
       }
     },
     onOpen: () => {
-      console.log('WebSocket connected for notifications');
+      // WebSocket connected
     },
     onClose: () => {
-      console.log('WebSocket disconnected for notifications');
+      // WebSocket disconnected
     },
     onError: (error) => {
-      console.error('WebSocket error for notifications:', error);
+      // WebSocket error handled by useWebSocket hook
     },
   });
 
@@ -67,6 +65,13 @@ export function useNotificationWebSocket() {
       window.Notification.requestPermission();
     }
   }, []);
+
+  // Connection status monitoring
+  useEffect(() => {
+    if (error) {
+      // Error is handled by the useWebSocket hook
+    }
+  }, [isConnected, error]);
 
   return {
     isConnected,

@@ -23,6 +23,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  const isConnectingRef = useRef(false);
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const {
     onMessage,
@@ -34,7 +36,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   } = options;
 
   const connect = () => {
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !user || isConnectingRef.current || wsRef.current?.readyState === WebSocket.CONNECTING || wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
 
@@ -45,10 +47,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         return;
       }
 
+      isConnectingRef.current = true;
       const wsUrl = `${config.wsUrl}/ws?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {
+        isConnectingRef.current = false;
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
@@ -64,7 +68,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
+        isConnectingRef.current = false;
         setIsConnected(false);
         onClose?.();
         
@@ -74,16 +79,21 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
           }, reconnectInterval);
+        } else {
+          setError('WebSocket connection failed after maximum retry attempts');
         }
       };
 
       ws.onerror = (error) => {
-        setError('WebSocket connection error');
+        isConnectingRef.current = false;
+        const errorMessage = `WebSocket connection error: ${error.type || 'Connection failed'}`;
+        setError(errorMessage);
         onError?.(error);
       };
 
       wsRef.current = ws;
     } catch (err) {
+      isConnectingRef.current = false;
       setError('Failed to create WebSocket connection');
       onError?.(err as Event);
     }
@@ -100,6 +110,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       wsRef.current = null;
     }
     
+    isConnectingRef.current = false;
     setIsConnected(false);
   };
 
@@ -112,13 +123,26 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   };
 
   useEffect(() => {
+    // Clear any existing connection timeout
+    if (connectionTimeoutRef.current) {
+      clearTimeout(connectionTimeoutRef.current);
+      connectionTimeoutRef.current = null;
+    }
+
     if (isAuthenticated && user) {
-      connect();
+      // Add a small delay to prevent rapid reconnections in React Strict Mode
+      connectionTimeoutRef.current = setTimeout(() => {
+        connect();
+      }, 100);
     } else {
       disconnect();
     }
 
     return () => {
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
       disconnect();
     };
   }, [isAuthenticated, user]);
