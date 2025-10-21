@@ -17,7 +17,7 @@ Microservices platform with API Gateway, user authentication, post management, a
 - **Notification Service** (Node.js) - Push notifications & user preferences (port 8086)
 
 ### Frontend
-- **Web Client** (Next.js) - Frontend application (port 3000)
+- **Frontend** (Next.js) - Frontend application (port 3000)
 
 ### Infrastructure
 - **Prometheus** (port 9090) - Metrics collection & monitoring
@@ -123,7 +123,7 @@ pulse-microservices/
 │   ├── kong.yml               # Kong Gateway routes
 │   ├── prometheus.yml         # Prometheus configuration
 │   └── grafana/               # Grafana dashboards
-├── web-client/                 # Next.js frontend
+├── frontend/                   # Next.js frontend
 ├── user-service/               # Node.js + Prisma
 ├── post-service/               # Go service
 ├── social-service/             # Node.js service
@@ -299,29 +299,29 @@ curl http://localhost:8081/metrics
 
 For detailed monitoring documentation, see [docs/MONITORING.md](docs/MONITORING.md)
 
-## Web Client
+## Frontend
 
-The frontend application is located in the `web-client/` directory. It's a Next.js application that communicates with the backend microservices through Kong Gateway.
+The frontend application is located in the `frontend/` directory. It's a Next.js application that communicates with the backend microservices through Kong Gateway.
 
 ### Quick Start
 
 ```bash
-# From project root - starts everything including web client
-docker-compose up -d web-client
+# From project root - starts everything including frontend
+docker-compose up -d frontend
 
 # Or develop locally
-cd web-client
+cd frontend
 npm install
 npm run dev
 ```
 
 ### Documentation
 
-- **[Web Client README](web-client/README.md)** - Frontend setup and overview
-- **[Integration Guide](web-client/WEB_CLIENT_INTEGRATION.md)** - Complete integration documentation
-- **[Microservices Config](web-client/config/microservices.config.ts)** - Backend endpoint configuration
+- **[Frontend README](frontend/README.md)** - Frontend setup and overview
+- **[Integration Guide](frontend/WEB_CLIENT_INTEGRATION.md)** - Complete integration documentation
+- **[Microservices Config](frontend/config/microservices.config.ts)** - Backend endpoint configuration
 
-For detailed information about frontend development, API integration, and deployment, see the [Web Client Integration Guide](web-client/WEB_CLIENT_INTEGRATION.md).
+For detailed information about frontend development, API integration, and deployment, see the [Frontend Integration Guide](frontend/WEB_CLIENT_INTEGRATION.md).
 
 ## Troubleshooting
 
@@ -331,8 +331,8 @@ make ps                # Check service status
 make db-reset          # Reset databases
 docker-compose restart # Restart services
 
-# Web client specific
-docker-compose logs -f web-client
-docker-compose restart web-client
+# Frontend specific
+docker-compose logs -f frontend
+docker-compose restart frontend
 ```
 

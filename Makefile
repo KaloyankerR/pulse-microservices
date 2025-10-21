@@ -28,15 +28,15 @@ rebuild-no-cache: ## Force rebuild all services without cache
 	docker-compose build --no-cache
 	docker-compose up -d
 
-rebuild-web: ## Rebuild only web-client
-	docker-compose build --no-cache web-client
-	docker-compose up -d web-client
+rebuild-frontend: ## Rebuild only frontend
+	docker-compose build --no-cache frontend
+	docker-compose up -d frontend
 
 dev: ## Start development environment with hot reload
-	docker-compose --profile dev up -d web-client-dev
+	docker-compose --profile dev up -d frontend-dev
 
 dev-stop: ## Stop development environment
-	docker-compose --profile dev down web-client-dev
+	docker-compose --profile dev down frontend-dev
 
 clean: ## Stop services and remove volumes
 	docker-compose down -v

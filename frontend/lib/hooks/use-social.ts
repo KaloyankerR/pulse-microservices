@@ -91,6 +91,10 @@ export function useFollowStatus(userId: string) {
   };
 }
 
+// Cache for recommendations to reduce API calls
+const recommendationsCache = new Map<string, { data: UserWithSocial[], timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export function useRecommendations(limit = 10, enabled = true) {
   const [recommendations, setRecommendations] = useState<UserWithSocial[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -104,13 +108,30 @@ export function useRecommendations(limit = 10, enabled = true) {
       return;
     }
 
+    const cacheKey = `recommendations-${limit}`;
+    const cached = recommendationsCache.get(cacheKey);
+    
+    // Check if we have valid cached data
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      setRecommendations(cached.data);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchRecommendations = async () => {
       try {
         setIsLoading(true);
         setError(null);
         const data = await socialApi.getRecommendations(limit);
         // Ensure we always set an array
-        setRecommendations(Array.isArray(data) ? data : []);
+        const recommendations = Array.isArray(data) ? data : [];
+        setRecommendations(recommendations);
+        
+        // Cache the results
+        recommendationsCache.set(cacheKey, {
+          data: recommendations,
+          timestamp: Date.now()
+        });
       } catch (err: any) {
         setError(err.message || 'Failed to fetch recommendations');
         // Set empty array on error to prevent .map() issues

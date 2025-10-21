@@ -173,6 +173,23 @@ class SocialController {
     }
   }
 
+  async syncUsers(req, res, next) {
+    try {
+      const result = await socialService.syncUsersFromUserService();
+      
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getFollowStatus(req, res, next) {
     try {
       const { userId } = req.params;

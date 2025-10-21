@@ -38,12 +38,12 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
       return;
     }
 
-    if (formData.event_type === 'PHYSICAL' && !formData.location.trim()) {
+    if (formData.event_type === 'PHYSICAL' && (!formData.location || !formData.location.trim())) {
       setError('Location is required for physical events');
       return;
     }
 
-    if (formData.event_type === 'VIRTUAL' && !formData.virtual_link.trim()) {
+    if (formData.event_type === 'VIRTUAL' && (!formData.virtual_link || !formData.virtual_link.trim())) {
       setError('Virtual link is required for virtual events');
       return;
     }
@@ -67,8 +67,8 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
         event_type: formData.event_type,
         start_date: convertToRFC3339(formData.start_date),
         end_date: convertToRFC3339(formData.end_date),
-        ...(formData.event_type === 'PHYSICAL' && { location: formData.location.trim() }),
-        ...(formData.event_type === 'VIRTUAL' && { virtual_link: formData.virtual_link.trim() }),
+        ...(formData.event_type === 'PHYSICAL' && formData.location && { location: formData.location.trim() }),
+        ...(formData.event_type === 'VIRTUAL' && formData.virtual_link && { virtual_link: formData.virtual_link.trim() }),
       };
 
       await onEventCreate?.(submitData);
@@ -141,7 +141,7 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
               placeholder="Enter event title"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-600"
               maxLength={100}
             />
           </div>
@@ -171,29 +171,29 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
               Event Type *
             </label>
             <div className="flex space-x-4">
-              <label className="flex items-center">
+              <label className="flex items-center cursor-pointer">
                 <input
                   type="radio"
                   name="event_type"
                   value="PHYSICAL"
                   checked={formData.event_type === 'PHYSICAL'}
                   onChange={() => handleEventTypeChange('PHYSICAL')}
-                  className="mr-2"
+                  className="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                 />
-                <MapPin className="w-4 h-4 mr-1" />
-                Physical Event
+                <MapPin className="w-4 h-4 mr-1 text-gray-600" />
+                <span className="text-gray-700">Physical Event</span>
               </label>
-              <label className="flex items-center">
+              <label className="flex items-center cursor-pointer">
                 <input
                   type="radio"
                   name="event_type"
                   value="VIRTUAL"
                   checked={formData.event_type === 'VIRTUAL'}
                   onChange={() => handleEventTypeChange('VIRTUAL')}
-                  className="mr-2"
+                  className="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
                 />
-                <Video className="w-4 h-4 mr-1" />
-                Virtual Event
+                <Video className="w-4 h-4 mr-1 text-gray-600" />
+                <span className="text-gray-700">Virtual Event</span>
               </label>
             </div>
           </div>
@@ -210,7 +210,7 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
                 placeholder="Enter event location"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-600"
                 maxLength={200}
               />
             </div>
@@ -228,7 +228,7 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
                 value={formData.virtual_link}
                 onChange={(e) => handleInputChange('virtual_link', e.target.value)}
                 placeholder="https://meet.google.com/..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-600"
               />
             </div>
           )}
@@ -244,7 +244,7 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
               value={formData.start_date}
               onChange={(e) => handleInputChange('start_date', e.target.value)}
               min={getMinDateTime()}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
             />
           </div>
 
@@ -259,7 +259,7 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
               value={formData.end_date}
               onChange={(e) => handleInputChange('end_date', e.target.value)}
               min={getMinEndDateTime()}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
             />
           </div>
 

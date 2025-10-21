@@ -260,6 +260,7 @@ router.delete(
  */
 router.get(
   '/recommendations',
+  socialLimiter,
   authenticateToken,
   [
     query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50'),
@@ -295,6 +296,26 @@ router.get(
   ],
   validate,
   socialController.getSocialStats
+);
+
+/**
+ * @swagger
+ * /api/v1/social/sync-users:
+ *   post:
+ *     summary: Sync users from user service
+ *     tags: [Social]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Users synced successfully
+ *       401:
+ *         description: Unauthorized
+ */
+router.post(
+  '/sync-users',
+  authenticateToken,
+  socialController.syncUsers
 );
 
 /**

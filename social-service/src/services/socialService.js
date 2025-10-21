@@ -401,23 +401,115 @@ class SocialService {
       .slice(0, limit)
       .map((entry) => entry[0]);
 
+    // If no recommendations from social graph, get random users
+    if (topUserIds.length === 0) {
+      const allUsers = await prisma.userCache.findMany({
+        where: {
+          id: {
+            notIn: [userId, ...blockedIds],
+          },
+        },
+        take: limit,
+      });
+      topUserIds.push(...allUsers.map(u => u.id));
+    }
+
+    // If still no users, try to get from user service directly
+    if (topUserIds.length === 0) {
+      try {
+        const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:8081';
+        const response = await fetch(`${userServiceUrl}/api/v1/users?limit=${limit}`, {
+          headers: {
+            'Authorization': `Bearer ${process.env.INTERNAL_SERVICE_TOKEN || ''}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          const users = userData.data || [];
+          
+          // Cache these users and use them for recommendations
+          for (const user of users) {
+            if (user.id !== userId && !blockedIds.includes(user.id)) {
+              await prisma.userCache.upsert({
+                where: { id: user.id },
+                update: {
+                  username: user.username,
+                  displayName: user.displayName || null,
+                  avatarUrl: user.avatarUrl || null,
+                  verified: user.verified || false,
+                  lastSynced: new Date(),
+                },
+                create: {
+                  id: user.id,
+                  username: user.username,
+                  displayName: user.displayName || null,
+                  avatarUrl: user.avatarUrl || null,
+                  verified: user.verified || false,
+                  lastSynced: new Date(),
+                },
+              });
+              topUserIds.push(user.id);
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn('Failed to fetch users from user service:', error.message);
+      }
+    }
+
     // Get user info from cache
     const recommendedUsers = await Promise.all(
       topUserIds.map(async (id) => {
-        const userCache = await prisma.userCache.findUnique({
+        let userCache = await prisma.userCache.findUnique({
           where: { id },
         });
+
+        // If user cache is empty, try to fetch from user service
+        if (!userCache) {
+          try {
+            // Try to fetch user data from user service
+            const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:8081';
+            const response = await fetch(`${userServiceUrl}/api/v1/users/${id}`, {
+              headers: {
+                'Authorization': `Bearer ${process.env.INTERNAL_SERVICE_TOKEN || ''}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (response.ok) {
+              const userData = await response.json();
+              const user = userData.data;
+              
+              // Cache the user data
+              userCache = await prisma.userCache.create({
+                data: {
+                  id: user.id,
+                  username: user.username,
+                  displayName: user.displayName || null,
+                  avatarUrl: user.avatarUrl || null,
+                  verified: user.verified || false,
+                  lastSynced: new Date(),
+                },
+              });
+            }
+          } catch (error) {
+            logger.warn(`Failed to fetch user data for ${id}:`, error.message);
+          }
+        }
 
         const stats = await this.getSocialStats(id);
 
         return {
-          userId: id,
-          username: userCache?.username || 'unknown',
-          displayName: userCache?.displayName || null,
+          id: id,
+          username: userCache?.username || `user_${id.slice(0, 8)}`,
+          displayName: userCache?.displayName || `User ${id.slice(0, 8)}`,
           avatarUrl: userCache?.avatarUrl || null,
           verified: userCache?.verified || false,
-          followersCount: stats.followersCount,
-          mutualFollowersCount: userCounts[id],
+          followers_count: stats.followers_count,
+          following_count: stats.following_count,
+          mutualFollowersCount: userCounts[id] || 0,
         };
       })
     );
@@ -430,6 +522,62 @@ class SocialService {
     await cacheService.set(cacheKey, result, 600); // 10 minutes
 
     return result;
+  }
+
+  // Sync users from user service
+  async syncUsersFromUserService() {
+    try {
+      const userServiceUrl = process.env.USER_SERVICE_URL || 'http://user-service:8081';
+      const response = await fetch(`${userServiceUrl}/api/v1/admin/users?limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.INTERNAL_SERVICE_TOKEN || ''}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.status}`);
+      }
+
+      const userData = await response.json();
+      const users = userData.data?.users || [];
+      
+      let syncedCount = 0;
+      
+      // Cache these users
+      for (const user of users) {
+        await prisma.userCache.upsert({
+          where: { id: user.id },
+          update: {
+            username: user.username,
+            displayName: user.displayName || null,
+            avatarUrl: user.avatarUrl || null,
+            verified: user.verified || false,
+            lastSynced: new Date(),
+          },
+          create: {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName || null,
+            avatarUrl: user.avatarUrl || null,
+            verified: user.verified || false,
+            lastSynced: new Date(),
+          },
+        });
+        syncedCount++;
+      }
+
+      logger.info(`Successfully synced ${syncedCount} users from user service`);
+      
+      return {
+        syncedCount,
+        totalUsers: users.length,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      logger.error('Error syncing users from user service:', error);
+      throw error;
+    }
   }
 
   // Get social stats for a user

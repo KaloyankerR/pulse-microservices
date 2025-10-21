@@ -76,7 +76,7 @@ export default function NotificationsPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
           {notifications.some((n) => !n.is_read) && (
-            <Button variant="outline" size="sm" onClick={markAllAsRead}>
+            <Button variant="secondary" size="sm" onClick={markAllAsRead}>
               Mark all as read
             </Button>
           )}

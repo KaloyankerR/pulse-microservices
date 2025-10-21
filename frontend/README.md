@@ -1,4 +1,4 @@
-# Pulse Web Client
+# Pulse Frontend
 
 Modern Next.js 14 frontend for the Pulse microservices platform.
 
@@ -71,20 +71,20 @@ npm start
 Build and run with Docker:
 
 ```bash
-docker build -t pulse-web-client .
-docker run -p 3000:3000 pulse-web-client
+docker build -t pulse-frontend .
+docker run -p 3000:3000 pulse-frontend
 ```
 
 Or use docker-compose from the root:
 
 ```bash
-docker-compose up web-client
+docker-compose up frontend
 ```
 
 ## Project Structure
 
 ```
-web-client/
+frontend/
 ├── app/                    # Next.js App Router pages
 │   ├── auth/              # Authentication pages
 │   ├── feed/              # Feed page
