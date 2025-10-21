@@ -31,6 +31,7 @@ services:
       - social-service
       - messaging-service
       - notification-service
+      - event-service
 
   # User Service (Node.js)
   user-service:
@@ -271,6 +272,28 @@ services:
       retries: 3
       start_period: 40s
 
+  # Event Service (Go)
+  event-service:
+    build:
+      context: ./event-service
+      dockerfile: Dockerfile
+    container_name: pulse-event-service
+    ports:
+      - "8083:8083"
+    environment:
+      PORT: 8083
+      JWT_SECRET: 5b41d6a0c1adfd2804d730d26f7a4fd1
+      LOG_LEVEL: info
+    restart: unless-stopped
+    networks:
+      - pulse-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   # SonarQube for Code Quality
   sonarqube:
     image: sonarqube:community
@@ -372,6 +395,7 @@ services:
       - social-service
       - messaging-service
       - notification-service
+      - event-service
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
@@ -410,6 +434,7 @@ services:
       - social-service
       - messaging-service
       - notification-service
+      - event-service
     profiles:
       - dev
 

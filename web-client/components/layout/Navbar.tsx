@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Home, MessageCircle, Search, User } from 'lucide-react';
+import { Bell, Home, MessageCircle, Search, User, Calendar } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -36,6 +36,7 @@ export function Navbar() {
 
   const navItems = [
     { href: '/feed', icon: Home, label: 'Feed' },
+    { href: '/events', icon: Calendar, label: 'Events' },
     { href: '/search', icon: Search, label: 'Search' },
     { href: '/messages', icon: MessageCircle, label: 'Messages' },
     { href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount },

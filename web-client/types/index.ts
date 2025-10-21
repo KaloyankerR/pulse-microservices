@@ -211,3 +211,66 @@ export interface PaginatedResponse<T> {
   };
 }
 
+// Event types
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  location?: string;
+  virtual_link?: string;
+  event_type: 'PHYSICAL' | 'VIRTUAL';
+  start_date: string;
+  end_date?: string;
+  creator_id: string;
+  created_at: string;
+  updated_at: string;
+  rsvp_counts: {
+    yes: number;
+    maybe: number;
+    no: number;
+  };
+  user_rsvp?: 'YES' | 'MAYBE' | 'NO';
+  creator?: {
+    id: string;
+    username: string;
+    displayName?: string;
+    avatarUrl?: string;
+  };
+}
+
+export type RsvpStatus = 'YES' | 'MAYBE' | 'NO';
+
+export interface CreateEventRequest {
+  title: string;
+  description: string;
+  location?: string;
+  virtual_link?: string;
+  event_type: 'PHYSICAL' | 'VIRTUAL';
+  start_date: string;
+  end_date: string;
+  creator_id?: string;
+}
+
+export interface UpdateEventRequest {
+  title?: string;
+  description?: string;
+  location?: string;
+  virtual_link?: string;
+  event_type?: 'PHYSICAL' | 'VIRTUAL';
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface RsvpRequest {
+  status: RsvpStatus;
+}
+
+export interface EventAttendee {
+  id: string;
+  username: string;
+  displayName?: string;
+  avatarUrl?: string;
+  rsvp_status: RsvpStatus;
+  rsvp_date: string;
+}
+

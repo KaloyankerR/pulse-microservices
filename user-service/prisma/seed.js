@@ -70,33 +70,7 @@ async function main() {
     console.log('Sample user created:', { id: user.id, email: user.email });
   }
 
-  // Create some follow relationships
-  if (createdUsers.length >= 4) {
-    const followRelations = [
-      { followerId: createdUsers[0].id, followingId: createdUsers[1].id }, // john follows jane
-      { followerId: createdUsers[0].id, followingId: createdUsers[2].id }, // john follows mike
-      { followerId: createdUsers[1].id, followingId: createdUsers[0].id }, // jane follows john
-      { followerId: createdUsers[1].id, followingId: createdUsers[3].id }, // jane follows sarah
-      { followerId: createdUsers[2].id, followingId: createdUsers[1].id }, // mike follows jane
-      { followerId: createdUsers[3].id, followingId: createdUsers[0].id }, // sarah follows john
-      { followerId: createdUsers[3].id, followingId: createdUsers[1].id }, // sarah follows jane
-    ];
-
-    for (const relation of followRelations) {
-      await prisma.userFollow.upsert({
-        where: {
-          followerId_followingId: {
-            followerId: relation.followerId,
-            followingId: relation.followingId,
-          },
-        },
-        update: {},
-        create: relation,
-      });
-    }
-
-    console.log('Follow relationships created');
-  }
+  // No mock follow relationships - users start with clean social connections
 
   console.log('Database seeding completed successfully!');
 }

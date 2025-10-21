@@ -57,5 +57,15 @@ export const API_ENDPOINTS = {
     markAllRead: '/api/notifications/read-all',
     preferences: '/api/notifications/preferences',
   },
+  // Event endpoints
+  events: {
+    list: '/api/events',
+    create: '/api/events',
+    byId: (id: string) => `/api/events/${id}`,
+    update: (id: string) => `/api/events/${id}`,
+    delete: (id: string) => `/api/events/${id}`,
+    rsvp: (id: string) => `/api/events/${id}/rsvp`,
+    attendees: (id: string) => `/api/events/${id}/attendees`,
+  },
 } as const;
 
