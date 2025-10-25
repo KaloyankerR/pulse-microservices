@@ -62,9 +62,8 @@ Each learning outcome document follows a consistent structure:
 For questions about this documentation or the project:
 - **Student**: Kaloyan Kulov
 - **Project**: Pulse Microservices Platform
-- **Semester**: Complex Software Systems (2024-2025)
+- **Semester**: Complex Software Systems (2025-2026)
 
 ---
 
-**Last Updated**: January 2025  
-**Project Repository**: [Pulse Microservices](https://github.com/yourusername/pulse-microservices)
+**Project Repository**: [Pulse Microservices](https://github.com/KaloyankerR/pulse-microservices)

@@ -80,7 +80,7 @@ At the start of the project, I established clear learning objectives:
 - **Docker**: Achieved proficiency in containerization
 
 **Learning Resources**:
-- Online courses (Udemy, Pluralsight)
+- Online courses (Youtube)
 - Official documentation
 - Technical books and blogs
 - Hands-on experimentation
@@ -240,6 +240,4 @@ This project has been instrumental in developing my leadership capabilities and 
 
 ---
 
-**Last Updated**: January 2025  
-**Status**: Complete  
-**Evidence**: Progress reports, meeting notes, project documentation
+**Evidence**: Progress reports, project documentation

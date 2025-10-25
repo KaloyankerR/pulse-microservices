@@ -54,9 +54,6 @@ services:
       LOG_LEVEL: debug
       ADMIN_EMAIL: admin@pulse.com
       ADMIN_PASSWORD: admin123
-      GOOGLE_CLIENT_ID: 324113479892-7cq7ntoptj8cfn5u65ahssm5af55hdmd
-      GOOGLE_CLIENT_SECRET: your-google-client-secret
-      GOOGLE_CALLBACK_URL: http://localhost:8000/api/v1/auth/google/callback
       SESSION_SECRET: dev-session-secret-change-in-production
       SESSION_MAX_AGE: 86400000
     extra_hosts:

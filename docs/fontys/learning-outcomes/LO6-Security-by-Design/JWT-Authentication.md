@@ -126,12 +126,6 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 - **Verification**: bcrypt.compare for validation
 - **Storage**: Only hashed passwords stored in database
 
-### OAuth2 Integration
-- Google OAuth2 for social login
-- Secure redirect URLs
-- Token validation
-- User information retrieval
-
 ## Cross-Service Authentication
 
 ### Token Sharing
@@ -195,8 +189,3 @@ JWT authentication successfully provides:
 - Scalable design
 
 The implementation follows security best practices and provides a solid foundation for the microservices platform.
-
----
-
-**Date**: January 2025  
-**Status**: Implemented and Validated

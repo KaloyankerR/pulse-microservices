@@ -116,16 +116,6 @@ const isValid = await bcrypt.compare(password, hashedPassword);
 - Salt rounds: 10
 - No password storage in plain text
 
-### 2.3 OAuth2 Implementation
-
-**Google OAuth2**:
-- Client ID and secret management
-- Secure redirect URLs
-- Token validation
-- User information retrieval
-
-**Configuration**: Environment variables for credentials
-
 ## 3. Authorization
 
 ### 3.1 Role-Based Access Control (RBAC)
@@ -436,6 +426,4 @@ The platform follows security by design principles, ensuring security is built i
 
 ---
 
-**Last Updated**: January 2025  
-**Status**: Complete  
-**Evidence**: Security implementations, vulnerability scans, audit reports
+**Evidence**: @JWT-Authentication.md
