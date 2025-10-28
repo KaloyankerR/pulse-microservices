@@ -116,7 +116,7 @@ At the start of the project, I established clear learning objectives:
 - What did I learn?
 - What will I improve next week?
 
-**Evidence**: Weekly progress reports in `docs/fontys/progress reports/`
+**Evidence**: Weekly progress reports in the portfolio
 
 ### 4.2 Retrospective Analysis
 

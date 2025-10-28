@@ -140,7 +140,7 @@ The Pulse platform is designed for future development:
 
 ### 6.1 Repository Structure
 
-All documentation maintained in `docs/fontys/` directory:
+All documentation maintained in portfolio directory:
 - Learning outcomes documentation
 - Progress reports
 - User requirements
