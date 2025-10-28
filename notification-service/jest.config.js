@@ -11,19 +11,27 @@ module.exports = {
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  testMatch: ['**/tests/**/*.test.ts'],
+  testMatch: ['**/tests/**/*.test.{ts,js}'],
   testTimeout: 10000,
   verbose: true,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
+    '^.+\\.(ts|js)$': ['ts-jest', {
       tsconfig: {
         esModuleInterop: true,
         allowSyntheticDefaultImports: true,
+        allowJs: true,
+        skipLibCheck: true,
       },
+      isolatedModules: true,
     }],
+  },
+  globals: {
+    'ts-jest': {
+      isolatedModules: true,
+    },
   },
 };
 

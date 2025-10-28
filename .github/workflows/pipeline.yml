@@ -189,6 +189,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
       
       - name: Install Node dependencies
         if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
@@ -295,6 +297,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
       
       - name: Install Node dependencies
         if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'

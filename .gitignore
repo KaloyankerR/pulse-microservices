@@ -100,6 +100,10 @@ user-service/logs/
 post-service/logs/
 swagger-gateway/logs/
 
+# TypeScript build output
+**/dist/
+**/*.tsbuildinfo
+
 # IDE
 .vscode
 
