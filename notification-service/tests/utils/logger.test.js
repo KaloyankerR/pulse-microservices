@@ -1,4 +1,5 @@
-const logger = require('../../src/utils/logger');
+const loggerModule = require('../../src/utils/logger');
+const logger = loggerModule.default || loggerModule;
 
 describe('Logger Utility', () => {
   beforeEach(() => {

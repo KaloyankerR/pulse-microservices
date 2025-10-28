@@ -25,13 +25,7 @@ module.exports = {
         allowJs: true,
         skipLibCheck: true,
       },
-      isolatedModules: true,
     }],
-  },
-  globals: {
-    'ts-jest': {
-      isolatedModules: true,
-    },
   },
 };
 

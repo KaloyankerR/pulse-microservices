@@ -114,7 +114,7 @@ export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: Nex
     const token = authHeader && (authHeader as string).split(' ')[1];
 
     if (!token) {
-      req.user = undefined;
+      req.user = null;
       next();
       return;
     }
@@ -127,7 +127,7 @@ export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: Nex
           error: err.message,
           ip: req.ip,
         });
-        req.user = undefined;
+        req.user = null;
       } else {
         req.user = decoded as JWTClaims;
         logger.info('User authenticated with optional auth', {
@@ -139,7 +139,7 @@ export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: Nex
     });
   } catch (error) {
     logger.logError(error, { action: 'optionalAuth' });
-    req.user = undefined;
+    req.user = null;
     next();
   }
 };
