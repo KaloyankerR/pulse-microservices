@@ -1,24 +1,25 @@
-const amqp = require('amqplib');
-const logger = require('../utils/logger');
+import amqp, { Connection, Channel, ConsumeMessage } from 'amqplib';
+import logger from '../utils/logger';
+import { HealthCheckResponse, RabbitMQChannel, RabbitMQConnection } from '../types/config';
+
+type MessageHandler = (content: Record<string, unknown>) => Promise<void>;
 
 class RabbitMQConfig {
-  constructor() {
-    this.connection = null;
-    this.channel = null;
-    this.isConnected = false;
-  }
+  private connection: Connection | null = null;
+  private channel: Channel | null = null;
+  private isConnected = false;
 
-  async connect(retries = 5, delay = 2000) {
+  async connect(retries = 5, delay = 2000): Promise<{ connection: Connection; channel: Channel }> {
     const rabbitmqUrl = process.env.RABBITMQ_URL || 'amqp://localhost:5672';
-    
-    for (let attempt = 1; attempt <= retries; attempt++) {
+
+    for (let attempt = 1; attempt <= retries; attempt += 1) {
       try {
         logger.info(`Attempting to connect to RabbitMQ (attempt ${attempt}/${retries})`);
-        
+
         this.connection = await amqp.connect(rabbitmqUrl);
         this.channel = await this.connection.createChannel();
         this.isConnected = true;
-        
+
         logger.info('Connected to RabbitMQ successfully');
 
         // Handle connection events
@@ -34,22 +35,25 @@ class RabbitMQConfig {
 
         return { connection: this.connection, channel: this.channel };
       } catch (error) {
-        logger.warn(`Failed to connect to RabbitMQ (attempt ${attempt}/${retries}):`, error.message);
-        
+        const err = error as Error;
+        logger.warn(`Failed to connect to RabbitMQ (attempt ${attempt}/${retries}):`, err.message);
+
         if (attempt === retries) {
           logger.error('Failed to connect to RabbitMQ after all retries');
           this.isConnected = false;
           throw error;
         }
-        
+
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
         delay *= 1.5; // Exponential backoff
       }
     }
+
+    throw new Error('Failed to connect to RabbitMQ');
   }
 
-  async disconnect() {
+  async disconnect(): Promise<void> {
     try {
       if (this.channel) {
         await this.channel.close();
@@ -65,14 +69,14 @@ class RabbitMQConfig {
     }
   }
 
-  getChannel() {
+  getChannel(): Channel {
     if (!this.channel || !this.isConnected) {
       throw new Error('RabbitMQ channel not available');
     }
     return this.channel;
   }
 
-  async healthCheck() {
+  async healthCheck(): Promise<HealthCheckResponse> {
     try {
       if (!this.isConnected || !this.channel) {
         return {
@@ -83,32 +87,38 @@ class RabbitMQConfig {
       }
 
       // Check if channel is open
-      if (this.channel.connection.stream.destroyed) {
+      if ((this.channel.connection as Connection & { stream?: { destroyed?: boolean } }).stream?.destroyed) {
         return {
           status: 'unhealthy',
           message: 'RabbitMQ channel closed',
           timestamp: new Date().toISOString(),
         };
       }
-      
+
       return {
         status: 'healthy',
         message: 'RabbitMQ connection is active',
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      logger.error('RabbitMQ health check failed:', error);
+      const err = error as Error;
+      logger.error('RabbitMQ health check failed:', err);
       return {
         status: 'unhealthy',
         message: 'RabbitMQ health check failed',
-        error: error.message,
+        error: err.message,
         timestamp: new Date().toISOString(),
       };
     }
   }
 
   // Consumer setup
-  async setupConsumer(queueName, exchangeName, routingKey, handler) {
+  async setupConsumer(
+    queueName: string,
+    exchangeName: string,
+    routingKey: string,
+    handler: MessageHandler
+  ): Promise<void> {
     try {
       const channel = this.getChannel();
 
@@ -122,17 +132,18 @@ class RabbitMQConfig {
       await channel.bindQueue(queueName, exchangeName, routingKey);
 
       // Setup consumer
-      await channel.consume(queueName, async (msg) => {
+      await channel.consume(queueName, async (msg: ConsumeMessage | null) => {
         if (msg !== null) {
           try {
-            const content = JSON.parse(msg.content.toString());
+            const content = JSON.parse(msg.content.toString()) as Record<string, unknown>;
             logger.info(`Received message: ${routingKey}`, { content });
-            
+
             await handler(content);
-            
+
             channel.ack(msg);
           } catch (error) {
-            logger.error(`Error processing message: ${routingKey}`, error);
+            const err = error as Error;
+            logger.error(`Error processing message: ${routingKey}`, err);
             // Reject message and don't requeue
             channel.nack(msg, false, false);
           }
@@ -147,10 +158,10 @@ class RabbitMQConfig {
   }
 
   // Publisher
-  async publish(exchangeName, routingKey, message) {
+  async publish(exchangeName: string, routingKey: string, message: Record<string, unknown>): Promise<boolean> {
     try {
       const channel = this.getChannel();
-      
+
       // Assert exchange
       await channel.assertExchange(exchangeName, 'topic', { durable: true });
 
@@ -176,4 +187,5 @@ class RabbitMQConfig {
   }
 }
 
-module.exports = new RabbitMQConfig();
+export default new RabbitMQConfig();
+

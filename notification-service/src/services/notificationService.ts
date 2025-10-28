@@ -1,21 +1,48 @@
-const Notification = require('../models/notification');
-const UserCache = require('../models/userCache');
-const NotificationPreferences = require('../models/notificationPreferences');
-const redis = require('../config/redis');
-const rabbitmq = require('../config/rabbitmq');
-const logger = require('../utils/logger');
-const metrics = require('../config/metrics');
+import Notification from '../models/notification';
+import UserCache from '../models/userCache';
+import NotificationPreferences from '../models/notificationPreferences';
+import redis from '../config/redis';
+import rabbitmq from '../config/rabbitmq';
+import logger from '../utils/logger';
+import metrics from '../config/metrics';
+import {
+  INotification,
+  NotificationType,
+  NotificationPriority,
+  ReferenceType,
+} from '../types/models';
+import {
+  NotificationOptions,
+  NotificationListResponse,
+  NotificationStats,
+  NotificationWithSender,
+  EventProcessingPayload,
+  NotificationCreatedEvent,
+} from '../types/api';
+import { Types } from 'mongoose';
+
+interface CreateNotificationData {
+  recipient_id: string;
+  sender_id?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  reference_id?: string;
+  reference_type?: ReferenceType;
+  priority?: NotificationPriority;
+  metadata?: Record<string, unknown>;
+}
 
 class NotificationService {
   // Create a new notification
-  async createNotification(notificationData) {
+  async createNotification(notificationData: CreateNotificationData): Promise<INotification> {
     const startTime = Date.now();
-    
+
     try {
       const notification = new Notification(notificationData);
       const savedNotification = await notification.save();
 
-      logger.logNotification('created', savedNotification._id, notificationData.recipient_id, {
+      logger.logNotification('created', savedNotification._id.toString(), notificationData.recipient_id, {
         type: notificationData.type,
         title: notificationData.title,
       });
@@ -33,15 +60,18 @@ class NotificationService {
     } catch (error) {
       logger.logError(error, { action: 'createNotification', notificationData });
       metrics.incrementNotificationCounter(notificationData.type || 'UNKNOWN', 'error');
-      metrics.recordNotificationProcessingDuration(notificationData.type || 'UNKNOWN', Date.now() - startTime);
+      metrics.recordNotificationProcessingDuration(
+        notificationData.type || 'UNKNOWN',
+        Date.now() - startTime
+      );
       throw error;
     }
   }
 
   // Get notifications for a user with pagination
-  async getNotifications(userId, options = {}) {
+  async getNotifications(userId: string, options: NotificationOptions = {}): Promise<NotificationListResponse> {
     const startTime = Date.now();
-    
+
     try {
       const {
         page = 1,
@@ -55,26 +85,27 @@ class NotificationService {
 
       // Try to get from cache first
       const cacheKey = `notifications:${userId}:${page}:${limit}:${type || 'all'}:${unreadOnly}`;
-      
+
       try {
         const cached = await redis.get(cacheKey);
         if (cached) {
           metrics.incrementCacheHit('get_notifications');
           logger.logCacheOperation('get', cacheKey, 'hit');
-          return JSON.parse(cached);
+          return JSON.parse(cached) as NotificationListResponse;
         }
         metrics.incrementCacheMiss('get_notifications');
         logger.logCacheOperation('get', cacheKey, 'miss');
       } catch (cacheError) {
-        logger.warn('Cache error during notification fetch', { error: cacheError.message });
+        const err = cacheError as Error;
+        logger.warn('Cache error during notification fetch', { error: err.message });
       }
 
-      const query = { recipient_id: userId };
-      
+      const query: Record<string, unknown> = { recipient_id: userId };
+
       if (unreadOnly) {
         query.is_read = false;
       }
-      
+
       if (type) {
         query.type = type;
       }
@@ -89,9 +120,11 @@ class NotificationService {
       ]);
 
       // Enrich notifications with user cache data
-      const enrichedNotifications = await this.enrichNotificationsWithUserData(notifications);
+      const enrichedNotifications = await this.enrichNotificationsWithUserData(
+        notifications as Array<Record<string, unknown>>
+      );
 
-      const result = {
+      const result: NotificationListResponse = {
         notifications: enrichedNotifications,
         pagination: {
           page,
@@ -107,7 +140,8 @@ class NotificationService {
       try {
         await redis.set(cacheKey, JSON.stringify(result), 300);
       } catch (cacheError) {
-        logger.warn('Cache error during notification cache set', { error: cacheError.message });
+        const err = cacheError as Error;
+        logger.warn('Cache error during notification cache set', { error: err.message });
       }
 
       metrics.incrementDatabaseOperation('find', 'notifications', 'success');
@@ -123,9 +157,9 @@ class NotificationService {
   }
 
   // Mark notification as read
-  async markAsRead(userId, notificationId) {
+  async markAsRead(userId: string, notificationId: string): Promise<INotification | null> {
     const startTime = Date.now();
-    
+
     try {
       const notification = await Notification.findOneAndUpdate(
         { _id: notificationId, recipient_id: userId },
@@ -135,7 +169,7 @@ class NotificationService {
 
       if (notification) {
         logger.logNotification('marked_read', notificationId, userId);
-        
+
         // Invalidate cache for user notifications
         await this.invalidateUserNotificationCache(userId);
       }
@@ -153,19 +187,19 @@ class NotificationService {
   }
 
   // Mark all notifications as read for a user
-  async markAllAsRead(userId) {
+  async markAllAsRead(userId: string): Promise<{ modifiedCount: number }> {
     const startTime = Date.now();
-    
+
     try {
-      const result = await Notification.updateMany(
+      const result = (await Notification.updateMany(
         { recipient_id: userId, is_read: false },
-        { 
-          $set: { 
-            is_read: true, 
-            read_at: new Date() 
-          } 
+        {
+          $set: {
+            is_read: true,
+            read_at: new Date(),
+          },
         }
-      );
+      )) as { modifiedCount: number };
 
       logger.logNotification('marked_all_read', 'all', userId, {
         modified_count: result.modifiedCount,
@@ -187,13 +221,13 @@ class NotificationService {
   }
 
   // Get unread count for a user
-  async getUnreadCount(userId) {
+  async getUnreadCount(userId: string): Promise<number> {
     const startTime = Date.now();
-    
+
     try {
       // Try cache first
       const cacheKey = `unread_count:${userId}`;
-      
+
       try {
         const cached = await redis.get(cacheKey);
         if (cached !== null) {
@@ -204,19 +238,21 @@ class NotificationService {
         metrics.incrementCacheMiss('get_unread_count');
         logger.logCacheOperation('get', cacheKey, 'miss');
       } catch (cacheError) {
-        logger.warn('Cache error during unread count fetch', { error: cacheError.message });
+        const err = cacheError as Error;
+        logger.warn('Cache error during unread count fetch', { error: err.message });
       }
 
-      const count = await Notification.countDocuments({ 
-        recipient_id: userId, 
-        is_read: false 
+      const count = await Notification.countDocuments({
+        recipient_id: userId,
+        is_read: false,
       });
 
       // Cache for 1 minute
       try {
         await redis.set(cacheKey, count.toString(), 60);
       } catch (cacheError) {
-        logger.warn('Cache error during unread count cache set', { error: cacheError.message });
+        const err = cacheError as Error;
+        logger.warn('Cache error during unread count cache set', { error: err.message });
       }
 
       metrics.incrementDatabaseOperation('count', 'notifications', 'success');
@@ -232,21 +268,23 @@ class NotificationService {
   }
 
   // Get notification statistics for a user
-  async getNotificationStats(userId) {
+  async getNotificationStats(userId: string): Promise<NotificationStats> {
     const startTime = Date.now();
-    
+
     try {
       const stats = await Notification.getNotificationStats(userId);
-      
+
       metrics.incrementDatabaseOperation('aggregate', 'notifications', 'success');
       metrics.recordDatabaseOperationDuration('aggregate', Date.now() - startTime);
 
-      return stats || {
-        total: 0,
-        unread: 0,
-        read: 0,
-        typeBreakdown: {},
-      };
+      return (
+        stats || {
+          total: 0,
+          unread: 0,
+          read: 0,
+          typeBreakdown: {},
+        }
+      );
     } catch (error) {
       logger.logError(error, { userId, action: 'getNotificationStats' });
       metrics.incrementDatabaseOperation('aggregate', 'notifications', 'error');
@@ -256,9 +294,9 @@ class NotificationService {
   }
 
   // Delete a notification
-  async deleteNotification(userId, notificationId) {
+  async deleteNotification(userId: string, notificationId: string): Promise<INotification | null> {
     const startTime = Date.now();
-    
+
     try {
       const result = await Notification.findOneAndDelete({
         _id: notificationId,
@@ -267,7 +305,7 @@ class NotificationService {
 
       if (result) {
         logger.logNotification('deleted', notificationId, userId);
-        
+
         // Invalidate cache for user notifications
         await this.invalidateUserNotificationCache(userId);
       }
@@ -285,11 +323,11 @@ class NotificationService {
   }
 
   // Cleanup old notifications
-  async cleanupOldNotifications(userId, daysOld = 30) {
+  async cleanupOldNotifications(userId: string, daysOld = 30): Promise<{ deletedCount: number }> {
     const startTime = Date.now();
-    
+
     try {
-      const result = await Notification.deleteOldNotifications(daysOld);
+      const result = (await Notification.deleteOldNotifications(daysOld)) as { deletedCount: number };
 
       logger.logNotification('cleanup', 'old_notifications', userId, {
         deleted_count: result.deletedCount,
@@ -312,48 +350,48 @@ class NotificationService {
   }
 
   // Process event and create notification
-  async processEvent(eventData) {
+  async processEvent(eventData: EventProcessingPayload): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
       const { event_type, data } = eventData;
-      
+
       logger.logEventProcessing(event_type, 'started', { eventData });
 
-      let notificationData;
-      
+      let notificationData: CreateNotificationData | null = null;
+
       switch (event_type) {
         case 'user.followed':
-          notificationData = await this.processFollowEvent(data);
+          notificationData = await this.processFollowEvent(data as Record<string, unknown>);
           break;
         case 'post.liked':
-          notificationData = await this.processLikeEvent(data);
+          notificationData = await this.processLikeEvent(data as Record<string, unknown>);
           break;
         case 'comment.created':
-          notificationData = await this.processCommentEvent(data);
+          notificationData = await this.processCommentEvent(data as Record<string, unknown>);
           break;
         case 'event.created':
-          notificationData = await this.processEventCreatedEvent(data);
+          notificationData = await this.processEventCreatedEvent(data as Record<string, unknown>);
           break;
         case 'event.rsvp.added':
-          notificationData = await this.processEventRsvpEvent(data);
+          notificationData = await this.processEventRsvpEvent(data as Record<string, unknown>);
           break;
         case 'message.sent':
-          notificationData = await this.processMessageEvent(data);
+          notificationData = await this.processMessageEvent(data as Record<string, unknown>);
           break;
         case 'user.mentioned':
-          notificationData = await this.processMentionEvent(data);
+          notificationData = await this.processMentionEvent(data as Record<string, unknown>);
           break;
         default:
           logger.warn('Unknown event type received', { event_type, data });
           metrics.incrementEventProcessingCounter(event_type, 'unknown_event');
-          return null;
+          return;
       }
 
       if (notificationData) {
         // Check user preferences before creating notification
         const shouldNotify = await this.shouldCreateNotification(notificationData);
-        
+
         if (shouldNotify) {
           await this.createNotification(notificationData);
           metrics.incrementEventProcessingCounter(event_type, 'success');
@@ -363,7 +401,6 @@ class NotificationService {
       }
 
       metrics.recordEventProcessingDuration(event_type, Date.now() - startTime);
-      
     } catch (error) {
       logger.logError(error, { action: 'processEvent', eventData });
       metrics.incrementEventProcessingCounter(eventData.event_type || 'unknown', 'error');
@@ -373,7 +410,7 @@ class NotificationService {
   }
 
   // Check if notification should be created based on user preferences
-  async shouldCreateNotification(notificationData) {
+  async shouldCreateNotification(notificationData: CreateNotificationData): Promise<boolean> {
     try {
       const preferences = await NotificationPreferences.getOrCreate(notificationData.recipient_id);
       return preferences.shouldSendNotification(notificationData.type, 'in_app');
@@ -385,72 +422,78 @@ class NotificationService {
   }
 
   // Enrich notifications with user data from cache
-  async enrichNotificationsWithUserData(notifications) {
+  async enrichNotificationsWithUserData(
+    notifications: Array<Record<string, unknown>>
+  ): Promise<NotificationWithSender[]> {
     try {
       const senderIds = notifications
-        .map(n => n.sender_id)
-        .filter(id => id);
+        .map((n) => n.sender_id as string | undefined)
+        .filter((id): id is string => Boolean(id));
 
       if (senderIds.length === 0) {
-        return notifications;
+        return notifications as NotificationWithSender[];
       }
 
       const userCache = await UserCache.findByUserIds(senderIds);
-      const userCacheMap = {};
-      
-      userCache.forEach(user => {
+      const userCacheMap: Record<string, unknown> = {};
+
+      userCache.forEach((user) => {
         userCacheMap[user.user_id] = user;
       });
 
-      return notifications.map(notification => ({
+      return notifications.map((notification) => ({
         ...notification,
-        sender: notification.sender_id ? userCacheMap[notification.sender_id] : null,
-      }));
+        sender: notification.sender_id
+          ? (userCacheMap[notification.sender_id as string] as NotificationWithSender['sender'])
+          : null,
+      })) as NotificationWithSender[];
     } catch (error) {
       logger.logError(error, { action: 'enrichNotificationsWithUserData' });
       // Return notifications without enrichment if error occurs
-      return notifications;
+      return notifications as NotificationWithSender[];
     }
   }
 
   // Invalidate user notification cache
-  async invalidateUserNotificationCache(userId) {
+  async invalidateUserNotificationCache(userId: string): Promise<void> {
     try {
       const unreadKey = `unread_count:${userId}`;
-      
+
       // Delete unread count cache
       await redis.del(unreadKey);
-      
+
       // Delete common notification cache keys
-      // Since we know the cache key pattern, we can delete the most common ones
       const commonCacheKeys = [
         `notifications:${userId}:1:20:all:false`,
         `notifications:${userId}:1:20:all:true`,
         `notifications:${userId}:1:50:all:false`,
         `notifications:${userId}:1:50:all:true`,
       ];
-      
+
       // Delete each common cache key
       for (const key of commonCacheKeys) {
         try {
           await redis.del(key);
         } catch (keyError) {
           // Ignore errors for individual keys
-          logger.warn('Failed to delete cache key', { key, error: keyError.message });
+          const err = keyError as Error;
+          logger.warn('Failed to delete cache key', { key, error: err.message });
         }
       }
-      
-      logger.logCacheOperation('invalidate', `user:${userId}`, 'success', { deletedKeys: commonCacheKeys.length });
+
+      logger.logCacheOperation('invalidate', `user:${userId}`, 'success', {
+        deletedKeys: commonCacheKeys.length,
+      });
     } catch (error) {
       logger.logError(error, { action: 'invalidateUserNotificationCache', userId });
     }
   }
 
   // Publish notification.created event for real-time delivery
-  async publishNotificationCreatedEvent(notification) {
+  async publishNotificationCreatedEvent(notification: INotification): Promise<void> {
     try {
       // Get sender information if available
-      let senderInfo = null;
+      let senderInfo: NotificationCreatedEvent['sender'] = null;
       if (notification.sender_id) {
         const userCache = await UserCache.findByUserId(notification.sender_id);
         if (userCache) {
@@ -462,10 +505,10 @@ class NotificationService {
         }
       }
 
-      const eventData = {
+      const eventData: NotificationCreatedEvent = {
         _id: notification._id.toString(),
         recipient_id: notification.recipient_id,
-        sender_id: notification.sender_id,
+        sender_id: notification.sender_id || null,
         type: notification.type,
         title: notification.title,
         message: notification.message,
@@ -479,30 +522,30 @@ class NotificationService {
       };
 
       await rabbitmq.publish('notification_events', 'notification.created', eventData);
-      
+
       logger.info('Notification created event published', {
         notificationId: notification._id,
         recipientId: notification.recipient_id,
         type: notification.type,
       });
     } catch (error) {
-      logger.logError(error, { 
-        action: 'publishNotificationCreatedEvent', 
-        notificationId: notification._id 
+      logger.logError(error, {
+        action: 'publishNotificationCreatedEvent',
+        notificationId: notification._id,
       });
       // Don't throw error - notification was still created successfully
     }
   }
 
   // Event processing methods
-  async processFollowEvent(data) {
+  private async processFollowEvent(data: Record<string, unknown>): Promise<CreateNotificationData> {
     return {
-      recipient_id: data.following_id,
-      sender_id: data.follower_id,
+      recipient_id: data.following_id as string,
+      sender_id: data.follower_id as string,
       type: 'FOLLOW',
       title: 'New Follower',
-      message: `${data.follower_username || 'Someone'} started following you`,
-      reference_id: data.follower_id,
+      message: `${(data.follower_username as string) || 'Someone'} started following you`,
+      reference_id: data.follower_id as string,
       reference_type: 'USER',
       priority: 'MEDIUM',
       metadata: {
@@ -512,14 +555,14 @@ class NotificationService {
     };
   }
 
-  async processLikeEvent(data) {
+  private async processLikeEvent(data: Record<string, unknown>): Promise<CreateNotificationData> {
     return {
-      recipient_id: data.post_author_id,
-      sender_id: data.user_id,
+      recipient_id: data.post_author_id as string,
+      sender_id: data.user_id as string,
       type: 'LIKE',
       title: 'Post Liked',
-      message: `${data.user_username || 'Someone'} liked your post`,
-      reference_id: data.post_id,
+      message: `${(data.user_username as string) || 'Someone'} liked your post`,
+      reference_id: data.post_id as string,
       reference_type: 'POST',
       priority: 'LOW',
       metadata: {
@@ -530,39 +573,39 @@ class NotificationService {
     };
   }
 
-  async processCommentEvent(data) {
+  private async processCommentEvent(data: Record<string, unknown>): Promise<CreateNotificationData> {
     return {
-      recipient_id: data.post_author_id,
-      sender_id: data.commenter_id,
+      recipient_id: data.post_author_id as string,
+      sender_id: data.commenter_id as string,
       type: 'COMMENT',
       title: 'New Comment',
-      message: `${data.commenter_username || 'Someone'} commented on your post`,
-      reference_id: data.post_id,
+      message: `${(data.commenter_username as string) || 'Someone'} commented on your post`,
+      reference_id: data.post_id as string,
       reference_type: 'POST',
       priority: 'HIGH',
       metadata: {
         post_id: data.post_id,
         comment_id: data.comment_id,
         commenter_id: data.commenter_id,
-        commenter_username: data.commenter_username,
+        commenter_username: data.commenter_id,
       },
     };
   }
 
-  async processEventCreatedEvent(data) {
+  private async processEventCreatedEvent(data: Record<string, unknown>): Promise<null> {
     // This would typically notify followers or friends
     // For now, we'll skip this as it's not a direct notification
-    return null;
+    return null as unknown as CreateNotificationData;
   }
 
-  async processEventRsvpEvent(data) {
+  private async processEventRsvpEvent(data: Record<string, unknown>): Promise<CreateNotificationData> {
     return {
-      recipient_id: data.event_creator_id,
-      sender_id: data.user_id,
+      recipient_id: data.event_creator_id as string,
+      sender_id: data.user_id as string,
       type: 'EVENT_RSVP',
       title: 'Event RSVP',
-      message: `${data.user_username || 'Someone'} is ${data.status.toLowerCase()} to your event`,
-      reference_id: data.event_id,
+      message: `${(data.user_username as string) || 'Someone'} is ${((data.status as string) || '').toLowerCase()} to your event`,
+      reference_id: data.event_id as string,
       reference_type: 'EVENT',
       priority: 'MEDIUM',
       metadata: {
@@ -575,19 +618,19 @@ class NotificationService {
     };
   }
 
-  async processMessageEvent(data) {
+  private async processMessageEvent(data: Record<string, unknown>): Promise<CreateNotificationData | null> {
     // Filter out messages from the same user
     if (data.sender_id === data.recipient_id) {
       return null;
     }
 
     return {
-      recipient_id: data.recipient_id,
-      sender_id: data.sender_id,
+      recipient_id: data.recipient_id as string,
+      sender_id: data.sender_id as string,
       type: 'MESSAGE',
       title: 'New Message',
-      message: `${data.sender_username || 'Someone'} sent you a message`,
-      reference_id: data.conversation_id,
+      message: `${(data.sender_username as string) || 'Someone'} sent you a message`,
+      reference_id: data.conversation_id as string,
       reference_type: 'MESSAGE',
       priority: 'HIGH',
       metadata: {
@@ -599,14 +642,14 @@ class NotificationService {
     };
   }
 
-  async processMentionEvent(data) {
+  private async processMentionEvent(data: Record<string, unknown>): Promise<CreateNotificationData> {
     return {
-      recipient_id: data.mentioned_user_id,
-      sender_id: data.mentioner_id,
+      recipient_id: data.mentioned_user_id as string,
+      sender_id: data.mentioner_id as string,
       type: 'POST_MENTION',
       title: 'You were mentioned',
-      message: `${data.mentioner_username || 'Someone'} mentioned you in a post`,
-      reference_id: data.post_id,
+      message: `${(data.mentioner_username as string) || 'Someone'} mentioned you in a post`,
+      reference_id: data.post_id as string,
       reference_type: 'POST',
       priority: 'HIGH',
       metadata: {
@@ -618,4 +661,5 @@ class NotificationService {
   }
 }
 
-module.exports = new NotificationService();
+export default new NotificationService();
+

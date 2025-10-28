@@ -1,16 +1,29 @@
 module.exports = {
+  preset: 'ts-jest',
   testEnvironment: 'node',
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/server.js',
-    '!src/config/database.js',
-    '!src/config/rabbitmq.js',
-    '!src/config/redis.js',
+    'src/**/*.ts',
+    '!src/server.ts',
+    '!src/config/database.ts',
+    '!src/config/rabbitmq.ts',
+    '!src/config/redis.ts',
+    '!src/**/*.d.ts',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  testMatch: ['**/tests/**/*.test.js'],
+  testMatch: ['**/tests/**/*.test.ts'],
   testTimeout: 10000,
   verbose: true,
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: {
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
+    }],
+  },
 };
 

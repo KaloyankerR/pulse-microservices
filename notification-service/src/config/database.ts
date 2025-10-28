@@ -1,16 +1,15 @@
-const mongoose = require('mongoose');
-const logger = require('../utils/logger');
+import mongoose, { Connection } from 'mongoose';
+import logger from '../utils/logger';
+import { DatabaseConnectionStatus, HealthCheckResponse } from '../types/config';
 
 class DatabaseConfig {
-  constructor() {
-    this.connection = null;
-    this.isConnected = false;
-  }
+  private connection: Connection | null = null;
+  private isConnected = false;
 
-  async connect() {
+  async connect(): Promise<Connection> {
     try {
       const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/pulse_notifications';
-      
+
       const options = {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
@@ -20,9 +19,9 @@ class DatabaseConfig {
 
       this.connection = await mongoose.connect(mongoUri, options);
       this.isConnected = true;
-      
+
       logger.info('Connected to MongoDB successfully');
-      
+
       // Handle connection events
       mongoose.connection.on('error', (error) => {
         logger.error('MongoDB connection error:', error);
@@ -47,7 +46,7 @@ class DatabaseConfig {
     }
   }
 
-  async disconnect() {
+  async disconnect(): Promise<void> {
     try {
       if (this.connection) {
         await mongoose.disconnect();
@@ -60,17 +59,17 @@ class DatabaseConfig {
     }
   }
 
-  getConnectionStatus() {
+  getConnectionStatus(): DatabaseConnectionStatus {
     return {
       isConnected: this.isConnected,
       readyState: mongoose.connection.readyState,
-      host: mongoose.connection.host,
-      port: mongoose.connection.port,
-      name: mongoose.connection.name,
+      host: mongoose.connection.host || undefined,
+      port: mongoose.connection.port || undefined,
+      name: mongoose.connection.name || undefined,
     };
   }
 
-  async healthCheck() {
+  async healthCheck(): Promise<HealthCheckResponse> {
     try {
       if (!this.isConnected) {
         return {
@@ -82,7 +81,7 @@ class DatabaseConfig {
 
       // Ping the database
       await mongoose.connection.db.admin().ping();
-      
+
       return {
         status: 'healthy',
         message: 'Database connection is active',
@@ -90,15 +89,17 @@ class DatabaseConfig {
         connectionInfo: this.getConnectionStatus(),
       };
     } catch (error) {
-      logger.error('Database health check failed:', error);
+      const err = error as Error;
+      logger.error('Database health check failed:', err);
       return {
         status: 'unhealthy',
         message: 'Database health check failed',
-        error: error.message,
+        error: err.message,
         timestamp: new Date().toISOString(),
       };
     }
   }
 }
 
-module.exports = new DatabaseConfig();
+export default new DatabaseConfig();
+

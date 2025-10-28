@@ -1,5 +1,5 @@
-const client = require('prom-client');
-const logger = require('../utils/logger');
+import * as client from 'prom-client';
+import logger from '../utils/logger';
 
 // Create a Registry to register the metrics
 const register = new client.Registry();
@@ -119,83 +119,104 @@ const memoryUsage = new client.Gauge({
   registers: [register],
 });
 
+// Metrics interface
+interface MetricsInterface {
+  register: client.Registry;
+  incrementNotificationCounter(type: string, status?: string): void;
+  recordNotificationProcessingDuration(type: string, duration: number): void;
+  incrementCacheHit(operation: string): void;
+  incrementCacheMiss(operation: string): void;
+  setActiveConnections(count: number): void;
+  incrementEventProcessingCounter(eventType: string, status?: string): void;
+  recordEventProcessingDuration(eventType: string, duration: number): void;
+  incrementDatabaseOperation(operation: string, status?: string): void;
+  recordDatabaseOperationDuration(operation: string, duration: number): void;
+  incrementHttpRequest(method: string, route: string, statusCode: number): void;
+  recordHttpRequestDuration(method: string, route: string, duration: number): void;
+  setQueueSize(queueName: string, size: number): void;
+  recordQueueProcessingDuration(queueName: string, routingKey: string, duration: number): void;
+  updateMemoryUsage(): void;
+  getMetrics(): Promise<string>;
+  clear(): void;
+}
+
 // Custom metrics methods
-const metrics = {
+const metrics: MetricsInterface = {
   register,
-  
+
   // Notification metrics
-  incrementNotificationCounter(type, status = 'success') {
+  incrementNotificationCounter(type: string, status = 'success'): void {
     notificationCounter.inc({ type, status });
   },
-  
-  recordNotificationProcessingDuration(type, duration) {
-    notificationProcessingDuration.observe({ type }, duration);
+
+  recordNotificationProcessingDuration(type: string, duration: number): void {
+    notificationProcessingDuration.observe({ type }, duration / 1000); // Convert ms to seconds
   },
-  
-  incrementCacheHit(operation) {
+
+  incrementCacheHit(operation: string): void {
     notificationCacheHitCounter.inc({ operation });
   },
-  
-  incrementCacheMiss(operation) {
+
+  incrementCacheMiss(operation: string): void {
     notificationCacheMissCounter.inc({ operation });
   },
-  
-  setActiveConnections(count) {
+
+  setActiveConnections(count: number): void {
     activeConnections.set(count);
   },
-  
+
   // Event processing metrics
-  incrementEventProcessingCounter(eventType, status = 'success') {
+  incrementEventProcessingCounter(eventType: string, status = 'success'): void {
     eventProcessingCounter.inc({ event_type: eventType, status });
   },
-  
-  recordEventProcessingDuration(eventType, duration) {
-    eventProcessingDuration.observe({ event_type: eventType }, duration);
+
+  recordEventProcessingDuration(eventType: string, duration: number): void {
+    eventProcessingDuration.observe({ event_type: eventType }, duration / 1000); // Convert ms to seconds
   },
-  
+
   // Database metrics
-  incrementDatabaseOperation(operation, status = 'success') {
+  incrementDatabaseOperation(operation: string, status = 'success'): void {
     databaseOperationCounter.inc({ operation, status });
   },
-  
-  recordDatabaseOperationDuration(operation, duration) {
-    databaseOperationDuration.observe({ operation }, duration);
+
+  recordDatabaseOperationDuration(operation: string, duration: number): void {
+    databaseOperationDuration.observe({ operation }, duration / 1000); // Convert ms to seconds
   },
-  
+
   // HTTP metrics
-  incrementHttpRequest(method, route, statusCode) {
+  incrementHttpRequest(method: string, route: string, statusCode: number): void {
     httpRequestCounter.inc({ method, route, status_code: statusCode });
   },
-  
-  recordHttpRequestDuration(method, route, duration) {
-    httpRequestDuration.observe({ method, route }, duration);
+
+  recordHttpRequestDuration(method: string, route: string, duration: number): void {
+    httpRequestDuration.observe({ method, route }, duration / 1000); // Convert ms to seconds
   },
-  
+
   // Queue metrics
-  setQueueSize(queueName, size) {
+  setQueueSize(queueName: string, size: number): void {
     queueSize.set({ queue_name: queueName }, size);
   },
-  
-  recordQueueProcessingDuration(queueName, routingKey, duration) {
-    queueProcessingDuration.observe({ queue_name: queueName, routing_key: routingKey }, duration);
+
+  recordQueueProcessingDuration(queueName: string, routingKey: string, duration: number): void {
+    queueProcessingDuration.observe({ queue_name: queueName, routing_key: routingKey }, duration / 1000);
   },
-  
+
   // Memory metrics
-  updateMemoryUsage() {
+  updateMemoryUsage(): void {
     const memUsage = process.memoryUsage();
     memoryUsage.set({ type: 'rss' }, memUsage.rss);
     memoryUsage.set({ type: 'heapTotal' }, memUsage.heapTotal);
     memoryUsage.set({ type: 'heapUsed' }, memUsage.heapUsed);
     memoryUsage.set({ type: 'external' }, memUsage.external);
   },
-  
+
   // Get all metrics as string
-  async getMetrics() {
+  async getMetrics(): Promise<string> {
     return register.metrics();
   },
-  
+
   // Clear all metrics (useful for testing)
-  clear() {
+  clear(): void {
     register.clear();
   },
 };
@@ -207,4 +228,5 @@ setInterval(() => {
 
 logger.info('Prometheus metrics configured');
 
-module.exports = metrics;
+export default metrics;
+

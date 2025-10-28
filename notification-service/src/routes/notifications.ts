@@ -1,37 +1,37 @@
-const express = require('express');
-const router = express.Router();
-
-// Import controller
-const notificationController = require('../controllers/notificationController');
-
-// Import middleware
-const { authenticateToken } = require('../middleware/auth');
-const {
+import express, { Router, Request, Response } from 'express';
+import notificationController from '../controllers/notificationController';
+import { authenticateToken } from '../middleware/auth';
+import { AuthenticatedRequest } from '../types/api';
+import {
   validateGetNotifications,
   validateNotificationId,
   validateUpdatePreferences,
   validateCleanup,
   sanitizeInput,
-} = require('../middleware/validation');
-const {
-  apiLimiter,
-  preferencesUpdateLimiter,
-} = require('../middleware/rateLimiter');
-const {
-  requestMetrics,
-  businessMetrics,
-} = require('../middleware/metrics');
+} from '../middleware/validation';
+import { apiLimiter, preferencesUpdateLimiter } from '../middleware/rateLimiter';
+import { requestMetrics, businessMetrics } from '../middleware/metrics';
+import database from '../config/database';
+import redis from '../config/redis';
+import rabbitmq from '../config/rabbitmq';
+
+const router: Router = express.Router();
 
 // Health endpoint (no auth required)
-router.get('/health', async (req, res) => {
+router.get('/health', async (req: Request, res: Response) => {
   try {
-    const dbHealth = await require('../config/database').healthCheck();
-    const redisHealth = await require('../config/redis').healthCheck();
-    const rabbitmqHealth = await require('../config/rabbitmq').healthCheck();
+    const [dbHealth, redisHealth, rabbitmqHealth] = await Promise.all([
+      database.healthCheck(),
+      redis.healthCheck(),
+      rabbitmq.healthCheck(),
+    ]);
 
-    const overallStatus = dbHealth.status === 'healthy' && 
-                         redisHealth.status === 'healthy' && 
-                         rabbitmqHealth.status === 'healthy' ? 'healthy' : 'unhealthy';
+    const overallStatus =
+      dbHealth.status === 'healthy' &&
+      redisHealth.status === 'healthy' &&
+      rabbitmqHealth.status === 'healthy'
+        ? 'healthy'
+        : 'unhealthy';
 
     res.status(overallStatus === 'healthy' ? 200 : 503).json({
       success: true,
@@ -43,25 +43,26 @@ router.get('/health', async (req, res) => {
         dependencies: {
           database: dbHealth,
           redis: redisHealth,
-          rabbitmq: rabbitmqHealth
-        }
+          rabbitmq: rabbitmqHealth,
+        },
       },
       meta: {
         timestamp: new Date().toISOString(),
-        version: 'v1'
-      }
+        version: 'v1',
+      },
     });
   } catch (error) {
+    const err = error as Error;
     res.status(503).json({
       success: false,
       error: {
         message: 'Health check failed',
-        code: 'HEALTH_CHECK_FAILED'
+        code: 'HEALTH_CHECK_FAILED',
       },
       meta: {
         timestamp: new Date().toISOString(),
-        version: 'v1'
-      }
+        version: 'v1',
+      },
     });
   }
 });
@@ -174,8 +175,8 @@ router.use(sanitizeInput);
  *       500:
  *         description: Internal server error
  */
-router.post('/', apiLimiter, notificationController.createNotification);
-router.get('/', apiLimiter, validateGetNotifications, notificationController.getNotifications);
+router.post('/', apiLimiter, (req, res, next) => notificationController.createNotification(req as AuthenticatedRequest, res));
+router.get('/', apiLimiter, validateGetNotifications, (req, res, next) => notificationController.getNotifications(req as AuthenticatedRequest, res));
 
 /**
  * @swagger
@@ -207,7 +208,7 @@ router.get('/', apiLimiter, validateGetNotifications, notificationController.get
  *       500:
  *         description: Internal server error
  */
-router.get('/unread-count', apiLimiter, notificationController.getUnreadCount);
+router.get('/unread-count', apiLimiter, (req, res, next) => notificationController.getUnreadCount(req as AuthenticatedRequest, res));
 
 /**
  * @swagger
@@ -254,7 +255,7 @@ router.get('/unread-count', apiLimiter, notificationController.getUnreadCount);
  *       500:
  *         description: Internal server error
  */
-router.get('/stats', apiLimiter, notificationController.getNotificationStats);
+router.get('/stats', apiLimiter, (req, res, next) => notificationController.getNotificationStats(req as AuthenticatedRequest, res));
 
 /**
  * @swagger
@@ -289,7 +290,7 @@ router.get('/stats', apiLimiter, notificationController.getNotificationStats);
  *       500:
  *         description: Internal server error
  */
-router.put('/read-all', apiLimiter, notificationController.markAllNotificationsAsRead);
+router.put('/read-all', apiLimiter, (req, res, next) => notificationController.markAllNotificationsAsRead(req as AuthenticatedRequest, res));
 
 /**
  * @swagger
@@ -333,7 +334,7 @@ router.put('/read-all', apiLimiter, notificationController.markAllNotificationsA
  *       500:
  *         description: Internal server error
  */
-router.delete('/cleanup', apiLimiter, validateCleanup, notificationController.cleanupOldNotifications);
+router.delete('/cleanup', apiLimiter, validateCleanup, (req, res, next) => notificationController.cleanupOldNotifications(req as AuthenticatedRequest, res));
 
 /**
  * @swagger
@@ -361,7 +362,13 @@ router.delete('/cleanup', apiLimiter, validateCleanup, notificationController.cl
  *       500:
  *         description: Internal server error
  */
-router.put('/:id/read', apiLimiter, validateNotificationId, businessMetrics.trackNotificationRead, notificationController.markNotificationAsRead);
+router.put(
+  '/:id/read',
+  apiLimiter,
+  validateNotificationId,
+  businessMetrics.trackNotificationRead,
+  (req, res, next) => notificationController.markNotificationAsRead(req as AuthenticatedRequest, res)
+);
 
 /**
  * @swagger
@@ -389,7 +396,7 @@ router.put('/:id/read', apiLimiter, validateNotificationId, businessMetrics.trac
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', apiLimiter, validateNotificationId, notificationController.deleteNotification);
+router.delete('/:id', apiLimiter, validateNotificationId, (req, res, next) => notificationController.deleteNotification(req as AuthenticatedRequest, res));
 
 /**
  * @swagger
@@ -455,7 +462,7 @@ router.delete('/:id', apiLimiter, validateNotificationId, notificationController
  *       500:
  *         description: Internal server error
  */
-router.get('/preferences', apiLimiter, notificationController.getNotificationPreferences);
+router.get('/preferences', apiLimiter, (req, res, next) => notificationController.getNotificationPreferences(req as AuthenticatedRequest, res));
 
 /**
  * @swagger
@@ -520,6 +527,13 @@ router.get('/preferences', apiLimiter, notificationController.getNotificationPre
  *       500:
  *         description: Internal server error
  */
-router.put('/preferences', preferencesUpdateLimiter, validateUpdatePreferences, businessMetrics.trackPreferenceUpdate, notificationController.updateNotificationPreferences);
+router.put(
+  '/preferences',
+  preferencesUpdateLimiter,
+  validateUpdatePreferences,
+  businessMetrics.trackPreferenceUpdate,
+  (req, res, next) => notificationController.updateNotificationPreferences(req as AuthenticatedRequest, res)
+);
 
-module.exports = router;
+export default router;
+

@@ -1,43 +1,35 @@
-const redis = require('redis');
-const logger = require('../utils/logger');
+import { createClient, RedisClientType } from 'redis';
+import logger from '../utils/logger';
+import { HealthCheckResponse, RedisClient } from '../types/config';
 
 class RedisConfig {
-  constructor() {
-    this.client = null;
-    this.isConnected = false;
-  }
+  private client: RedisClientType | null = null;
+  private isConnected = false;
 
-  async connect() {
+  async connect(): Promise<RedisClientType> {
     try {
       const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-      
-      this.client = redis.createClient({
+
+      this.client = createClient({
         url: redisUrl,
-        retry_strategy: (options) => {
-          if (options.error && options.error.code === 'ECONNREFUSED') {
-            logger.error('Redis server connection refused');
-            return new Error('Redis server connection refused');
-          }
-          if (options.total_retry_time > 1000 * 60 * 60) {
-            logger.error('Redis retry time exhausted');
-            return new Error('Retry time exhausted');
-          }
-          if (options.attempt > 10) {
-            logger.error('Redis max retry attempts reached');
-            return undefined;
-          }
-          // Reconnect after
-          return Math.min(options.attempt * 100, 3000);
+        socket: {
+          reconnectStrategy: (retries: number) => {
+            if (retries > 10) {
+              logger.error('Redis max retry attempts reached');
+              return false;
+            }
+            return Math.min(retries * 100, 3000);
+          },
         },
-      });
+      }) as RedisClientType;
 
       this.client.on('connect', () => {
         logger.info('Redis client connected');
-        this.isConnected = true;
       });
 
       this.client.on('ready', () => {
         logger.info('Redis client ready');
+        this.isConnected = true;
       });
 
       this.client.on('error', (error) => {
@@ -51,7 +43,7 @@ class RedisConfig {
       });
 
       await this.client.connect();
-      
+
       return this.client;
     } catch (error) {
       logger.error('Failed to connect to Redis:', error);
@@ -60,7 +52,7 @@ class RedisConfig {
     }
   }
 
-  async disconnect() {
+  async disconnect(): Promise<void> {
     try {
       if (this.client) {
         await this.client.quit();
@@ -73,14 +65,14 @@ class RedisConfig {
     }
   }
 
-  getClient() {
+  getClient(): RedisClientType {
     if (!this.client || !this.isConnected) {
       throw new Error('Redis client not connected');
     }
     return this.client;
   }
 
-  async healthCheck() {
+  async healthCheck(): Promise<HealthCheckResponse> {
     try {
       if (!this.isConnected || !this.client) {
         return {
@@ -92,28 +84,29 @@ class RedisConfig {
 
       // Ping Redis
       await this.client.ping();
-      
+
       return {
         status: 'healthy',
         message: 'Redis connection is active',
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
-      logger.error('Redis health check failed:', error);
+      const err = error as Error;
+      logger.error('Redis health check failed:', err);
       return {
         status: 'unhealthy',
         message: 'Redis health check failed',
-        error: error.message,
+        error: err.message,
         timestamp: new Date().toISOString(),
       };
     }
   }
 
   // Cache methods
-  async set(key, value, ttl = 3600) {
+  async set(key: string, value: string, ttl = 3600): Promise<boolean> {
     try {
       const client = this.getClient();
-      await client.setEx(key, ttl, JSON.stringify(value));
+      await client.setEx(key, ttl, value);
       return true;
     } catch (error) {
       logger.error('Redis set error:', error);
@@ -121,18 +114,18 @@ class RedisConfig {
     }
   }
 
-  async get(key) {
+  async get(key: string): Promise<string | null> {
     try {
       const client = this.getClient();
       const value = await client.get(key);
-      return value ? JSON.parse(value) : null;
+      return value;
     } catch (error) {
       logger.error('Redis get error:', error);
       throw error;
     }
   }
 
-  async del(key) {
+  async del(key: string): Promise<boolean> {
     try {
       const client = this.getClient();
       await client.del(key);
@@ -143,7 +136,7 @@ class RedisConfig {
     }
   }
 
-  async exists(key) {
+  async exists(key: string): Promise<boolean> {
     try {
       const client = this.getClient();
       const result = await client.exists(key);
@@ -155,4 +148,5 @@ class RedisConfig {
   }
 }
 
-module.exports = new RedisConfig();
+export default new RedisConfig();
+

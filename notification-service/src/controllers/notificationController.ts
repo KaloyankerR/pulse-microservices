@@ -1,25 +1,28 @@
-const NotificationService = require('../services/notificationService');
-const NotificationPreferencesService = require('../services/notificationPreferencesService');
-const logger = require('../utils/logger');
-const metrics = require('../config/metrics');
+import { Request, Response } from 'express';
+import NotificationService from '../services/notificationService';
+import NotificationPreferencesService from '../services/notificationPreferencesService';
+import logger from '../utils/logger';
+import metrics from '../config/metrics';
+import { AuthenticatedRequest, ApiResponse, CreateNotificationRequest, UpdatePreferencesRequest } from '../types/api';
+import { INotification, INotificationPreferences } from '../types/models';
 
 class NotificationController {
   // POST /api/notifications (for testing purposes)
-  async createNotification(req, res) {
+  async createNotification(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
-      const notificationData = {
-        recipient_id: req.body.recipient_id || userId,
-        sender_id: req.body.sender_id,
-        type: req.body.type,
-        title: req.body.title,
-        message: req.body.message,
-        reference_id: req.body.reference_id,
-        reference_type: req.body.reference_type,
-        priority: req.body.priority || 'MEDIUM',
-        metadata: req.body.metadata || {}
+      const userId = req.user!.id;
+      const notificationData: CreateNotificationRequest = {
+        recipient_id: (req.body as CreateNotificationRequest).recipient_id || userId,
+        sender_id: (req.body as CreateNotificationRequest).sender_id,
+        type: (req.body as CreateNotificationRequest).type,
+        title: (req.body as CreateNotificationRequest).title,
+        message: (req.body as CreateNotificationRequest).message,
+        reference_id: (req.body as CreateNotificationRequest).reference_id,
+        reference_type: (req.body as CreateNotificationRequest).reference_type,
+        priority: (req.body as CreateNotificationRequest).priority || 'MEDIUM',
+        metadata: (req.body as CreateNotificationRequest).metadata || {},
       };
 
       logger.info('Creating test notification', { userId, notificationData });
@@ -29,20 +32,22 @@ class NotificationController {
       metrics.incrementHttpRequest('POST', '/api/notifications', 201);
       metrics.recordHttpRequestDuration('POST', '/api/notifications', Date.now() - startTime);
 
-      res.status(201).json({
+      const response: ApiResponse<INotification> = {
         success: true,
         data: notification,
         meta: {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(201).json(response);
     } catch (error) {
       logger.logError(error, { userId: req.user?.id, action: 'createNotification' });
       metrics.incrementHttpRequest('POST', '/api/notifications', 500);
       metrics.recordHttpRequestDuration('POST', '/api/notifications', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to create notification',
@@ -52,30 +57,34 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // GET /api/notifications
-  async getNotifications(req, res) {
+  async getNotifications(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
-      const {
-        page = 1,
-        limit = 20,
-        type,
-        unread_only = false,
-        sort = 'desc'
-      } = req.query;
+      const userId = req.user!.id;
+      const query = req.query as {
+        page?: string;
+        limit?: string;
+        type?: string;
+        unread_only?: string;
+        sort?: string;
+      };
+
+      const { page = 1, limit = 20, type, unread_only = false, sort = 'desc' } = query;
 
       const options = {
-        page: parseInt(page, 10),
-        limit: parseInt(limit, 10),
-        type,
+        page: parseInt(String(page), 10),
+        limit: parseInt(String(limit), 10),
+        type: type as typeof type,
         unreadOnly: unread_only === 'true',
-        sort: sort === 'desc' ? -1 : 1,
+        sort: sort === 'desc' ? -1 : 1 as -1 | 1,
       };
 
       logger.info('Fetching notifications', { userId, options });
@@ -85,20 +94,22 @@ class NotificationController {
       metrics.incrementHttpRequest('GET', '/api/notifications', 200);
       metrics.recordHttpRequestDuration('GET', '/api/notifications', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse = {
         success: true,
         data: result,
         meta: {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       logger.logError(error, { userId: req.user?.id, action: 'getNotifications' });
       metrics.incrementHttpRequest('GET', '/api/notifications', 500);
       metrics.recordHttpRequestDuration('GET', '/api/notifications', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to fetch notifications',
@@ -108,16 +119,18 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // PUT /api/notifications/:id/read
-  async markNotificationAsRead(req, res) {
+  async markNotificationAsRead(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const notificationId = req.params.id;
 
       logger.info('Marking notification as read', { userId, notificationId });
@@ -127,8 +140,8 @@ class NotificationController {
       if (!notification) {
         metrics.incrementHttpRequest('PUT', '/api/notifications/:id/read', 404);
         metrics.recordHttpRequestDuration('PUT', '/api/notifications/:id/read', Date.now() - startTime);
-        
-        return res.status(404).json({
+
+        const response: ApiResponse = {
           success: false,
           error: {
             message: 'Notification not found',
@@ -138,26 +151,35 @@ class NotificationController {
             timestamp: new Date().toISOString(),
             version: 'v1',
           },
-        });
+        };
+
+        res.status(404).json(response);
+        return;
       }
 
       metrics.incrementHttpRequest('PUT', '/api/notifications/:id/read', 200);
       metrics.recordHttpRequestDuration('PUT', '/api/notifications/:id/read', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse<INotification> = {
         success: true,
         data: notification,
         meta: {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
-      logger.logError(error, { userId: req.user?.id, notificationId: req.params.id, action: 'markNotificationAsRead' });
+      logger.logError(error, {
+        userId: req.user?.id,
+        notificationId: req.params.id,
+        action: 'markNotificationAsRead',
+      });
       metrics.incrementHttpRequest('PUT', '/api/notifications/:id/read', 500);
       metrics.recordHttpRequestDuration('PUT', '/api/notifications/:id/read', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to mark notification as read',
@@ -167,16 +189,18 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // PUT /api/notifications/read-all
-  async markAllNotificationsAsRead(req, res) {
+  async markAllNotificationsAsRead(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
 
       logger.info('Marking all notifications as read', { userId });
 
@@ -185,7 +209,7 @@ class NotificationController {
       metrics.incrementHttpRequest('PUT', '/api/notifications/read-all', 200);
       metrics.recordHttpRequestDuration('PUT', '/api/notifications/read-all', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse = {
         success: true,
         data: {
           modified_count: result.modifiedCount,
@@ -195,13 +219,15 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       logger.logError(error, { userId: req.user?.id, action: 'markAllNotificationsAsRead' });
       metrics.incrementHttpRequest('PUT', '/api/notifications/read-all', 500);
       metrics.recordHttpRequestDuration('PUT', '/api/notifications/read-all', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to mark all notifications as read',
@@ -211,16 +237,18 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // GET /api/notifications/unread-count
-  async getUnreadCount(req, res) {
+  async getUnreadCount(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
 
       logger.info('Fetching unread notification count', { userId });
 
@@ -229,7 +257,7 @@ class NotificationController {
       metrics.incrementHttpRequest('GET', '/api/notifications/unread-count', 200);
       metrics.recordHttpRequestDuration('GET', '/api/notifications/unread-count', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse = {
         success: true,
         data: {
           unread_count: count,
@@ -238,13 +266,15 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       logger.logError(error, { userId: req.user?.id, action: 'getUnreadCount' });
       metrics.incrementHttpRequest('GET', '/api/notifications/unread-count', 500);
       metrics.recordHttpRequestDuration('GET', '/api/notifications/unread-count', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to get unread notification count',
@@ -254,16 +284,18 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // GET /api/notifications/stats
-  async getNotificationStats(req, res) {
+  async getNotificationStats(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
 
       logger.info('Fetching notification statistics', { userId });
 
@@ -272,20 +304,22 @@ class NotificationController {
       metrics.incrementHttpRequest('GET', '/api/notifications/stats', 200);
       metrics.recordHttpRequestDuration('GET', '/api/notifications/stats', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse = {
         success: true,
         data: stats,
         meta: {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       logger.logError(error, { userId: req.user?.id, action: 'getNotificationStats' });
       metrics.incrementHttpRequest('GET', '/api/notifications/stats', 500);
       metrics.recordHttpRequestDuration('GET', '/api/notifications/stats', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to get notification statistics',
@@ -295,16 +329,18 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // GET /api/notifications/preferences
-  async getNotificationPreferences(req, res) {
+  async getNotificationPreferences(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
 
       logger.info('Fetching notification preferences', { userId });
 
@@ -313,20 +349,22 @@ class NotificationController {
       metrics.incrementHttpRequest('GET', '/api/notifications/preferences', 200);
       metrics.recordHttpRequestDuration('GET', '/api/notifications/preferences', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse<INotificationPreferences> = {
         success: true,
         data: preferences,
         meta: {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       logger.logError(error, { userId: req.user?.id, action: 'getNotificationPreferences' });
       metrics.incrementHttpRequest('GET', '/api/notifications/preferences', 500);
       metrics.recordHttpRequestDuration('GET', '/api/notifications/preferences', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to get notification preferences',
@@ -336,17 +374,19 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // PUT /api/notifications/preferences
-  async updateNotificationPreferences(req, res) {
+  async updateNotificationPreferences(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
-      const preferences = req.body;
+      const userId = req.user!.id;
+      const preferences = req.body as UpdatePreferencesRequest;
 
       logger.info('Updating notification preferences', { userId, preferences });
 
@@ -355,20 +395,22 @@ class NotificationController {
       metrics.incrementHttpRequest('PUT', '/api/notifications/preferences', 200);
       metrics.recordHttpRequestDuration('PUT', '/api/notifications/preferences', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse<INotificationPreferences> = {
         success: true,
         data: updatedPreferences,
         meta: {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       logger.logError(error, { userId: req.user?.id, action: 'updateNotificationPreferences' });
       metrics.incrementHttpRequest('PUT', '/api/notifications/preferences', 500);
       metrics.recordHttpRequestDuration('PUT', '/api/notifications/preferences', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to update notification preferences',
@@ -378,16 +420,18 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // DELETE /api/notifications/:id
-  async deleteNotification(req, res) {
+  async deleteNotification(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
+      const userId = req.user!.id;
       const notificationId = req.params.id;
 
       logger.info('Deleting notification', { userId, notificationId });
@@ -397,8 +441,8 @@ class NotificationController {
       if (!result) {
         metrics.incrementHttpRequest('DELETE', '/api/notifications/:id', 404);
         metrics.recordHttpRequestDuration('DELETE', '/api/notifications/:id', Date.now() - startTime);
-        
-        return res.status(404).json({
+
+        const response: ApiResponse = {
           success: false,
           error: {
             message: 'Notification not found',
@@ -408,13 +452,16 @@ class NotificationController {
             timestamp: new Date().toISOString(),
             version: 'v1',
           },
-        });
+        };
+
+        res.status(404).json(response);
+        return;
       }
 
       metrics.incrementHttpRequest('DELETE', '/api/notifications/:id', 200);
       metrics.recordHttpRequestDuration('DELETE', '/api/notifications/:id', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse = {
         success: true,
         data: {
           message: 'Notification deleted successfully',
@@ -423,13 +470,19 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
-      logger.logError(error, { userId: req.user?.id, notificationId: req.params.id, action: 'deleteNotification' });
+      logger.logError(error, {
+        userId: req.user?.id,
+        notificationId: req.params.id,
+        action: 'deleteNotification',
+      });
       metrics.incrementHttpRequest('DELETE', '/api/notifications/:id', 500);
       metrics.recordHttpRequestDuration('DELETE', '/api/notifications/:id', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to delete notification',
@@ -439,26 +492,29 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 
   // DELETE /api/notifications/cleanup
-  async cleanupOldNotifications(req, res) {
+  async cleanupOldNotifications(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();
-    
+
     try {
-      const userId = req.user.id;
-      const { days_old = 30 } = req.query;
+      const userId = req.user!.id;
+      const query = req.query as { days_old?: string };
+      const { days_old = 30 } = query;
 
       logger.info('Cleaning up old notifications', { userId, days_old });
 
-      const result = await NotificationService.cleanupOldNotifications(userId, parseInt(days_old, 10));
+      const result = await NotificationService.cleanupOldNotifications(userId, parseInt(String(days_old), 10));
 
       metrics.incrementHttpRequest('DELETE', '/api/notifications/cleanup', 200);
       metrics.recordHttpRequestDuration('DELETE', '/api/notifications/cleanup', Date.now() - startTime);
 
-      res.status(200).json({
+      const response: ApiResponse = {
         success: true,
         data: {
           deleted_count: result.deletedCount,
@@ -468,13 +524,15 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(200).json(response);
     } catch (error) {
       logger.logError(error, { userId: req.user?.id, action: 'cleanupOldNotifications' });
       metrics.incrementHttpRequest('DELETE', '/api/notifications/cleanup', 500);
       metrics.recordHttpRequestDuration('DELETE', '/api/notifications/cleanup', Date.now() - startTime);
-      
-      res.status(500).json({
+
+      const response: ApiResponse = {
         success: false,
         error: {
           message: 'Failed to cleanup old notifications',
@@ -484,9 +542,12 @@ class NotificationController {
           timestamp: new Date().toISOString(),
           version: 'v1',
         },
-      });
+      };
+
+      res.status(500).json(response);
     }
   }
 }
 
-module.exports = new NotificationController();
+export default new NotificationController();
+

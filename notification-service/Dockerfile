@@ -45,11 +45,17 @@ CMD ["npm", "run", "dev"]
 # Production stage
 FROM base AS production
 
-# Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+# Install all dependencies (needed for TypeScript compilation)
+RUN npm ci && npm cache clean --force
 
 # Copy application code
 COPY . .
+
+# Build TypeScript to JavaScript
+RUN npm run build
+
+# Remove dev dependencies after build
+RUN npm prune --production && npm cache clean --force
 
 # Create logs directory
 RUN mkdir -p logs
@@ -67,5 +73,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "src/app.js"]
+# Start the application (using compiled JavaScript)
+CMD ["node", "dist/server.js"]

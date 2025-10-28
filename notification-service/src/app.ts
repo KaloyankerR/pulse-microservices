@@ -1,34 +1,32 @@
-require('dotenv').config();
-
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const swaggerUi = require('swagger-ui-express');
-const winston = require('winston');
-const expressWinston = require('express-winston');
+import 'dotenv/config';
+import express, { Express, Request, Response } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
+import expressWinston from 'express-winston';
 
 // Import configurations
-const database = require('./config/database');
-const redis = require('./config/redis');
-const rabbitmq = require('./config/rabbitmq');
-const metrics = require('./config/metrics');
+import database from './config/database';
+import redis from './config/redis';
+import rabbitmq from './config/rabbitmq';
+import metrics from './config/metrics';
 
 // Import services
-const eventService = require('./services/eventService');
+import eventService from './services/eventService';
 
 // Import utilities
-const logger = require('./utils/logger');
+import logger from './utils/logger';
 
 // Import middleware
-const { errorHandler, notFound, initializeErrorHandlers } = require('./middleware/errorHandler');
-const { generalLimiter, healthCheckLimiter, metricsLimiter } = require('./middleware/rateLimiter');
-const { requestMetrics, healthCheckMetrics } = require('./middleware/metrics');
+import { errorHandler, notFound, initializeErrorHandlers } from './middleware/errorHandler';
+import { generalLimiter, healthCheckLimiter, metricsLimiter } from './middleware/rateLimiter';
+import { requestMetrics, healthCheckMetrics } from './middleware/metrics';
 
 // Import routes
-const notificationRoutes = require('./routes/notifications');
+import notificationRoutes from './routes/notifications';
 
 // Create Express app
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT || 8086;
 
 // Initialize error handlers
@@ -38,23 +36,25 @@ initializeErrorHandlers();
 app.set('trust proxy', 1);
 
 // Security middleware
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     const allowedOrigins = [
       process.env.CORS_ORIGIN || 'http://localhost:3000',
       'http://localhost:8080', // Allow Swagger UI direct access
       'http://localhost:8086', // Allow service direct access
       'http://localhost:8000', // Allow Kong Gateway
     ];
-    
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -73,14 +73,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging
-app.use(expressWinston.logger({
-  winstonInstance: logger,
-  meta: true,
-  msg: 'HTTP {{req.method}} {{req.url}}',
-  expressFormat: true,
-  colorize: false,
-  ignoreRoute: (req) => req.url === '/health' || req.url.startsWith('/api-docs') || req.url === '/metrics',
-}));
+app.use(
+  expressWinston.logger({
+    winstonInstance: logger,
+    meta: true,
+    msg: 'HTTP {{req.method}} {{req.url}}',
+    expressFormat: true,
+    colorize: false,
+    ignoreRoute: (req: Request) =>
+      req.url === '/health' || req.url.startsWith('/api-docs') || req.url === '/metrics',
+  })
+);
 
 // Add request ID to logs
 app.use(logger.addRequestId);
@@ -89,7 +92,7 @@ app.use(logger.addRequestId);
 app.use(generalLimiter);
 
 // Health check endpoint
-app.get('/health', healthCheckLimiter, healthCheckMetrics, async (req, res) => {
+app.get('/health', healthCheckLimiter, healthCheckMetrics, async (req: Request, res: Response) => {
   try {
     const [dbHealth, redisHealth, rabbitmqHealth] = await Promise.all([
       database.healthCheck(),
@@ -97,9 +100,12 @@ app.get('/health', healthCheckLimiter, healthCheckMetrics, async (req, res) => {
       rabbitmq.healthCheck(),
     ]);
 
-    const overallStatus = dbHealth.status === 'healthy' && 
-                         redisHealth.status === 'healthy' && 
-                         rabbitmqHealth.status === 'healthy' ? 'healthy' : 'unhealthy';
+    const overallStatus =
+      dbHealth.status === 'healthy' &&
+      redisHealth.status === 'healthy' &&
+      rabbitmqHealth.status === 'healthy'
+        ? 'healthy'
+        : 'unhealthy';
 
     const statusCode = overallStatus === 'healthy' ? 200 : 503;
 
@@ -124,7 +130,8 @@ app.get('/health', healthCheckLimiter, healthCheckMetrics, async (req, res) => {
     });
   } catch (error) {
     logger.logError(error, { action: 'healthCheck' });
-    
+
+    const err = error as Error;
     res.status(503).json({
       success: false,
       data: {
@@ -132,7 +139,7 @@ app.get('/health', healthCheckLimiter, healthCheckMetrics, async (req, res) => {
         service: 'pulse-notification-service',
         version: '1.0.0',
         timestamp: new Date().toISOString(),
-        error: error.message,
+        error: err.message,
       },
       meta: {
         timestamp: new Date().toISOString(),
@@ -143,7 +150,7 @@ app.get('/health', healthCheckLimiter, healthCheckMetrics, async (req, res) => {
 });
 
 // Readiness check endpoint
-app.get('/ready', healthCheckLimiter, async (req, res) => {
+app.get('/ready', healthCheckLimiter, async (req: Request, res: Response) => {
   try {
     // Check if all required services are connected
     const [dbHealth, redisHealth, rabbitmqHealth] = await Promise.all([
@@ -152,9 +159,10 @@ app.get('/ready', healthCheckLimiter, async (req, res) => {
       rabbitmq.healthCheck(),
     ]);
 
-    const isReady = dbHealth.status === 'healthy' && 
-                   redisHealth.status === 'healthy' && 
-                   rabbitmqHealth.status === 'healthy';
+    const isReady =
+      dbHealth.status === 'healthy' &&
+      redisHealth.status === 'healthy' &&
+      rabbitmqHealth.status === 'healthy';
 
     const statusCode = isReady ? 200 : 503;
 
@@ -172,14 +180,15 @@ app.get('/ready', healthCheckLimiter, async (req, res) => {
     });
   } catch (error) {
     logger.logError(error, { action: 'readinessCheck' });
-    
+
+    const err = error as Error;
     res.status(503).json({
       success: false,
       data: {
         ready: false,
         service: 'pulse-notification-service',
         timestamp: new Date().toISOString(),
-        error: error.message,
+        error: err.message,
       },
       meta: {
         timestamp: new Date().toISOString(),
@@ -190,7 +199,7 @@ app.get('/ready', healthCheckLimiter, async (req, res) => {
 });
 
 // Metrics endpoint
-app.get('/metrics', metricsLimiter, async (req, res) => {
+app.get('/metrics', metricsLimiter, async (req: Request, res: Response) => {
   try {
     const metricsData = await metrics.getMetrics();
     res.set('Content-Type', 'text/plain');
@@ -321,7 +330,7 @@ app.use(requestMetrics);
 app.use('/api/notifications', notificationRoutes);
 
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     data: {
@@ -340,11 +349,13 @@ app.get('/', (req, res) => {
 });
 
 // Error logging
-app.use(expressWinston.errorLogger({
-  winstonInstance: logger,
-  meta: true,
-  msg: 'HTTP {{req.method}} {{req.url}} - {{err.message}}',
-}));
+app.use(
+  expressWinston.errorLogger({
+    winstonInstance: logger,
+    meta: true,
+    msg: 'HTTP {{req.method}} {{req.url}} - {{err.message}}',
+  })
+);
 
 // 404 handler
 app.use(notFound);
@@ -352,5 +363,6 @@ app.use(notFound);
 // Global error handler
 app.use(errorHandler);
 
-// Export the app for testing or use by server.js
-module.exports = app;
+// Export the app for testing or use by server.ts
+export default app;
+

@@ -1,12 +1,14 @@
-const NotificationPreferences = require('../models/notificationPreferences');
-const logger = require('../utils/logger');
-const metrics = require('../config/metrics');
+import NotificationPreferences from '../models/notificationPreferences';
+import { INotificationPreferences } from '../types/models';
+import logger from '../utils/logger';
+import metrics from '../config/metrics';
+import { UpdatePreferencesRequest } from '../types/api';
 
 class NotificationPreferencesService {
   // Get notification preferences for a user
-  async getPreferences(userId) {
+  async getPreferences(userId: string): Promise<INotificationPreferences> {
     const startTime = Date.now();
-    
+
     try {
       const preferences = await NotificationPreferences.getOrCreate(userId);
 
@@ -23,9 +25,9 @@ class NotificationPreferencesService {
   }
 
   // Update notification preferences for a user
-  async updatePreferences(userId, preferencesData) {
+  async updatePreferences(userId: string, preferencesData: UpdatePreferencesRequest): Promise<INotificationPreferences> {
     const startTime = Date.now();
-    
+
     try {
       const existingPreferences = await NotificationPreferences.getOrCreate(userId);
 
@@ -58,18 +60,19 @@ class NotificationPreferencesService {
 
       // Update type-specific preferences
       if (preferencesData.preferences) {
-        Object.keys(preferencesData.preferences).forEach(notificationType => {
-          if (existingPreferences.preferences[notificationType]) {
-            const typePreferences = preferencesData.preferences[notificationType];
-            
+        Object.keys(preferencesData.preferences).forEach((notificationType) => {
+          const prefs = existingPreferences.preferences as Record<string, { email?: boolean; push?: boolean; in_app?: boolean }>;
+          if (prefs[notificationType]) {
+            const typePreferences = preferencesData.preferences![notificationType];
+
             if (typePreferences.email !== undefined) {
-              existingPreferences.preferences[notificationType].email = typePreferences.email;
+              prefs[notificationType].email = typePreferences.email;
             }
             if (typePreferences.push !== undefined) {
-              existingPreferences.preferences[notificationType].push = typePreferences.push;
+              prefs[notificationType].push = typePreferences.push;
             }
             if (typePreferences.in_app !== undefined) {
-              existingPreferences.preferences[notificationType].in_app = typePreferences.in_app;
+              prefs[notificationType].in_app = typePreferences.in_app;
             }
           }
         });
@@ -95,14 +98,19 @@ class NotificationPreferencesService {
   }
 
   // Update specific notification type preference
-  async updateTypePreference(userId, notificationType, channel, enabled) {
+  async updateTypePreference(
+    userId: string,
+    notificationType: string,
+    channel: string,
+    enabled: boolean
+  ): Promise<INotificationPreferences> {
     const startTime = Date.now();
-    
+
     try {
       const preferences = await NotificationPreferences.getOrCreate(userId);
-      
+
       preferences.setPreferenceForType(notificationType, channel, enabled);
-      
+
       const updatedPreferences = await preferences.save();
 
       logger.info('Notification type preference updated', {
@@ -117,12 +125,12 @@ class NotificationPreferencesService {
 
       return updatedPreferences;
     } catch (error) {
-      logger.logError(error, { 
-        userId, 
-        action: 'updateTypePreference', 
-        notificationType, 
-        channel, 
-        enabled 
+      logger.logError(error, {
+        userId,
+        action: 'updateTypePreference',
+        notificationType,
+        channel,
+        enabled,
       });
       metrics.incrementDatabaseOperation('save', 'notification_preferences', 'error');
       metrics.recordDatabaseOperationDuration('save', Date.now() - startTime);
@@ -131,12 +139,12 @@ class NotificationPreferencesService {
   }
 
   // Enable/disable all notifications for a channel
-  async updateChannelPreferences(userId, channel, enabled) {
+  async updateChannelPreferences(userId: string, channel: string, enabled: boolean): Promise<INotificationPreferences> {
     const startTime = Date.now();
-    
+
     try {
       const preferences = await NotificationPreferences.getOrCreate(userId);
-      
+
       switch (channel) {
         case 'email':
           preferences.email_notifications = enabled;
@@ -172,12 +180,20 @@ class NotificationPreferencesService {
   }
 
   // Update quiet hours
-  async updateQuietHours(userId, quietHoursData) {
+  async updateQuietHours(
+    userId: string,
+    quietHoursData: {
+      enabled?: boolean;
+      start_time?: string;
+      end_time?: string;
+      timezone?: string;
+    }
+  ): Promise<INotificationPreferences> {
     const startTime = Date.now();
-    
+
     try {
       const preferences = await NotificationPreferences.getOrCreate(userId);
-      
+
       if (quietHoursData.enabled !== undefined) {
         preferences.quiet_hours.enabled = quietHoursData.enabled;
       }
@@ -211,25 +227,26 @@ class NotificationPreferencesService {
   }
 
   // Reset preferences to default
-  async resetToDefault(userId) {
+  async resetToDefault(userId: string): Promise<INotificationPreferences> {
     const startTime = Date.now();
-    
+
     try {
       const preferences = await NotificationPreferences.getOrCreate(userId);
-      
+
       // Reset to default values
       preferences.email_notifications = true;
       preferences.push_notifications = true;
       preferences.in_app_notifications = true;
-      
+
       preferences.quiet_hours.enabled = false;
       preferences.quiet_hours.start_time = '22:00';
       preferences.quiet_hours.end_time = '08:00';
       preferences.quiet_hours.timezone = 'UTC';
 
       // Reset type-specific preferences to defaults
-      Object.keys(preferences.preferences).forEach(type => {
-        const typePrefs = preferences.preferences[type];
+      const prefs = preferences.preferences as Record<string, { email: boolean; push: boolean; in_app: boolean }>;
+      Object.keys(prefs).forEach((type) => {
+        const typePrefs = prefs[type];
         typePrefs.email = true;
         typePrefs.push = true;
         typePrefs.in_app = true;
@@ -252,9 +269,9 @@ class NotificationPreferencesService {
   }
 
   // Check if notification should be sent based on preferences
-  async shouldSendNotification(userId, notificationType, channel) {
+  async shouldSendNotification(userId: string, notificationType: string, channel: string): Promise<boolean> {
     const startTime = Date.now();
-    
+
     try {
       const preferences = await NotificationPreferences.getOrCreate(userId);
       const shouldSend = preferences.shouldSendNotification(notificationType, channel);
@@ -264,11 +281,11 @@ class NotificationPreferencesService {
 
       return shouldSend;
     } catch (error) {
-      logger.logError(error, { 
-        userId, 
-        action: 'shouldSendNotification', 
-        notificationType, 
-        channel 
+      logger.logError(error, {
+        userId,
+        action: 'shouldSendNotification',
+        notificationType,
+        channel,
       });
       metrics.incrementDatabaseOperation('findOne', 'notification_preferences', 'error');
       metrics.recordDatabaseOperationDuration('findOne', Date.now() - startTime);
@@ -278,16 +295,16 @@ class NotificationPreferencesService {
   }
 
   // Get preferences for multiple users (bulk operation)
-  async getBulkPreferences(userIds) {
+  async getBulkPreferences(userIds: string[]): Promise<Record<string, INotificationPreferences>> {
     const startTime = Date.now();
-    
+
     try {
       const preferences = await NotificationPreferences.find({
-        user_id: { $in: userIds }
+        user_id: { $in: userIds },
       });
 
-      const preferencesMap = {};
-      preferences.forEach(pref => {
+      const preferencesMap: Record<string, INotificationPreferences> = {};
+      preferences.forEach((pref) => {
         preferencesMap[pref.user_id] = pref;
       });
 
@@ -304,9 +321,9 @@ class NotificationPreferencesService {
   }
 
   // Delete preferences for a user
-  async deletePreferences(userId) {
+  async deletePreferences(userId: string): Promise<INotificationPreferences | null> {
     const startTime = Date.now();
-    
+
     try {
       const result = await NotificationPreferences.findOneAndDelete({ user_id: userId });
 
@@ -325,4 +342,5 @@ class NotificationPreferencesService {
   }
 }
 
-module.exports = new NotificationPreferencesService();
+export default new NotificationPreferencesService();
+

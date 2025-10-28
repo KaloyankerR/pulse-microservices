@@ -1,14 +1,16 @@
-const jwt = require('jsonwebtoken');
-const logger = require('../utils/logger');
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import logger from '../utils/logger';
+import { AuthenticatedRequest, JWTClaims } from '../types/api';
 
 // JWT Authentication Middleware
-const authenticateToken = (req, res, next) => {
+export const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && (authHeader as string).split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: {
           message: 'Access token is required',
@@ -19,21 +21,22 @@ const authenticateToken = (req, res, next) => {
           version: 'v1',
         },
       });
+      return;
     }
 
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
-    
-    jwt.verify(token, jwtSecret, (err, user) => {
+
+    jwt.verify(token, jwtSecret, (err, decoded) => {
       if (err) {
-        logger.warn('Invalid token provided', { 
-          error: err.message, 
+        logger.warn('Invalid token provided', {
+          error: err.message,
           token: token.substring(0, 20) + '...',
           ip: req.ip,
           userAgent: req.get('User-Agent'),
         });
 
         if (err.name === 'TokenExpiredError') {
-          return res.status(401).json({
+          res.status(401).json({
             success: false,
             error: {
               message: 'Access token has expired',
@@ -44,10 +47,11 @@ const authenticateToken = (req, res, next) => {
               version: 'v1',
             },
           });
+          return;
         }
 
         if (err.name === 'JsonWebTokenError') {
-          return res.status(401).json({
+          res.status(401).json({
             success: false,
             error: {
               message: 'Invalid access token',
@@ -58,9 +62,10 @@ const authenticateToken = (req, res, next) => {
               version: 'v1',
             },
           });
+          return;
         }
 
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: {
             message: 'Access token verification failed',
@@ -71,14 +76,15 @@ const authenticateToken = (req, res, next) => {
             version: 'v1',
           },
         });
+        return;
       }
 
       // Add user information to request object
-      req.user = user;
-      
+      req.user = decoded as JWTClaims;
+
       logger.info('User authenticated successfully', {
-        userId: user.id,
-        username: user.username,
+        userId: req.user.id,
+        username: req.user.username,
         ip: req.ip,
         requestId: req.requestId,
       });
@@ -87,7 +93,7 @@ const authenticateToken = (req, res, next) => {
     });
   } catch (error) {
     logger.logError(error, { action: 'authenticateToken' });
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       error: {
         message: 'Authentication error',
@@ -102,47 +108,48 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Optional authentication middleware (doesn't fail if no token)
-const optionalAuth = (req, res, next) => {
+export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const token = authHeader && (authHeader as string).split(' ')[1];
 
     if (!token) {
-      req.user = null;
-      return next();
+      req.user = undefined;
+      next();
+      return;
     }
 
     const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
-    
-    jwt.verify(token, jwtSecret, (err, user) => {
+
+    jwt.verify(token, jwtSecret, (err, decoded) => {
       if (err) {
-        logger.warn('Invalid optional token provided', { 
+        logger.warn('Invalid optional token provided', {
           error: err.message,
           ip: req.ip,
         });
-        req.user = null;
+        req.user = undefined;
       } else {
-        req.user = user;
+        req.user = decoded as JWTClaims;
         logger.info('User authenticated with optional auth', {
-          userId: user.id,
-          username: user.username,
+          userId: req.user.id,
+          username: req.user.username,
         });
       }
       next();
     });
   } catch (error) {
     logger.logError(error, { action: 'optionalAuth' });
-    req.user = null;
+    req.user = undefined;
     next();
   }
 };
 
 // Role-based authorization middleware
-const requireRole = (roles) => {
-  return (req, res, next) => {
+export const requireRole = (roles: string[]) => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     try {
       if (!req.user) {
-        return res.status(401).json({
+        res.status(401).json({
           success: false,
           error: {
             message: 'Authentication required',
@@ -153,10 +160,11 @@ const requireRole = (roles) => {
             version: 'v1',
           },
         });
+        return;
       }
 
       const userRole = req.user.role || 'USER';
-      
+
       if (!roles.includes(userRole)) {
         logger.warn('Insufficient permissions', {
           userId: req.user.id,
@@ -165,7 +173,7 @@ const requireRole = (roles) => {
           ip: req.ip,
         });
 
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: {
             message: 'Insufficient permissions',
@@ -176,6 +184,7 @@ const requireRole = (roles) => {
             version: 'v1',
           },
         });
+        return;
       }
 
       logger.info('Role authorization successful', {
@@ -187,7 +196,7 @@ const requireRole = (roles) => {
       next();
     } catch (error) {
       logger.logError(error, { action: 'requireRole' });
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
         error: {
           message: 'Authorization error',
@@ -203,11 +212,11 @@ const requireRole = (roles) => {
 };
 
 // Resource ownership middleware
-const requireOwnership = (resourceUserIdParam = 'userId') => {
-  return (req, res, next) => {
+export const requireOwnership = (resourceUserIdParam = 'userId') => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     try {
       if (!req.user) {
-        return res.status(401).json({
+        res.status(401).json({
           success: false,
           error: {
             message: 'Authentication required',
@@ -218,6 +227,7 @@ const requireOwnership = (resourceUserIdParam = 'userId') => {
             version: 'v1',
           },
         });
+        return;
       }
 
       const requestedUserId = req.params[resourceUserIdParam];
@@ -225,7 +235,8 @@ const requireOwnership = (resourceUserIdParam = 'userId') => {
 
       // Admin users can access any resource
       if (req.user.role === 'ADMIN') {
-        return next();
+        next();
+        return;
       }
 
       if (requestedUserId !== currentUserId) {
@@ -235,7 +246,7 @@ const requireOwnership = (resourceUserIdParam = 'userId') => {
           ip: req.ip,
         });
 
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: {
             message: 'Access denied - resource ownership required',
@@ -246,6 +257,7 @@ const requireOwnership = (resourceUserIdParam = 'userId') => {
             version: 'v1',
           },
         });
+        return;
       }
 
       logger.info('Resource ownership verified', {
@@ -256,7 +268,7 @@ const requireOwnership = (resourceUserIdParam = 'userId') => {
       next();
     } catch (error) {
       logger.logError(error, { action: 'requireOwnership' });
-      return res.status(500).json({
+      res.status(500).json({
         success: false,
         error: {
           message: 'Authorization error',
@@ -271,9 +283,3 @@ const requireOwnership = (resourceUserIdParam = 'userId') => {
   };
 };
 
-module.exports = {
-  authenticateToken,
-  optionalAuth,
-  requireRole,
-  requireOwnership,
-};

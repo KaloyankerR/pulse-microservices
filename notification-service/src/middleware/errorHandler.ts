@@ -1,9 +1,17 @@
-const logger = require('../utils/logger');
-const metrics = require('../config/metrics');
+import { Request, Response, NextFunction } from 'express';
+import { Server } from 'http';
+import logger from '../utils/logger';
+import metrics from '../config/metrics';
+import { AuthenticatedRequest } from '../types/api';
 
 // Custom error class
-class AppError extends Error {
-  constructor(message, statusCode, code = null) {
+export class AppError extends Error {
+  statusCode: number;
+  code: string | null;
+  isOperational: boolean;
+  details?: unknown[];
+
+  constructor(message: string, statusCode: number, code: string | null = null) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
@@ -14,7 +22,12 @@ class AppError extends Error {
 }
 
 // Error handling middleware
-const errorHandler = (error, req, res, next) => {
+export const errorHandler = (
+  error: Error | AppError,
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
   let statusCode = 500;
   let message = 'Internal server error';
   let code = 'INTERNAL_ERROR';
@@ -24,24 +37,31 @@ const errorHandler = (error, req, res, next) => {
     statusCode = error.statusCode;
     message = error.message;
     code = error.code || 'APP_ERROR';
-  } else if (error.name === 'ValidationError') {
+  } else if ((error as Error & { name?: string }).name === 'ValidationError') {
     // Mongoose validation error
     statusCode = 400;
     message = 'Validation failed';
     code = 'VALIDATION_ERROR';
-    
-    const validationErrors = Object.values(error.errors).map(err => ({
-      field: err.path,
-      message: err.message,
-      value: err.value,
-    }));
-    
+
+    const mongooseError = error as Error & {
+      errors?: Record<string, { path?: string; message?: string; value?: unknown }>;
+    };
+
+    const validationErrors =
+      mongooseError.errors
+        ? Object.values(mongooseError.errors).map((err) => ({
+            field: err.path || '',
+            message: err.message || '',
+            value: err.value,
+          }))
+        : [];
+
     logger.warn('Mongoose validation error', {
       errors: validationErrors,
       requestId: req.requestId,
     });
 
-    return res.status(statusCode).json({
+    res.status(statusCode).json({
       success: false,
       error: {
         message,
@@ -53,41 +73,51 @@ const errorHandler = (error, req, res, next) => {
         version: 'v1',
       },
     });
-  } else if (error.name === 'CastError') {
+    return;
+  } else if ((error as Error & { name?: string }).name === 'CastError') {
     // Mongoose cast error (invalid ObjectId, etc.)
     statusCode = 400;
     message = 'Invalid data format';
     code = 'CAST_ERROR';
-  } else if (error.name === 'MongoError' && error.code === 11000) {
+  } else if (
+    (error as Error & { name?: string; code?: number }).name === 'MongoError' &&
+    (error as Error & { code?: number }).code === 11000
+  ) {
     // MongoDB duplicate key error
     statusCode = 409;
     message = 'Resource already exists';
     code = 'DUPLICATE_ERROR';
-  } else if (error.name === 'MongoNetworkError') {
+  } else if ((error as Error & { name?: string }).name === 'MongoNetworkError') {
     // MongoDB network error
     statusCode = 503;
     message = 'Database connection error';
     code = 'DATABASE_ERROR';
-  } else if (error.name === 'MongoTimeoutError') {
+  } else if ((error as Error & { name?: string }).name === 'MongoTimeoutError') {
     // MongoDB timeout error
     statusCode = 504;
     message = 'Database operation timeout';
     code = 'DATABASE_TIMEOUT';
-  } else if (error.name === 'JsonWebTokenError') {
+  } else if ((error as Error & { name?: string }).name === 'JsonWebTokenError') {
     // JWT errors
     statusCode = 401;
     message = 'Invalid token';
     code = 'INVALID_TOKEN';
-  } else if (error.name === 'TokenExpiredError') {
+  } else if ((error as Error & { name?: string }).name === 'TokenExpiredError') {
     statusCode = 401;
     message = 'Token expired';
     code = 'TOKEN_EXPIRED';
-  } else if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
+  } else if (
+    (error as Error & { name?: string }).name === 'SyntaxError' &&
+    error.message.includes('JSON')
+  ) {
     // JSON parsing error
     statusCode = 400;
     message = 'Invalid JSON format';
     code = 'INVALID_JSON';
-  } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+  } else if (
+    (error as Error & { code?: string }).code === 'ENOTFOUND' ||
+    (error as Error & { code?: string }).code === 'ECONNREFUSED'
+  ) {
     // Network connection errors
     statusCode = 503;
     message = 'Service unavailable';
@@ -105,10 +135,22 @@ const errorHandler = (error, req, res, next) => {
   });
 
   // Increment error metrics
-  metrics.incrementHttpRequest(req.method, req.route?.path || req.path, statusCode);
+  const route = (req as Request & { route?: { path?: string } }).route?.path || req.path;
+  metrics.incrementHttpRequest(req.method, route, statusCode);
 
   // Send error response
-  const errorResponse = {
+  const errorResponse: {
+    success: boolean;
+    error: {
+      message: string;
+      code: string;
+      stack?: string;
+    };
+    meta: {
+      timestamp: string;
+      version: string;
+    };
+  } = {
     success: false,
     error: {
       message,
@@ -129,7 +171,7 @@ const errorHandler = (error, req, res, next) => {
 };
 
 // 404 handler
-const notFound = (req, res) => {
+export const notFound = (req: AuthenticatedRequest, res: Response): void => {
   logger.warn('Route not found', {
     method: req.method,
     url: req.url,
@@ -138,7 +180,8 @@ const notFound = (req, res) => {
     requestId: req.requestId,
   });
 
-  metrics.incrementHttpRequest(req.method, req.url, 404);
+  const route = (req as Request & { route?: { path?: string } }).route?.path || req.url;
+  metrics.incrementHttpRequest(req.method, route, 404);
 
   res.status(404).json({
     success: false,
@@ -154,21 +197,23 @@ const notFound = (req, res) => {
 };
 
 // Async error wrapper
-const asyncHandler = (fn) => {
-  return (req, res, next) => {
+export const asyncHandler = (
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
+) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 };
 
 // Handle unhandled promise rejections
-const handleUnhandledRejection = () => {
-  process.on('unhandledRejection', (reason, promise) => {
+export const handleUnhandledRejection = (): void => {
+  process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
     logger.error('Unhandled Promise Rejection', {
-      reason: reason.toString(),
-      stack: reason.stack,
+      reason: reason instanceof Error ? reason.toString() : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
       promise: promise.toString(),
     });
-    
+
     // Don't exit the process in production
     if (process.env.NODE_ENV !== 'production') {
       process.exit(1);
@@ -177,29 +222,29 @@ const handleUnhandledRejection = () => {
 };
 
 // Handle uncaught exceptions
-const handleUncaughtException = () => {
-  process.on('uncaughtException', (error) => {
+export const handleUncaughtException = (): void => {
+  process.on('uncaughtException', (error: Error) => {
     logger.error('Uncaught Exception', {
       message: error.message,
       stack: error.stack,
     });
-    
+
     // Exit the process as it's in an undefined state
     process.exit(1);
   });
 };
 
 // Graceful shutdown handler
-const gracefulShutdown = (server) => {
-  return (signal) => {
+export const gracefulShutdown = (server: Server) => {
+  return (signal: string): void => {
     logger.info(`${signal} received. Starting graceful shutdown...`);
-    
+
     server.close((err) => {
       if (err) {
         logger.error('Error during server shutdown', { error: err.message });
         process.exit(1);
       }
-      
+
       logger.info('Server closed successfully');
       process.exit(0);
     });
@@ -213,11 +258,11 @@ const gracefulShutdown = (server) => {
 };
 
 // Database connection error handler
-const handleDatabaseError = (error) => {
+export const handleDatabaseError = (error: Error): void => {
   logger.error('Database connection error', {
     message: error.message,
     name: error.name,
-    code: error.code,
+    code: (error as Error & { code?: string }).code,
   });
 
   // Implement retry logic or fallback mechanisms here
@@ -225,11 +270,11 @@ const handleDatabaseError = (error) => {
 };
 
 // Redis connection error handler
-const handleRedisError = (error) => {
+export const handleRedisError = (error: Error): void => {
   logger.error('Redis connection error', {
     message: error.message,
     name: error.name,
-    code: error.code,
+    code: (error as Error & { code?: string }).code,
   });
 
   // Implement retry logic or fallback mechanisms here
@@ -237,11 +282,11 @@ const handleRedisError = (error) => {
 };
 
 // RabbitMQ connection error handler
-const handleRabbitMQError = (error) => {
+export const handleRabbitMQError = (error: Error): void => {
   logger.error('RabbitMQ connection error', {
     message: error.message,
     name: error.name,
-    code: error.code,
+    code: (error as Error & { code?: string }).code,
   });
 
   // Implement retry logic or fallback mechanisms here
@@ -249,57 +294,40 @@ const handleRabbitMQError = (error) => {
 };
 
 // Validation error factory
-const createValidationError = (message, details = []) => {
+export const createValidationError = (message: string, details: unknown[] = []): AppError => {
   const error = new AppError(message, 400, 'VALIDATION_ERROR');
   error.details = details;
   return error;
 };
 
 // Not found error factory
-const createNotFoundError = (resource = 'Resource') => {
+export const createNotFoundError = (resource = 'Resource'): AppError => {
   return new AppError(`${resource} not found`, 404, 'NOT_FOUND');
 };
 
 // Unauthorized error factory
-const createUnauthorizedError = (message = 'Unauthorized') => {
+export const createUnauthorizedError = (message = 'Unauthorized'): AppError => {
   return new AppError(message, 401, 'UNAUTHORIZED');
 };
 
 // Forbidden error factory
-const createForbiddenError = (message = 'Forbidden') => {
+export const createForbiddenError = (message = 'Forbidden'): AppError => {
   return new AppError(message, 403, 'FORBIDDEN');
 };
 
 // Conflict error factory
-const createConflictError = (message = 'Resource conflict') => {
+export const createConflictError = (message = 'Resource conflict'): AppError => {
   return new AppError(message, 409, 'CONFLICT');
 };
 
 // Too many requests error factory
-const createTooManyRequestsError = (message = 'Too many requests') => {
+export const createTooManyRequestsError = (message = 'Too many requests'): AppError => {
   return new AppError(message, 429, 'TOO_MANY_REQUESTS');
 };
 
 // Initialize error handlers
-const initializeErrorHandlers = () => {
+export const initializeErrorHandlers = (): void => {
   handleUnhandledRejection();
   handleUncaughtException();
 };
 
-module.exports = {
-  AppError,
-  errorHandler,
-  notFound,
-  asyncHandler,
-  gracefulShutdown,
-  handleDatabaseError,
-  handleRedisError,
-  handleRabbitMQError,
-  createValidationError,
-  createNotFoundError,
-  createUnauthorizedError,
-  createForbiddenError,
-  createConflictError,
-  createTooManyRequestsError,
-  initializeErrorHandlers,
-};
