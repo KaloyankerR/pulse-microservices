@@ -228,8 +228,10 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-// Start the server
-startServer();
+// Start the server only if this file is run directly (not imported)
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app;
 
