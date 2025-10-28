@@ -8,8 +8,8 @@ RUN apk add --no-cache openssl openssl-dev libc6-compat
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (including dev for build)
+RUN npm ci && npm cache clean --force
 
 # Copy Prisma schema
 COPY prisma ./prisma
@@ -19,6 +19,12 @@ RUN npx prisma generate
 
 # Copy application code
 COPY . .
+
+# Build TypeScript
+RUN npm run build
+
+# Prune dev dependencies
+RUN npm prune --production && npm cache clean --force
 
 # Create logs directory
 RUN mkdir -p logs
@@ -31,5 +37,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:8085/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start application
-CMD ["node", "src/app.js"]
+CMD ["node", "dist/server.js"]
 

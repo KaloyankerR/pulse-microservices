@@ -1,14 +1,15 @@
 module.exports = {
+  preset: 'ts-jest',
   testEnvironment: 'node',
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
-    'src/**/*.js',
-    '!src/**/*.test.js',
-    '!src/**/*.spec.js',
+    'src/**/*.ts',
+    '!src/**/*.test.ts',
+    '!src/**/*.spec.ts',
   ],
   testMatch: [
-    '**/tests/**/*.test.js',
-    '**/tests/**/*.spec.js',
+    '**/tests/**/*.test.ts',
+    '**/tests/**/*.spec.ts',
   ],
   coverageThreshold: {
     global: {
@@ -18,6 +19,9 @@ module.exports = {
       statements: 70,
     },
   },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
 };
 
