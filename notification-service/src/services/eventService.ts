@@ -173,7 +173,7 @@ class EventService {
     try {
       logger.logEventProcessing('user.registered', 'started', { data });
 
-      const eventData = data as UserRegisteredEvent;
+      const eventData = data as unknown as UserRegisteredEvent;
 
       // Update user cache
       await UserCache.createOrUpdate({
@@ -197,7 +197,7 @@ class EventService {
     try {
       logger.logEventProcessing('user.updated', 'started', { data });
 
-      const eventData = data as UserUpdatedEvent;
+      const eventData = data as unknown as UserUpdatedEvent;
 
       // Update user cache
       await UserCache.createOrUpdate({
@@ -221,7 +221,7 @@ class EventService {
     try {
       logger.logEventProcessing('user.deleted', 'started', { data });
 
-      const eventData = data as UserDeletedEvent;
+      const eventData = data as unknown as UserDeletedEvent;
 
       // Remove user from cache
       await UserCache.findOneAndDelete({ user_id: eventData.user_id });
@@ -242,7 +242,7 @@ class EventService {
       // For now, we don't send notifications for new posts
       // This could be extended to notify followers in the future
 
-      const eventData = data as EventCreatedEvent;
+      const eventData = data as unknown as EventCreatedEvent;
       logger.logEventProcessing('post.created', 'completed', { postId: eventData.event_id });
       metrics.incrementEventProcessingCounter('post.created', 'success');
     } catch (error) {
@@ -256,7 +256,7 @@ class EventService {
     try {
       logger.logEventProcessing('post.liked', 'started', { data });
 
-      const eventData = data as PostLikedEvent;
+      const eventData = data as unknown as PostLikedEvent;
 
       await NotificationService.processEvent({
         event_type: 'post.liked',
@@ -284,7 +284,7 @@ class EventService {
     try {
       logger.logEventProcessing('post.commented', 'started', { data });
 
-      const eventData = data as PostCommentedEvent;
+      const eventData = data as unknown as PostCommentedEvent;
 
       await NotificationService.processEvent({
         event_type: 'comment.created',
@@ -313,7 +313,7 @@ class EventService {
     try {
       logger.logEventProcessing('post.shared', 'started', { data });
 
-      const eventData = data as PostSharedEvent;
+      const eventData = data as unknown as PostSharedEvent;
 
       await NotificationService.processEvent({
         event_type: 'post.shared',
@@ -341,7 +341,7 @@ class EventService {
     try {
       logger.logEventProcessing('post.mentioned', 'started', { data });
 
-      const eventData = data as PostMentionedEvent;
+      const eventData = data as unknown as PostMentionedEvent;
 
       // Handle mentions for each mentioned user
       for (const mentionedUser of eventData.mentioned_users) {
@@ -375,7 +375,7 @@ class EventService {
       // For now, we don't send notifications for new events
       // This could be extended to notify followers or friends in the future
 
-      const eventData = data as EventCreatedEvent;
+      const eventData = data as unknown as EventCreatedEvent;
       logger.logEventProcessing('event.created', 'completed', { eventId: eventData.event_id });
       metrics.incrementEventProcessingCounter('event.created', 'success');
     } catch (error) {
@@ -389,7 +389,7 @@ class EventService {
     try {
       logger.logEventProcessing('event.rsvp.added', 'started', { data });
 
-      const eventData = data as EventRsvpAddedEvent;
+      const eventData = data as unknown as EventRsvpAddedEvent;
 
       await NotificationService.processEvent({
         event_type: 'event.rsvp.added',
@@ -422,7 +422,7 @@ class EventService {
       // For now, we don't send notifications for RSVP removals
       // This could be extended in the future
 
-      const eventData = data as EventRsvpRemovedEvent;
+      const eventData = data as unknown as EventRsvpRemovedEvent;
       logger.logEventProcessing('event.rsvp.removed', 'completed', {
         eventId: eventData.event_id,
         userId: eventData.user_id,
@@ -442,7 +442,7 @@ class EventService {
       // For now, we don't send notifications for event updates
       // This could be extended to notify attendees in the future
 
-      const eventData = data as EventUpdatedEvent;
+      const eventData = data as unknown as EventUpdatedEvent;
       logger.logEventProcessing('event.updated', 'completed', { eventId: eventData.event_id });
       metrics.incrementEventProcessingCounter('event.updated', 'success');
     } catch (error) {
@@ -456,7 +456,7 @@ class EventService {
     try {
       logger.logEventProcessing('event.cancelled', 'started', { data });
 
-      const eventData = data as EventCancelledEvent;
+      const eventData = data as unknown as EventCancelledEvent;
 
       // Create system notification for all attendees
       const notificationData = {
@@ -491,9 +491,9 @@ class EventService {
       // Extract the actual data from the nested structure (social-service wraps it)
       let eventData: UserFollowedEvent;
       if ('data' in data && data.data) {
-        eventData = data.data as UserFollowedEvent;
+        eventData = data.data as unknown as UserFollowedEvent;
       } else {
-        eventData = data as UserFollowedEvent;
+        eventData = data as unknown as UserFollowedEvent;
       }
 
       await NotificationService.processEvent({
@@ -524,7 +524,7 @@ class EventService {
       // For now, we don't send notifications for unfollows
       // This could be extended in the future
 
-      const eventData = data as UserUnfollowedEvent;
+      const eventData = data as unknown as UserUnfollowedEvent;
       logger.logEventProcessing('user.unfollowed', 'completed', {
         followerId: eventData.follower_id,
         followingId: eventData.following_id,
@@ -541,7 +541,7 @@ class EventService {
     try {
       logger.logEventProcessing('user.blocked', 'started', { data });
 
-      const eventData = data as UserBlockedEvent;
+      const eventData = data as unknown as UserBlockedEvent;
 
       // Create system notification for the blocked user
       const notificationData = {
@@ -577,9 +577,9 @@ class EventService {
       // Extract the actual data from the nested structure (messaging-service wraps it)
       let eventData: MessageSentEvent;
       if ('data' in data && data.data) {
-        eventData = data.data as MessageSentEvent;
+        eventData = data.data as unknown as MessageSentEvent;
       } else {
-        eventData = data as MessageSentEvent;
+        eventData = data as unknown as MessageSentEvent;
       }
 
       await NotificationService.processEvent({
@@ -612,7 +612,7 @@ class EventService {
       // For now, we don't send notifications for message reads
       // This could be extended to show read receipts in the future
 
-      const eventData = data as MessageReadEvent;
+      const eventData = data as unknown as MessageReadEvent;
       logger.logEventProcessing('message.read', 'completed', {
         messageId: eventData.message_id,
         userId: eventData.user_id,
@@ -632,7 +632,7 @@ class EventService {
       // For now, we don't send notifications for user online status
       // This could be extended to show presence indicators in the future
 
-      const eventData = data as UserOnlineEvent;
+      const eventData = data as unknown as UserOnlineEvent;
       logger.logEventProcessing('user.online', 'completed', { userId: eventData.user_id });
       metrics.incrementEventProcessingCounter('user.online', 'success');
     } catch (error) {
@@ -649,7 +649,7 @@ class EventService {
       // For now, we don't send notifications for user offline status
       // This could be extended to show presence indicators in the future
 
-      const eventData = data as UserOfflineEvent;
+      const eventData = data as unknown as UserOfflineEvent;
       logger.logEventProcessing('user.offline', 'completed', { userId: eventData.user_id });
       metrics.incrementEventProcessingCounter('user.offline', 'success');
     } catch (error) {

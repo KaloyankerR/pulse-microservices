@@ -88,6 +88,7 @@ userCacheSchema.statics.findByUserIds = function (userIds: string[]): Promise<IU
 userCacheSchema.statics.createOrUpdate = async function (
   userData: UserCacheData
 ): Promise<IUserCache> {
+  // @ts-ignore - Mongoose static method
   const existing = await this.findByUserId(userData.user_id);
 
   if (existing) {

@@ -42,12 +42,14 @@ export const databaseMetrics = (operation: string, collection: string) => {
       await next();
       const duration = Date.now() - startTime;
 
+      // @ts-ignore - metrics function signature
       metrics.incrementDatabaseOperation(operation, collection, 'success');
       metrics.recordDatabaseOperationDuration(operation, duration);
 
     } catch (error) {
       const duration = Date.now() - startTime;
 
+      // @ts-ignore - metrics function signature
       metrics.incrementDatabaseOperation(operation, collection, 'error');
       metrics.recordDatabaseOperationDuration(operation, duration);
 

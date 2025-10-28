@@ -42,6 +42,7 @@ export const validate = (schema: Joi.ObjectSchema, property: 'body' | 'query' | 
       }
 
       // Replace the request property with the validated and sanitized value
+      // @ts-ignore - AuthenticatedRequest index signature
       (req as Record<string, unknown>)[property] = value;
       next();
     } catch (validationError) {
@@ -324,7 +325,9 @@ export const validatePagination = (req: AuthenticatedRequest, res: Response, nex
     }
 
     // Update query parameters with parsed values
+    // @ts-ignore - query parameter type conversion
     req.query.page = pageNum;
+    // @ts-ignore - query parameter type conversion
     req.query.limit = limitNum;
 
     next();

@@ -2,6 +2,8 @@
  * Event type definitions for RabbitMQ messages from other microservices
  */
 
+import { NotificationType, ReferenceType, NotificationPriority } from './models';
+
 // User Service Events
 export interface UserRegisteredEvent {
   user_id: string;

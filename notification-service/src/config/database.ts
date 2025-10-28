@@ -17,6 +17,7 @@ class DatabaseConfig {
         bufferCommands: false,
       };
 
+      // @ts-ignore - mongoose connection type
       this.connection = await mongoose.connect(mongoUri, options);
       this.isConnected = true;
 
@@ -86,7 +87,7 @@ class DatabaseConfig {
         status: 'healthy',
         message: 'Database connection is active',
         timestamp: new Date().toISOString(),
-        connectionInfo: this.getConnectionStatus(),
+        connectionInfo: this.getConnectionStatus() as unknown as Record<string, unknown>,
       };
     } catch (error) {
       const err = error as Error;

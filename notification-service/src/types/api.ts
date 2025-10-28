@@ -20,7 +20,7 @@ export interface JWTClaims {
 
 // Extended Express Request with user
 export interface AuthenticatedRequest extends Request {
-  user?: JWTClaims;
+  user?: JWTClaims | null;
   requestId?: string;
   logger?: {
     info: (message: string, meta?: Record<string, unknown>) => void;

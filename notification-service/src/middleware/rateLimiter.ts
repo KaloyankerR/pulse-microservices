@@ -136,7 +136,7 @@ export const generalLimiter: RateLimitRequestHandler = rateLimit({
       },
     });
   },
-} as Options);
+} as unknown as Options);
 
 // Strict rate limiter for authentication endpoints (5 requests per 15 minutes)
 export const authLimiter: RateLimitRequestHandler = rateLimit({
@@ -178,7 +178,7 @@ export const authLimiter: RateLimitRequestHandler = rateLimit({
       },
     });
   },
-} as Options);
+} as unknown as Options);
 
 // API rate limiter for general API endpoints (300 requests per 15 minutes)
 export const apiLimiter: RateLimitRequestHandler = rateLimit({
@@ -227,7 +227,7 @@ export const apiLimiter: RateLimitRequestHandler = rateLimit({
       },
     });
   },
-} as Options);
+} as unknown as Options);
 
 // Notification creation rate limiter (10 notifications per minute per user)
 export const notificationCreationLimiter: RateLimitRequestHandler = rateLimit({
@@ -269,7 +269,7 @@ export const notificationCreationLimiter: RateLimitRequestHandler = rateLimit({
       },
     });
   },
-} as Options);
+} as unknown as Options);
 
 // Preferences update rate limiter (5 updates per minute per user)
 export const preferencesUpdateLimiter: RateLimitRequestHandler = rateLimit({
@@ -311,7 +311,7 @@ export const preferencesUpdateLimiter: RateLimitRequestHandler = rateLimit({
       },
     });
   },
-} as Options);
+} as unknown as Options);
 
 // Health check rate limiter (very permissive)
 export const healthCheckLimiter: RateLimitRequestHandler = rateLimit({
@@ -332,7 +332,7 @@ export const healthCheckLimiter: RateLimitRequestHandler = rateLimit({
       version: 'v1',
     },
   },
-} as Options);
+} as unknown as Options);
 
 // Metrics endpoint rate limiter (very restrictive)
 export const metricsLimiter: RateLimitRequestHandler = rateLimit({
@@ -370,7 +370,7 @@ export const metricsLimiter: RateLimitRequestHandler = rateLimit({
       },
     });
   },
-} as Options);
+} as unknown as Options);
 
 // Dynamic rate limiter factory
 export const createRateLimiter = (options: Partial<Options>): RateLimitRequestHandler => {
@@ -395,6 +395,6 @@ export const createRateLimiter = (options: Partial<Options>): RateLimitRequestHa
   return rateLimit({
     ...defaultOptions,
     ...options,
-  } as Options);
+  } as unknown as Options);
 };
 

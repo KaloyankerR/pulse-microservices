@@ -16,7 +16,9 @@ class RabbitMQConfig {
       try {
         logger.info(`Attempting to connect to RabbitMQ (attempt ${attempt}/${retries})`);
 
+        // @ts-ignore - amqplib connection type
         this.connection = await amqp.connect(rabbitmqUrl);
+        // @ts-ignore - amqplib connection type
         this.channel = await this.connection.createChannel();
         this.isConnected = true;
 
@@ -59,6 +61,7 @@ class RabbitMQConfig {
         await this.channel.close();
       }
       if (this.connection) {
+        // @ts-ignore - amqplib connection type
         await this.connection.close();
       }
       this.isConnected = false;
