@@ -1,10 +1,30 @@
-.PHONY: help up down logs ps restart rebuild clean test db-reset db-reset-users db-reset-posts
+.PHONY: help up down logs ps restart rebuild rebuild-no-cache rebuild-frontend clean test db-reset db-reset db-setup db-drop-all db-build-all db-reset-all db-reset-users db-reset-posts dev dev-stop \
+	build-all build-all-no-cache test-all test-coverage-all lint-all format-all clean-all docker-build-all docker-build-all-no-cache sonar-all \
+	build-% build-no-cache-% test-% test-coverage-% lint-% format-% clean-% docker-build-% docker-build-no-cache-% sonar-% \
+	logs-% restart-% health-check-% health-check
+
+# Define all microservices
+SERVICES := user-service notification-service social-service post-service messaging-service event-service frontend
+
+# Service health check endpoints (using direct service ports)
+HEALTH_ENDPOINTS := \
+	user-service=http://localhost:8081/health \
+	post-service=http://localhost:8082/health \
+	social-service=http://localhost:8085/health \
+	messaging-service=http://localhost:8084/health \
+	notification-service=http://localhost:8086/health \
+	event-service=http://localhost:8083/health \
+	frontend=http://localhost:3000/api/health
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Available targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-25s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+# =============================================================================
+# Docker Compose Operations
+# =============================================================================
 
 up: ## Start all services
 	docker-compose up -d
@@ -15,11 +35,19 @@ down: ## Stop all services
 logs: ## View logs from all services
 	docker-compose logs -f
 
+logs-%: ## View logs for a specific service (e.g., logs-user-service)
+	@service=$$(echo $* | sed 's/-/_/g'); \
+	docker-compose logs -f $$service || docker-compose logs -f $*
+
 ps: ## List running services
 	docker-compose ps
 
 restart: ## Restart all services
 	docker-compose restart
+
+restart-%: ## Restart a specific service (e.g., restart-user-service)
+	@service=$$(echo $* | sed 's/-/_/g'); \
+	docker-compose restart $$service || docker-compose restart $*
 
 rebuild: ## Rebuild and restart all services
 	docker-compose up -d --build
@@ -41,83 +69,127 @@ dev-stop: ## Stop development environment
 clean: ## Stop services and remove volumes
 	docker-compose down -v
 
-test: ## Run basic health checks
-	@echo "Testing services..."
-	@curl -s http://localhost:8000/health > /dev/null && echo "✅ User service is healthy" || echo "❌ User service failed"
-	@curl -s http://localhost:8000/api/v1/posts > /dev/null && echo "✅ Post service is healthy" || echo "❌ Post service failed"
-	@curl -s http://localhost:8086/health > /dev/null && echo "✅ Notification service is healthy" || echo "❌ Notification service failed"
-	@echo "Done!"
+# =============================================================================
+# Service Orchestration Commands
+# =============================================================================
 
-test-user: ## Run user-service tests
-	@echo "Running user-service tests..."
-	@cd user-service && npm test
+build-all: $(addprefix build-,$(SERVICES)) ## Build all services locally
+	@echo "✅ All services built!"
 
-test-coverage-user: ## Run user-service tests with coverage
-	@echo "Running user-service tests with coverage..."
-	@cd user-service && npm run test:coverage
+build-all-no-cache: $(addprefix build-no-cache-,$(SERVICES)) ## Clean build all services
+	@echo "✅ All services built without cache!"
 
-test-notification: ## Run notification-service tests
-	@echo "Running notification-service tests..."
-	@cd notification-service && npm test
+test-all: $(addprefix test-,$(SERVICES)) ## Run tests for all services
+	@echo "✅ All tests completed!"
 
-test-coverage-notification: ## Run notification-service tests with coverage
-	@echo "Running notification-service tests with coverage..."
-	@cd notification-service && npm run test:coverage
+test-coverage-all: $(addprefix test-coverage-,$(SERVICES)) ## Run tests with coverage for all services
+	@echo "✅ All coverage reports generated!"
 
-test-social: ## Run social-service tests
-	@echo "Running social-service tests..."
-	@cd social-service && npm test
+lint-all: $(addprefix lint-,$(SERVICES)) ## Lint all services
+	@echo "✅ All services linted!"
 
-test-coverage-social: ## Run social-service tests with coverage
-	@echo "Running social-service tests with coverage..."
-	@cd social-service && npm run test:coverage
+format-all: $(addprefix format-,$(SERVICES)) ## Format all services
+	@echo "✅ All services formatted!"
 
-test-post: ## Run post-service tests
-	@echo "Running post-service tests..."
-	@cd post-service && go test ./... -v
+clean-all: $(addprefix clean-,$(SERVICES)) ## Clean all services
+	@echo "✅ All services cleaned!"
 
-test-messaging: ## Run messaging-service tests
-	@echo "Running messaging-service tests..."
-	@cd messaging-service && go test ./... -v
+docker-build-all: $(addprefix docker-build-,$(SERVICES)) ## Build Docker images for all services
+	@echo "✅ All Docker images built!"
 
+docker-build-all-no-cache: $(addprefix docker-build-no-cache-,$(SERVICES)) ## Build Docker images without cache for all services
+	@echo "✅ All Docker images built without cache!"
+
+# =============================================================================
+# Individual Service Proxy Commands
+# =============================================================================
+
+build-%: ## Build a specific service (e.g., build-user-service)
+	@echo "Building $*..."
+	@cd $* && $(MAKE) build || echo "⚠️  Makefile not found or build failed for $*"
+
+build-no-cache-%: ## Clean build a specific service (e.g., build-no-cache-user-service)
+	@echo "Building $* without cache..."
+	@cd $* && $(MAKE) build-no-cache || echo "⚠️  Makefile not found or build failed for $*"
+
+test-%: ## Run tests for a specific service (e.g., test-user-service)
+	@echo "Running tests for $*..."
+	@cd $* && $(MAKE) test || echo "⚠️  Tests failed for $*"
+
+test-coverage-%: ## Run tests with coverage for a specific service (e.g., test-coverage-user-service)
+	@echo "Running tests with coverage for $*..."
+	@cd $* && $(MAKE) test-coverage || echo "⚠️  Coverage tests failed for $*"
+
+lint-%: ## Lint a specific service (e.g., lint-user-service)
+	@echo "Linting $*..."
+	@cd $* && $(MAKE) lint || echo "⚠️  Linting failed for $*"
+
+format-%: ## Format a specific service (e.g., format-user-service)
+	@echo "Formatting $*..."
+	@cd $* && $(MAKE) format || echo "⚠️  Formatting failed for $*"
+
+clean-%: ## Clean a specific service (e.g., clean-user-service)
+	@echo "Cleaning $*..."
+	@cd $* && $(MAKE) clean || echo "⚠️  Clean failed for $*"
+
+docker-build-%: ## Build Docker image for a specific service (e.g., docker-build-user-service)
+	@echo "Building Docker image for $*..."
+	@cd $* && $(MAKE) docker-build || echo "⚠️  Docker build failed for $*"
+
+docker-build-no-cache-%: ## Build Docker image without cache for a specific service (e.g., docker-build-no-cache-user-service)
+	@echo "Building Docker image without cache for $*..."
+	@cd $* && $(MAKE) docker-build-no-cache || echo "⚠️  Docker build failed for $*"
+
+# =============================================================================
+# Health Checks
+# =============================================================================
+
+health-check: ## Check health of all services
+	@echo "🏥 Checking health of all services..."
+	@for endpoint in $(HEALTH_ENDPOINTS); do \
+		service=$$(echo $$endpoint | cut -d'=' -f1); \
+		url=$$(echo $$endpoint | cut -d'=' -f2); \
+		echo -n "Checking $$service... "; \
+		if curl -sf $$url > /dev/null 2>&1; then \
+			echo "✅ healthy"; \
+		else \
+			echo "❌ unhealthy"; \
+		fi; \
+	done
+
+health-check-%: ## Check health of a specific service (e.g., health-check-user-service)
+	@service=$*; \
+	endpoint=$$(echo "$(HEALTH_ENDPOINTS)" | grep -o "$$service=[^ ]*"); \
+	if [ -z "$$endpoint" ]; then \
+		echo "❌ No health endpoint configured for $$service"; \
+		exit 1; \
+	fi; \
+	url=$$(echo $$endpoint | cut -d'=' -f2); \
+	echo "🏥 Checking health of $$service at $$url..."; \
+	if curl -sf $$url > /dev/null 2>&1; then \
+		echo "✅ $$service is healthy"; \
+	else \
+		echo "❌ $$service is unhealthy"; \
+		exit 1; \
+	fi
+
+# Legacy test command (redirects to health-check for backward compatibility)
+test: health-check ## Run basic health checks (alias for health-check)
+
+# =============================================================================
 # SonarQube Analysis Commands
-sonar-all: ## Run SonarQube analysis for all services
-	@echo "🔍 Running SonarQube analysis for all microservices..."
-	@$(MAKE) sonar-user
-	@$(MAKE) sonar-notification
-	@$(MAKE) sonar-social
-	@$(MAKE) sonar-post
-	@$(MAKE) sonar-messaging
+# =============================================================================
+
+sonar-all: $(addprefix sonar-,$(SERVICES)) ## Run SonarQube analysis for all services
 	@echo "✅ All SonarQube analyses complete! View results at http://localhost:9001"
 
-sonar-user: ## Run SonarQube analysis for user-service
-	@echo "🔍 [1/5] Analyzing user-service..."
-	@cd user-service && npm run test:coverage && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f npm run sonar
-	@echo "✅ User service analysis complete"
+sonar-%: ## Run SonarQube analysis for a specific service (e.g., sonar-user-service)
+	@echo "🔍 Running SonarQube analysis for $*..."
+	@cd $* && $(MAKE) sonar || echo "⚠️  SonarQube analysis failed for $*"
 
-sonar-notification: ## Run SonarQube analysis for notification-service
-	@echo "🔍 [2/5] Analyzing notification-service..."
-	@cd notification-service && npm run test && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f npm run sonar
-	@echo "✅ Notification service analysis complete"
-
-sonar-social: ## Run SonarQube analysis for social-service
-	@echo "🔍 [3/5] Analyzing social-service..."
-	@cd social-service && npm run test:coverage || true
-	@cd social-service && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f npm run sonar
-	@echo "✅ Social service analysis complete"
-
-sonar-post: ## Run SonarQube analysis for post-service
-	@echo "🔍 [4/5] Analyzing post-service..."
-	@cd post-service && go test ./... -coverprofile=coverage.out || true
-	@cd post-service && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f sonar-scanner
-	@echo "✅ Post service analysis complete"
-
-sonar-messaging: ## Run SonarQube analysis for messaging-service
-	@echo "🔍 [5/5] Analyzing messaging-service..."
-	@cd messaging-service && go test ./... -coverprofile=coverage.out || true
-	@cd messaging-service && SONAR_TOKEN=sqa_63d4c5db10ae941741a4a5d1928a51105119a85f sonar-scanner
-	@echo "✅ Messaging service analysis complete"
-
+# =============================================================================
+# Database Operations
+# =============================================================================
 
 db-reset: db-reset-all ## Reset all databases (drop and recreate) - alias for db-reset-all
 

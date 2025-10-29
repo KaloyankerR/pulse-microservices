@@ -1,6 +1,6 @@
-.PHONY: help build build-no-cache run test test-coverage lint format clean docker-build docker-build-no-cache docker-run sonar deps dev
+.PHONY: help build build-no-cache test test-coverage lint format clean docker-build docker-build-no-cache sonar deps
 
-SERVICE_NAME := messaging-service
+SERVICE_NAME := post-service
 DOCKER_IMAGE := $(SERVICE_NAME):latest
 BIN_DIR := bin
 
@@ -10,20 +10,18 @@ help: ## Display available commands
 
 build: ## Build the application
 	@mkdir -p $(BIN_DIR)
-	go build -o $(BIN_DIR)/$(SERVICE_NAME) ./cmd/main.go
+	go build -o $(BIN_DIR)/$(SERVICE_NAME) ./main.go
 
 build-no-cache: clean ## Clean build (no cache)
 	go clean -cache -modcache -testcache
 	@mkdir -p $(BIN_DIR)
-	go build -o $(BIN_DIR)/$(SERVICE_NAME) ./cmd/main.go
-
-run: ## Run the application
-	go run cmd/main.go
+	go build -o $(BIN_DIR)/$(SERVICE_NAME) ./main.go
 
 test: ## Run tests
-	go test ./... -v -coverprofile=coverage.out
+	go test ./... -v
 
-test-coverage: test ## Run tests with coverage report
+test-coverage: ## Run tests with coverage
+	go test ./... -v -coverprofile=coverage.out
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
@@ -52,9 +50,6 @@ docker-build: ## Build Docker image
 docker-build-no-cache: ## Build Docker image without cache
 	docker build --no-cache -t $(DOCKER_IMAGE) .
 
-docker-run: ## Run Docker container
-	docker run -p 8084:8084 --env-file .env $(DOCKER_IMAGE)
-
 sonar: test-coverage ## Run SonarQube analysis
 	@if [ -z "$$SONAR_TOKEN" ]; then \
 		echo "Error: SONAR_TOKEN environment variable is required"; \
@@ -66,10 +61,5 @@ sonar: test-coverage ## Run SonarQube analysis
 	fi
 	SONAR_TOKEN=$$SONAR_TOKEN sonar-scanner
 
-dev: ## Run in development mode with air (hot reload)
-	air
-
 .DEFAULT_GOAL := help
-
-
 
