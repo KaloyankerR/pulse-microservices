@@ -56,6 +56,13 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 10s
 
+  # Event Service (Go)
+  - job_name: 'event-service'
+    static_configs:
+      - targets: ['event-service:8083']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
   # Kong API Gateway (if metrics are enabled)
   # - job_name: 'kong'
   #   static_configs:
@@ -63,22 +70,28 @@ scrape_configs:
   #   metrics_path: '/metrics'
   #   scrape_interval: 15s
 
-  # RabbitMQ (requires rabbitmq_prometheus plugin)
-  # - job_name: 'rabbitmq'
-  #   static_configs:
-  #     - targets: ['rabbitmq:15692']
-  #   metrics_path: '/metrics'
-  #   scrape_interval: 30s
+  # RabbitMQ (prometheus plugin enabled)
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
 
-  # Redis (requires redis_exporter)
-  # - job_name: 'redis'
-  #   static_configs:
-  #     - targets: ['redis-exporter:9121']
-  #   scrape_interval: 30s
+  # Redis (via redis_exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
 
-  # MongoDB (requires mongodb_exporter)
+  # MongoDB (via mongodb_exporter) - disabled due to image availability
   # - job_name: 'mongodb'
   #   static_configs:
   #     - targets: ['mongodb-exporter:9216']
   #   scrape_interval: 30s
+
+  # Node Exporter (system metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
 

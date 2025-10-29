@@ -162,6 +162,7 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "15692:15692"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -291,6 +292,38 @@ services:
       retries: 3
       start_period: 40s
 
+  # Redis Exporter for Prometheus
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    environment:
+      REDIS_ADDR: redis:6379
+    restart: unless-stopped
+    networks:
+      - pulse-network
+    depends_on:
+      - redis
+    ports:
+      - "9121:9121"
+
+  # Node Exporter for System Metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    restart: unless-stopped
+    networks:
+      - pulse-network
+    ports:
+      - "9100:9100"
+
   # SonarQube for Code Quality
   sonarqube:
     image: sonarqube:community
@@ -354,7 +387,7 @@ services:
       - grafana_data:/var/lib/grafana
       - ./config/grafana/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./config/grafana/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
-      - ./config/grafana/dashboard-overview.json:/etc/grafana/provisioning/dashboards/dashboard-overview.json:ro
+      - ./config/grafana:/etc/grafana/provisioning/dashboards:ro
     networks:
       - pulse-network
     depends_on:
