@@ -1,6 +1,5 @@
-.PHONY: help up down logs ps restart rebuild rebuild-no-cache rebuild-frontend clean test db-reset db-reset db-setup db-drop-all db-build-all db-reset-all db-reset-users db-reset-posts dev dev-stop \
+.PHONY: help up down logs ps restart rebuild rebuild-no-cache rebuild-frontend clean test db-reset db-setup db-drop-all db-build-all db-reset-all dev dev-stop \
 	build-all build-all-no-cache test-all test-coverage-all lint-all format-all clean-all docker-build-all docker-build-all-no-cache sonar-all \
-	build-% build-no-cache-% test-% test-coverage-% lint-% format-% clean-% docker-build-% docker-build-no-cache-% sonar-% \
 	logs-% restart-% health-check-% health-check
 
 # Define all microservices
@@ -17,10 +16,28 @@ HEALTH_ENDPOINTS := \
 	frontend=http://localhost:3000/api/health
 
 help: ## Show this help message
-	@echo 'Usage: make [target]'
-	@echo ''
-	@echo 'Available targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-25s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ""
+	@echo "\033[1mPulse Microservices - Root Makefile\033[0m"
+	@echo ""
+	@echo "\033[1mDocker Compose Operations:\033[0m"
+	@grep -E '^(up|down|logs|ps|restart|rebuild|dev|clean):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^rebuild-.*:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "\033[1mService Orchestration:\033[0m"
+	@grep -E '^(build-all|test-all|lint-all|format-all|clean-all|docker-build-all|sonar-all|test-coverage-all|build-all-no-cache|docker-build-all-no-cache):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "\033[1mHealth Checks:\033[0m"
+	@grep -E '^(health-check|test):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "\033[1mDatabase Operations:\033[0m"
+	@grep -E '^db-[a-z-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "\033[1mService-Specific Commands:\033[0m"
+	@grep -E '^(logs-%|restart-%|health-check-%):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "\033[1mUsage:\033[0m"
+	@echo "  For service-specific commands, navigate to the service directory and run: make help"
+	@echo ""
 
 # =============================================================================
 # Docker Compose Operations
@@ -73,72 +90,77 @@ clean: ## Stop services and remove volumes
 # Service Orchestration Commands
 # =============================================================================
 
-build-all: $(addprefix build-,$(SERVICES)) ## Build all services locally
+build-all: ## Build all services locally
+	@echo "Building all services..."
+	@for service in $(SERVICES); do \
+		echo "Building $$service..."; \
+		cd $$service && $(MAKE) build && cd .. || echo "⚠️  Build failed for $$service"; \
+	done
 	@echo "✅ All services built!"
 
-build-all-no-cache: $(addprefix build-no-cache-,$(SERVICES)) ## Clean build all services
+build-all-no-cache: ## Clean build all services
+	@echo "Building all services without cache..."
+	@for service in $(SERVICES); do \
+		echo "Building $$service without cache..."; \
+		cd $$service && $(MAKE) build-no-cache && cd .. || echo "⚠️  Build failed for $$service"; \
+	done
 	@echo "✅ All services built without cache!"
 
-test-all: $(addprefix test-,$(SERVICES)) ## Run tests for all services
+test-all: ## Run tests for all services
+	@echo "Running tests for all services..."
+	@for service in $(SERVICES); do \
+		echo "Testing $$service..."; \
+		cd $$service && $(MAKE) test && cd .. || echo "⚠️  Tests failed for $$service"; \
+	done
 	@echo "✅ All tests completed!"
 
-test-coverage-all: $(addprefix test-coverage-,$(SERVICES)) ## Run tests with coverage for all services
+test-coverage-all: ## Run tests with coverage for all services
+	@echo "Running tests with coverage for all services..."
+	@for service in $(SERVICES); do \
+		echo "Running coverage tests for $$service..."; \
+		cd $$service && $(MAKE) test-coverage && cd .. || echo "⚠️  Coverage tests failed for $$service"; \
+	done
 	@echo "✅ All coverage reports generated!"
 
-lint-all: $(addprefix lint-,$(SERVICES)) ## Lint all services
+lint-all: ## Lint all services
+	@echo "Linting all services..."
+	@for service in $(SERVICES); do \
+		echo "Linting $$service..."; \
+		cd $$service && $(MAKE) lint && cd .. || echo "⚠️  Linting failed for $$service"; \
+	done
 	@echo "✅ All services linted!"
 
-format-all: $(addprefix format-,$(SERVICES)) ## Format all services
+format-all: ## Format all services
+	@echo "Formatting all services..."
+	@for service in $(SERVICES); do \
+		echo "Formatting $$service..."; \
+		cd $$service && $(MAKE) format && cd .. || echo "⚠️  Formatting failed for $$service"; \
+	done
 	@echo "✅ All services formatted!"
 
-clean-all: $(addprefix clean-,$(SERVICES)) ## Clean all services
+clean-all: ## Clean all services
+	@echo "Cleaning all services..."
+	@for service in $(SERVICES); do \
+		echo "Cleaning $$service..."; \
+		cd $$service && $(MAKE) clean && cd .. || echo "⚠️  Clean failed for $$service"; \
+	done
 	@echo "✅ All services cleaned!"
 
-docker-build-all: $(addprefix docker-build-,$(SERVICES)) ## Build Docker images for all services
+docker-build-all: ## Build Docker images for all services
+	@echo "Building Docker images for all services..."
+	@for service in $(SERVICES); do \
+		echo "Building Docker image for $$service..."; \
+		cd $$service && $(MAKE) docker-build && cd .. || echo "⚠️  Docker build failed for $$service"; \
+	done
 	@echo "✅ All Docker images built!"
 
-docker-build-all-no-cache: $(addprefix docker-build-no-cache-,$(SERVICES)) ## Build Docker images without cache for all services
+docker-build-all-no-cache: ## Build Docker images without cache for all services
+	@echo "Building Docker images without cache for all services..."
+	@for service in $(SERVICES); do \
+		echo "Building Docker image without cache for $$service..."; \
+		cd $$service && $(MAKE) docker-build-no-cache && cd .. || echo "⚠️  Docker build failed for $$service"; \
+	done
 	@echo "✅ All Docker images built without cache!"
-
-# =============================================================================
-# Individual Service Proxy Commands
-# =============================================================================
-
-build-%: ## Build a specific service (e.g., build-user-service)
-	@echo "Building $*..."
-	@cd $* && $(MAKE) build || echo "⚠️  Makefile not found or build failed for $*"
-
-build-no-cache-%: ## Clean build a specific service (e.g., build-no-cache-user-service)
-	@echo "Building $* without cache..."
-	@cd $* && $(MAKE) build-no-cache || echo "⚠️  Makefile not found or build failed for $*"
-
-test-%: ## Run tests for a specific service (e.g., test-user-service)
-	@echo "Running tests for $*..."
-	@cd $* && $(MAKE) test || echo "⚠️  Tests failed for $*"
-
-test-coverage-%: ## Run tests with coverage for a specific service (e.g., test-coverage-user-service)
-	@echo "Running tests with coverage for $*..."
-	@cd $* && $(MAKE) test-coverage || echo "⚠️  Coverage tests failed for $*"
-
-lint-%: ## Lint a specific service (e.g., lint-user-service)
-	@echo "Linting $*..."
-	@cd $* && $(MAKE) lint || echo "⚠️  Linting failed for $*"
-
-format-%: ## Format a specific service (e.g., format-user-service)
-	@echo "Formatting $*..."
-	@cd $* && $(MAKE) format || echo "⚠️  Formatting failed for $*"
-
-clean-%: ## Clean a specific service (e.g., clean-user-service)
-	@echo "Cleaning $*..."
-	@cd $* && $(MAKE) clean || echo "⚠️  Clean failed for $*"
-
-docker-build-%: ## Build Docker image for a specific service (e.g., docker-build-user-service)
-	@echo "Building Docker image for $*..."
-	@cd $* && $(MAKE) docker-build || echo "⚠️  Docker build failed for $*"
-
-docker-build-no-cache-%: ## Build Docker image without cache for a specific service (e.g., docker-build-no-cache-user-service)
-	@echo "Building Docker image without cache for $*..."
-	@cd $* && $(MAKE) docker-build-no-cache || echo "⚠️  Docker build failed for $*"
 
 # =============================================================================
 # Health Checks
@@ -180,32 +202,22 @@ test: health-check ## Run basic health checks (alias for health-check)
 # SonarQube Analysis Commands
 # =============================================================================
 
-sonar-all: $(addprefix sonar-,$(SERVICES)) ## Run SonarQube analysis for all services
+sonar-all: ## Run SonarQube analysis for all services
+	@echo "🔍 Running SonarQube analysis for all services..."
+	@for service in $(SERVICES); do \
+		echo "Analyzing $$service..."; \
+		cd $$service && $(MAKE) sonar && cd .. || echo "⚠️  SonarQube analysis failed for $$service"; \
+	done
 	@echo "✅ All SonarQube analyses complete! View results at http://localhost:9001"
-
-sonar-%: ## Run SonarQube analysis for a specific service (e.g., sonar-user-service)
-	@echo "🔍 Running SonarQube analysis for $*..."
-	@cd $* && $(MAKE) sonar || echo "⚠️  SonarQube analysis failed for $*"
 
 # =============================================================================
 # Database Operations
 # =============================================================================
 
+db-reset-all: db-drop-all db-build-all ## Drop and rebuild all databases (PostgreSQL + MongoDB)
+	@echo "✅ Database reset complete!"
+
 db-reset: db-reset-all ## Reset all databases (drop and recreate) - alias for db-reset-all
-
-# Legacy individual database reset commands (kept for granular control)
-db-reset-users: ## Reset user service database only
-	@echo "Resetting pulse_users database..."
-	@psql -U pulse_user -d pulse_users -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" 2>/dev/null || true
-	@psql -U pulse_user -d pulse_users -c "GRANT ALL ON SCHEMA public TO pulse_user;"
-	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_users" npx prisma db push --skip-generate
-	@echo "✅ User database reset complete"
-
-db-reset-posts: ## Reset post service database only
-	@echo "Resetting pulse_posts database..."
-	@psql -U pulse_user -d pulse_posts -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO pulse_user;" 2>/dev/null || true
-	@psql -U pulse_user -d pulse_posts -f post-service/init.sql
-	@echo "✅ Post database reset complete"
 
 db-setup: ## Create databases for the first time
 	@echo "Creating databases..."
@@ -247,6 +259,3 @@ db-build-all: ## Build all databases (PostgreSQL + MongoDB)
 	@echo "Creating MongoDB databases and collections..."
 	@mongosh < config/mongodb/init.js 2>/dev/null || echo "MongoDB initialization completed"
 	@echo "✅ All databases built!"
-
-db-reset-all: db-drop-all db-build-all ## Drop and rebuild all databases (PostgreSQL + MongoDB)
-	@echo "✅ Database reset complete!"
