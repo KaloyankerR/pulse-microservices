@@ -23,7 +23,6 @@ func NewAuthMiddleware(logger *logrus.Logger) *AuthMiddleware {
 	}
 }
 
-// RequireAuth is a middleware that requires JWT authentication
 func (a *AuthMiddleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get JWT secret from environment
