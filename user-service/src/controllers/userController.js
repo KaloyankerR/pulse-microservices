@@ -3,6 +3,24 @@ const { AppError } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 
 class UserController {
+  async createProfile(req, res, next) {
+    try {
+      const result = await userService.createProfile(req.body);
+
+      res.status(201).json({
+        success: true,
+        data: {
+          user: result,
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
   async getUserById(req, res, next) {
     try {
       const { id } = req.params;

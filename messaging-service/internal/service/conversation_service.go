@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pulse/messaging-service/internal/models"
 	"github.com/pulse/messaging-service/internal/repository"
@@ -21,17 +22,37 @@ type ConversationService interface {
 
 type conversationService struct {
 	conversationRepo repository.ConversationRepository
+	userClient       UserClient
 	logger           *zap.Logger
 }
 
 func NewConversationService(
 	conversationRepo repository.ConversationRepository,
+	userClient UserClient,
 	logger *zap.Logger,
 ) ConversationService {
 	return &conversationService{
 		conversationRepo: conversationRepo,
+		userClient:       userClient,
 		logger:           logger,
 	}
+}
+
+// isUserServiceUnavailable checks if the error is due to user service being unavailable
+func (s *conversationService) isUserServiceUnavailable(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "user service unavailable") ||
+		strings.Contains(errMsg, "connection refused") ||
+		strings.Contains(errMsg, "connect: connection refused") ||
+		strings.Contains(errMsg, "dial tcp") ||
+		strings.Contains(errMsg, "no such host") ||
+		strings.Contains(errMsg, "timeout") ||
+		strings.Contains(errMsg, "econnrefused") ||
+		strings.Contains(errMsg, "service unavailable") ||
+		strings.Contains(errMsg, "failed to validate user")
 }
 
 func (s *conversationService) CreateConversation(ctx context.Context, userID string, req *models.CreateConversationRequest) (*models.Conversation, error) {
@@ -40,11 +61,58 @@ func (s *conversationService) CreateConversation(ctx context.Context, userID str
 		return nil, fmt.Errorf("user ID cannot be empty")
 	}
 
+	// Validate that the creator user exists (if user client is available)
+	if s.userClient != nil {
+		if err := s.userClient.ValidateUserExists(ctx, userID); err != nil {
+			// Check if the error is due to user service being unavailable
+			errMsg := strings.ToLower(err.Error())
+			if s.isUserServiceUnavailable(err) || strings.Contains(errMsg, "dial tcp") || strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "failed to validate user") {
+				s.logger.Warn("User service unavailable for validation, continuing without validation",
+					zap.String("user_id", userID),
+					zap.String("error", err.Error()),
+				)
+				// Continue without validation when service is unavailable
+			} else if strings.Contains(errMsg, "user not found") {
+				// If user was actually not found, fail the request
+				return nil, fmt.Errorf("creator user not found: %w", err)
+			} else {
+				// For other errors, also allow graceful degradation (but log it)
+				s.logger.Warn("User validation error, continuing without validation",
+					zap.String("user_id", userID),
+					zap.String("error", err.Error()),
+				)
+			}
+		}
+	}
+
 	// Add creator to participants if not already included
 	participantSet := make(map[string]bool)
 	for _, p := range req.Participants {
 		if p == "" {
 			return nil, fmt.Errorf("participant ID cannot be empty")
+		}
+		// Validate that each participant user exists (if user client is available)
+		if s.userClient != nil {
+			if err := s.userClient.ValidateUserExists(ctx, p); err != nil {
+				// Check if the error is due to user service being unavailable
+				errMsg := strings.ToLower(err.Error())
+				if s.isUserServiceUnavailable(err) || strings.Contains(errMsg, "dial tcp") || strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "failed to validate user") {
+					s.logger.Warn("User service unavailable for validation, continuing without validation",
+						zap.String("participant_id", p),
+						zap.String("error", err.Error()),
+					)
+					// Continue without validation when service is unavailable
+				} else if strings.Contains(errMsg, "user not found") {
+					// If user was actually not found, fail the request
+					return nil, fmt.Errorf("participant user not found: %s - %w", p, err)
+				} else {
+					// For other errors, also allow graceful degradation (but log it)
+					s.logger.Warn("User validation error, continuing without validation",
+						zap.String("participant_id", p),
+						zap.String("error", err.Error()),
+					)
+				}
+			}
 		}
 		participantSet[p] = true
 	}
@@ -96,12 +164,59 @@ func (s *conversationService) CreateGroupConversation(ctx context.Context, userI
 		return nil, fmt.Errorf("user ID cannot be empty")
 	}
 
+	// Validate that the creator user exists (if user client is available)
+	if s.userClient != nil {
+		if err := s.userClient.ValidateUserExists(ctx, userID); err != nil {
+			// Check if the error is due to user service being unavailable
+			errMsg := strings.ToLower(err.Error())
+			if s.isUserServiceUnavailable(err) || strings.Contains(errMsg, "dial tcp") || strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "failed to validate user") {
+				s.logger.Warn("User service unavailable for validation, continuing without validation",
+					zap.String("user_id", userID),
+					zap.String("error", err.Error()),
+				)
+				// Continue without validation when service is unavailable
+			} else if strings.Contains(errMsg, "user not found") {
+				// If user was actually not found, fail the request
+				return nil, fmt.Errorf("creator user not found: %w", err)
+			} else {
+				// For other errors, also allow graceful degradation (but log it)
+				s.logger.Warn("User validation error, continuing without validation",
+					zap.String("user_id", userID),
+					zap.String("error", err.Error()),
+				)
+			}
+		}
+	}
+
 	// Add creator to participants
 	participantSet := make(map[string]bool)
 	participantSet[userID] = true
 	for _, p := range req.Participants {
 		if p == "" {
 			return nil, fmt.Errorf("participant ID cannot be empty")
+		}
+		// Validate that each participant user exists (if user client is available)
+		if s.userClient != nil {
+			if err := s.userClient.ValidateUserExists(ctx, p); err != nil {
+				// Check if the error is due to user service being unavailable
+				errMsg := strings.ToLower(err.Error())
+				if s.isUserServiceUnavailable(err) || strings.Contains(errMsg, "dial tcp") || strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "failed to validate user") {
+					s.logger.Warn("User service unavailable for validation, continuing without validation",
+						zap.String("participant_id", p),
+						zap.String("error", err.Error()),
+					)
+					// Continue without validation when service is unavailable
+				} else if strings.Contains(errMsg, "user not found") {
+					// If user was actually not found, fail the request
+					return nil, fmt.Errorf("participant user not found: %s - %w", p, err)
+				} else {
+					// For other errors, also allow graceful degradation (but log it)
+					s.logger.Warn("User validation error, continuing without validation",
+						zap.String("participant_id", p),
+						zap.String("error", err.Error()),
+					)
+				}
+			}
 		}
 		participantSet[p] = true
 	}

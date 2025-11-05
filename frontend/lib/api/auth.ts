@@ -78,32 +78,20 @@ export const authApi = {
   },
 
   async getCurrentUser(): Promise<User> {
-    try {
-      const response = await apiClient.get<ApiResponse<{ user: User }>>(
-        API_ENDPOINTS.auth.me
-      );
-      
-      // Handle different response structures
-      // User service returns: { success: true, data: { user: {...} }, meta: {...} }
-      let user: User;
-      if (response.data && response.data.user) {
-        user = response.data.user;
-      } else if ((response as any).user) {
-        // Direct user property (without data wrapper)
-        user = (response as any).user;
-      } else if (response.data && !response.data.user) {
-        // User data directly in response.data
-        user = response.data as unknown as User;
-      } else {
-        throw new Error('Invalid response structure from /api/v1/users/profile');
-      }
-      
-      // Clean avatar URL
-      user.avatarUrl = cleanAvatarUrl(user.avatarUrl);
-      return user;
-    } catch (error) {
-      throw error;
+    const response = await apiClient.get<ApiResponse<{ user: User }>>(
+      API_ENDPOINTS.auth.me
+    );
+    
+    // Auth service returns: { success: true, data: { user: {...} }, meta: {...} }
+    if (!response.data || !response.data.user) {
+      throw new Error('Invalid response structure from /api/v1/auth/me');
     }
+    
+    const user = response.data.user;
+    
+    // Clean avatar URL
+    user.avatarUrl = cleanAvatarUrl(user.avatarUrl);
+    return user;
   },
 
   async refreshToken(refreshToken: string): Promise<AuthResponse> {

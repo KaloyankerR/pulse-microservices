@@ -26,6 +26,7 @@ services:
       start_period: 30s
     restart: unless-stopped
     depends_on:
+      - auth-service
       - user-service
       - post-service
       - social-service
@@ -33,7 +34,44 @@ services:
       - notification-service
       - event-service
 
-  # User Service (Node.js)
+  # Auth Service (Node.js/TypeScript)
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+      target: development
+    container_name: pulse-auth-service
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      DATABASE_URL: postgresql://pulse_auth:pulse_auth@host.docker.internal:5432/pulse_auth_db
+      JWT_SECRET: 5b41d6a0c1adfd2804d730d26f7a4fd1
+      JWT_EXPIRES_IN: 24h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      BCRYPT_ROUNDS: 12
+      CORS_ORIGIN: http://localhost:3000
+      LOG_LEVEL: debug
+      USER_SERVICE_URL: http://user-service:8081
+      REDIS_URL: redis://redis:6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./auth-service:/app
+      - /app/node_modules
+      - ./auth-service/logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - pulse-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # User Service (Node.js/TypeScript)
   user-service:
     build:
       context: ./user-service
@@ -43,7 +81,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 8081
-      DATABASE_URL: postgresql://pulse_user:pulse_user@host.docker.internal:5432/pulse_users
+      DATABASE_URL: postgresql://pulse_user:pulse_user@host.docker.internal:5432/pulse_user_db
       JWT_SECRET: 5b41d6a0c1adfd2804d730d26f7a4fd1
       JWT_EXPIRES_IN: 24h
       JWT_REFRESH_EXPIRES_IN: 7d
@@ -195,6 +233,7 @@ services:
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
       JWT_SECRET: 5b41d6a0c1adfd2804d730d26f7a4fd1
+      USER_SERVICE_URL: http://user-service:8081
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

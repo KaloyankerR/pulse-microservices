@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const { user: currentUser } = useAuthStore();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const { posts, isLoading: postsLoading, error: postsError } = useUserPosts(userId);
   const { status: followStatus, follow: followUser, unfollow: unfollowUser, isLoading: followStatusLoading } = useFollowStatus(userId);
@@ -52,10 +53,33 @@ export default function ProfilePage() {
     const fetchUser = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         const data = await usersApi.getUserById(userId);
         setUser(data);
       } catch (error: any) {
-        // Handle error silently or show user-friendly message
+        // Log error for debugging
+        console.error('Failed to fetch user:', error);
+        
+        // Extract error message from response
+        const errorMessage = error.response?.data?.error?.message || 
+                           error.message || 
+                           'Failed to load user profile';
+        const errorCode = error.response?.data?.error?.code || 
+                         error.response?.status === 404 ? 'USER_NOT_FOUND' : 'UNKNOWN_ERROR';
+        
+        setError(errorMessage);
+        setUser(null);
+        
+        // Log additional details for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error details:', {
+            message: errorMessage,
+            code: errorCode,
+            status: error.response?.status,
+            userId,
+            response: error.response?.data,
+          });
+        }
       } finally {
         setIsLoading(false);
       }
@@ -82,9 +106,12 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">User not found</p>
-          <p className="text-gray-400 text-sm mt-2">User ID: {userId}</p>
-          <p className="text-gray-400 text-sm">Loading: {isLoading ? 'true' : 'false'}</p>
+          <p className="text-gray-500 text-lg">
+            {error || 'User not found'}
+          </p>
+          {process.env.NODE_ENV === 'development' && (
+            <p className="text-gray-400 text-sm mt-2">User ID: {userId}</p>
+          )}
         </div>
       </div>
     );

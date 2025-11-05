@@ -189,12 +189,20 @@ export default function MessagesPage() {
 
   const handleCreateNewChat = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!newChatRecipient.trim() && !selectedUser) || isCreatingChat) return;
+    
+    // Require that a user is selected from search results
+    if (!selectedUser || isCreatingChat) {
+      // Show error if trying to create chat without selecting a user
+      if (!selectedUser && newChatRecipient.trim()) {
+        alert('Please select a user from the search results to start a chat.');
+      }
+      return;
+    }
 
     try {
       setIsCreatingChat(true);
-      // Use selected user ID if available, otherwise use the typed username
-      const participantId = selectedUser?.id || newChatRecipient.trim();
+      // Use selected user ID - we now require a selected user
+      const participantId = selectedUser.id;
       
       // Check if conversation already exists with this participant
       const existingConversation = conversations?.find(conv => 
@@ -683,15 +691,15 @@ export default function MessagesPage() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={(!newChatRecipient.trim() && !selectedUser) || isCreatingChat}
+                    disabled={!selectedUser || isCreatingChat}
                     isLoading={isCreatingChat}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isCreatingChat 
                       ? 'Creating...' 
                       : selectedUser 
                         ? `Start Chat with ${selectedUser.displayName || selectedUser.username}`
-                        : 'Start Chat'
+                        : 'Select a user to start chat'
                     }
                   </Button>
                 </div>

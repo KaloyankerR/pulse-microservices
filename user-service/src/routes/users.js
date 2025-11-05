@@ -9,6 +9,9 @@ const router = express.Router();
 // Apply rate limiting to all user routes
 router.use(userLimiter);
 
+// Internal endpoint for auth-service to create profile
+router.post('/create-profile', validateRequest(schemas.createProfile), userController.createProfile);
+
 // Specific routes that must come before parameterized routes
 router.get('/profile', authenticateToken, userController.getCurrentUserProfile);
 router.put('/profile', authenticateToken, validateRequest(schemas.updateProfile), userController.updateCurrentUserProfile);

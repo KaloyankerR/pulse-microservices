@@ -132,7 +132,7 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
           
           {/* Event Title */}
           <div className="mb-4">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="title" className="block text-sm font-medium text-black mb-2">
               Event Title *
             </label>
             <input
@@ -141,7 +141,7 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
               value={formData.title}
               onChange={(e) => handleInputChange('title', e.target.value)}
               placeholder="Enter event title"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-600"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black placeholder:text-gray-600"
               maxLength={100}
             />
           </div>

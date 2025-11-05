@@ -71,6 +71,11 @@ const schemas = {
     }),
   }),
 
+  createProfile: Joi.object({
+    id: Joi.string().uuid().required(),
+    username: Joi.string().alphanum().min(3).max(30).required(),
+    displayName: Joi.string().min(1).max(100).optional(),
+  }),
   updateProfile: Joi.object({
     displayName: Joi.string().min(1).max(100).optional().messages({
       'string.min': 'Display name cannot be empty',

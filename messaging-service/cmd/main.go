@@ -69,8 +69,9 @@ func main() {
 
 	// Initialize services
 	eventPublisher := service.NewEventPublisher(rabbitmq.Channel, logger)
+	userClient := service.NewUserClient(cfg.UserServiceURL, logger)
 	messageService := service.NewMessageService(messageRepo, conversationRepo, eventPublisher, logger)
-	conversationService := service.NewConversationService(conversationRepo, logger)
+	conversationService := service.NewConversationService(conversationRepo, userClient, logger)
 
 	// Initialize handlers
 	messageHandler := handlers.NewMessageHandler(messageService, logger)

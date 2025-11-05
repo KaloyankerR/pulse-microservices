@@ -6,24 +6,26 @@ import (
 )
 
 type Config struct {
-	Port        string
-	MongoDBURL  string
-	MongoDBName string
-	RedisURL    string
-	RabbitMQURL string
-	JWTSecret   string
-	Environment string
+	Port          string
+	MongoDBURL    string
+	MongoDBName   string
+	RedisURL      string
+	RabbitMQURL   string
+	JWTSecret     string
+	Environment   string
+	UserServiceURL string
 }
 
 func Load() *Config {
 	return &Config{
-		Port:        getEnv("PORT", "8084"),
-		MongoDBURL:  getEnv("MONGODB_URL", "mongodb://localhost:27017"),
-		MongoDBName: getEnv("MONGODB_NAME", "messaging_db"),
-		RedisURL:    getEnv("REDIS_URL", "redis://localhost:6379"),
-		RabbitMQURL: getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
-		JWTSecret:   getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
-		Environment: getEnv("ENVIRONMENT", "development"),
+		Port:          getEnv("PORT", "8084"),
+		MongoDBURL:    getEnv("MONGODB_URL", "mongodb://localhost:27017"),
+		MongoDBName:   getEnv("MONGODB_NAME", "messaging_db"),
+		RedisURL:      getEnv("REDIS_URL", "redis://localhost:6379"),
+		RabbitMQURL:   getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
+		JWTSecret:     getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
+		Environment:   getEnv("ENVIRONMENT", "development"),
+		UserServiceURL: getEnv("USER_SERVICE_URL", "http://user-service:8081"),
 	}
 }
 

@@ -1,23 +1,17 @@
-require('dotenv').config();
+import 'dotenv/config';
+import express, { Express } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
+import winston from 'winston';
+import expressWinston from 'express-winston';
+import logger from './utils/logger';
+import { errorHandler, notFound } from './middleware/errorHandler';
+import { generalLimiter } from './middleware/rateLimiter';
+import metrics from './config/metrics';
+import authRoutes from './routes/auth';
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const swaggerUi = require('swagger-ui-express');
-const winston = require('winston');
-const expressWinston = require('express-winston');
-const logger = require('./utils/logger');
-const { errorHandler, notFound } = require('./middleware/errorHandler');
-const { generalLimiter } = require('./middleware/rateLimiter');
-const swaggerSpecs = require('./config/swagger');
-const metrics = require('./config/metrics');
-
-// Import routes
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const adminRoutes = require('./routes/admin');
-
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT || 8080;
 
 // Trust proxy for rate limiting and IP detection
@@ -25,22 +19,25 @@ app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 // CORS configuration
 const corsOptions = {
-  origin: function (origin, callback) {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
     const allowedOrigins = [
       process.env.CORS_ORIGIN || 'http://localhost:3000',
       'http://localhost:8080', // Allow Swagger UI direct access
-      'http://localhost:8081', // Allow Docker service access
+      'http://localhost:8087', // Allow Docker service access
       'http://localhost:8000', // Allow Kong Gateway
     ];
-    
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -57,7 +54,6 @@ app.use(cors(corsOptions));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
 
 // Request logging
 app.use(expressWinston.logger({
@@ -81,7 +77,7 @@ app.get('/health', (req, res) => {
     success: true,
     data: {
       status: 'healthy',
-      service: 'pulse-user-service',
+      service: 'pulse-auth-service',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
     },
@@ -98,30 +94,20 @@ app.get('/metrics', async (req, res) => {
     res.set('Content-Type', metrics.register.contentType);
     const metricsOutput = await metrics.getMetrics();
     res.end(metricsOutput);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).end(error.message);
   }
 });
 
-// API documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
-  explorer: true,
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Pulse User Service API',
-}));
-
 // API routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/admin', adminRoutes);
-
 
 // Root endpoint
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
     data: {
-      message: 'Pulse User Service API',
+      message: 'Pulse Auth Service API',
       version: '1.0.0',
       documentation: '/api-docs',
       health: '/health',
@@ -147,23 +133,6 @@ app.use(notFound);
 // Global error handler
 app.use(errorHandler);
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
+export default app;
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT received, shutting down gracefully');
-  process.exit(0);
-});
 
-// Start server
-app.listen(PORT, () => {
-  logger.info(`Pulse User Service is running on port ${PORT}`);
-  logger.info(`API documentation available at http://localhost:${PORT}/api-docs`);
-  logger.info(`Health check available at http://localhost:${PORT}/health`);
-  logger.info(`Metrics available at http://localhost:${PORT}/metrics`);
-});
-
-module.exports = app;

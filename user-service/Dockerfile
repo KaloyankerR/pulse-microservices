@@ -32,7 +32,7 @@ RUN npm ci --only=production --silent && \
 FROM base AS build
 
 # Install all dependencies (including dev dependencies)
-RUN npm ci --silent && \
+RUN npm install && \
     npm cache clean --force
 
 # Copy source code
@@ -41,6 +41,9 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
+# Build TypeScript
+RUN npm run build
+
 # Stage 4: Production - Final production image
 FROM base AS production
 
@@ -48,7 +51,7 @@ FROM base AS production
 COPY --from=dependencies /app/node_modules ./node_modules
 
 # Copy built application from build stage
-COPY --from=build /app/src ./src
+COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/package*.json ./
@@ -68,19 +71,28 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # Start application
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["npm", "start"]
+CMD ["node", "dist/server.js"]
 
 # Stage 5: Development - For development with hot reload
-FROM build AS development
+FROM base AS development
 
-# Install nodemon globally
-RUN npm install -g nodemon
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Install ts-node-dev globally
+RUN npm install -g ts-node-dev nodemon
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client (don't need full build in dev)
+RUN npx prisma generate
 
 # Create logs directory and set permissions
-RUN mkdir -p logs
+RUN mkdir -p logs && chown -R nodejs:nodejs /app
 
-# Switch to non-root user
-USER nodejs
+# Don't switch user in dev mode to avoid permission issues
+# USER nodejs
 
 # Expose port
 EXPOSE 8080

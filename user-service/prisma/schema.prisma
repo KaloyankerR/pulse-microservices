@@ -10,11 +10,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model UserProfile {
   id           String   @id @default(uuid())
-  email        String   @unique
   username     String   @unique
-  passwordHash String
   displayName  String?
   bio          String?
   avatarUrl    String?
@@ -22,23 +20,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
-  sessions     UserSession[]
   followers    UserFollow[]  @relation("UserFollowing")
   following    UserFollow[]  @relation("UserFollowers")
   
-  @@map("users")
-}
-
-model UserSession {
-  id         String   @id @default(uuid())
-  userId     String
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("user_sessions")
+  @@map("user_profiles")
 }
 
 model UserFollow {
@@ -47,8 +32,8 @@ model UserFollow {
   followingId  String
   createdAt    DateTime @default(now())
   
-  follower     User     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
-  following    User     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  follower     UserProfile     @relation("UserFollowers", fields: [followerId], references: [id], onDelete: Cascade)
+  following    UserProfile     @relation("UserFollowing", fields: [followingId], references: [id], onDelete: Cascade)
   
   @@unique([followerId, followingId])
   @@map("user_follows")
