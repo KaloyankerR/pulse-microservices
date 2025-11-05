@@ -35,6 +35,9 @@ help: ## Show this help message
 	@echo "\033[1mService-Specific Commands:\033[0m"
 	@grep -E '^(logs-%|restart-%|health-check-%):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@echo ""
+	@echo "\033[1mKubernetes Operations:\033[0m"
+	@grep -E '^k8s-(start|stop|build|deploy|delete|clean|logs-|status|port-forward):.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@echo ""
 	@echo "\033[1mUsage:\033[0m"
 	@echo "  For service-specific commands, navigate to the service directory and run: make help"
 	@echo ""
@@ -300,3 +303,62 @@ db-build-all: ## Build all databases (PostgreSQL + MongoDB)
 	@echo "Creating MongoDB databases and collections..."
 	@mongosh < config/mongodb/init.js 2>/dev/null || echo "MongoDB initialization completed"
 	@echo "✅ All databases built!"
+
+# =============================================================================
+# Kubernetes Operations
+# =============================================================================
+
+k8s-start: ## Start Minikube cluster
+	@minikube start --memory=4096 --cpus=2 || true
+	@minikube addons enable ingress || true
+
+k8s-stop: ## Stop Minikube cluster
+	@minikube stop
+
+k8s-build: ## Build all Docker images
+	@eval $$(minikube docker-env) && \
+	docker build -t pulse-auth-service:latest ./auth-service && \
+	docker build -t pulse-user-service:latest ./user-service && \
+	docker build -t pulse-post-service:latest ./post-service && \
+	docker build -t pulse-social-service:latest ./social-service && \
+	docker build -t pulse-messaging-service:latest ./messaging-service && \
+	docker build -t pulse-notification-service:latest ./notification-service && \
+	docker build -t pulse-event-service:latest ./event-service && \
+	docker build -t pulse-frontend:latest ./frontend
+
+k8s-deploy: ## Deploy all services
+	@kubectl apply -f k8s/namespaces/ && \
+	kubectl apply -f k8s/secrets/ && \
+	kubectl apply -f k8s/configmaps/ && \
+	kubectl apply -f k8s/databases/ && \
+	kubectl apply -f k8s/services/ && \
+	kubectl apply -f k8s/gateway/ && \
+	kubectl apply -f k8s/frontend/ && \
+	kubectl apply -f k8s/monitoring/ && \
+	kubectl apply -f k8s/ingress/ || true
+	@kubectl wait --for=condition=ready pod -l app=postgres -n pulse --timeout=120s || true
+	@kubectl apply -f k8s/databases/postgres-init-job.yaml || true
+
+k8s-delete: ## Delete all Kubernetes resources
+	@pkill -f "kubectl port-forward" || true
+	@kubectl delete namespace pulse --ignore-not-found=true
+
+k8s-clean: ## Clean up Docker images and Minikube storage
+	@echo "Cleaning up Docker images..."
+	@eval $$(minikube docker-env) && docker system prune -af --volumes || true
+	@echo "Cleaning up Minikube..."
+	@minikube ssh -- docker system prune -af || true
+
+k8s-logs-%: ## View logs for a service (e.g., k8s-logs-auth-service)
+	@pod=$$(kubectl get pods -n pulse -l app=$* -o jsonpath='{.items[0].metadata.name}' 2>/dev/null); \
+	if [ -z "$$pod" ]; then echo "❌ Service $* not found"; exit 1; fi; \
+	kubectl logs -f -n pulse $$pod
+
+k8s-status: ## Show pod status
+	@kubectl get pods -n pulse
+
+k8s-port-forward: ## Port forward services (frontend:3000, kong:8000)
+	@pkill -f "kubectl port-forward" || true
+	@kubectl port-forward -n pulse service/frontend 3000:3000 & \
+	kubectl port-forward -n pulse service/kong 8000:8000 8001:8001 & \
+	wait

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: event-service-config
+  namespace: pulse
+data:
+  PORT: "8083"
+  LOG_LEVEL: "info"
+
+
+
+

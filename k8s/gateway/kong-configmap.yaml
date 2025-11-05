@@ -1,0 +1,314 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-config
+  namespace: pulse
+data:
+  kong.yml: |
+    _format_version: "3.0"
+
+    services:
+      - name: auth-service
+        url: http://auth-service:8080
+        routes:
+          - name: auth-service-routes
+            paths:
+              - /api/v1/auth
+              - /health
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            strip_path: false
+            path_handling: v1
+
+      - name: user-service
+        url: http://user-service:8081
+        routes:
+          - name: user-service-routes
+            paths:
+              - /api/v1/users
+              - /health
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            strip_path: false
+            path_handling: v1
+
+      - name: post-service
+        url: http://post-service:8082
+        routes:
+          - name: post-service-routes
+            paths:
+              - /api/v1/posts
+              - /health
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            strip_path: false
+            path_handling: v1
+
+      - name: social-service
+        url: http://social-service:8085
+        routes:
+          - name: social-service-routes
+            paths:
+              - /api/v1/social
+              - /health
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            strip_path: false
+            path_handling: v1
+
+      - name: messaging-service
+        url: http://messaging-service:8084
+        routes:
+          - name: messaging-service-routes
+            paths:
+              - /api/messages
+              - /ws
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            strip_path: false
+            path_handling: v1
+
+      - name: notification-service
+        url: http://notification-service:8086
+        routes:
+          - name: notification-service-routes
+            paths:
+              - /api/notifications
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            strip_path: false
+            path_handling: v1
+          - name: notification-service-health
+            paths:
+              - /api/notifications/health
+            methods:
+              - GET
+              - OPTIONS
+            strip_path: false
+            path_handling: v1
+
+      - name: event-service
+        url: http://event-service:8083
+        routes:
+          - name: event-service-routes
+            paths:
+              - /api/events
+            methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            strip_path: false
+            path_handling: v1
+
+    plugins:
+      - name: cors
+        service: auth-service
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - X-Auth-Token
+            - Authorization
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+      - name: cors
+        service: user-service
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - X-Auth-Token
+            - Authorization
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+      - name: cors
+        service: post-service
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - X-Auth-Token
+            - Authorization
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+      - name: cors
+        service: social-service
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - X-Auth-Token
+            - Authorization
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+      - name: cors
+        service: messaging-service
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - X-Auth-Token
+            - Authorization
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+      - name: cors
+        service: notification-service
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - X-Auth-Token
+            - Authorization
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+      - name: cors
+        service: event-service
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Date
+            - X-Auth-Token
+            - Authorization
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+
+
+

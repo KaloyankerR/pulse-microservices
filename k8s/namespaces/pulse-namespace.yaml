@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pulse
+  labels:
+    name: pulse
+    app: pulse-microservices
+
+
+
+

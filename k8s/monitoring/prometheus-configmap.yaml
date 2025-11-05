@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: pulse
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        monitor: 'pulse-microservices'
+
+    # Alertmanager configuration (optional for future use)
+    # alerting:
+    #   alertmanagers:
+    #     - static_configs:
+    #         - targets: []
+
+    # Load rules once and periodically evaluate them
+    # rule_files:
+    #   - "alert_rules.yml"
+
+    # Scrape configurations
+    scrape_configs:
+      # Prometheus itself
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      # User Service (Node.js)
+      - job_name: 'user-service'
+        static_configs:
+          - targets: ['user-service:8081']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+
+      # Post Service (Go)
+      - job_name: 'post-service'
+        static_configs:
+          - targets: ['post-service:8082']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+
+      # Social Service (Node.js)
+      - job_name: 'social-service'
+        static_configs:
+          - targets: ['social-service:8085']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+
+      # Messaging Service (Go)
+      - job_name: 'messaging-service'
+        static_configs:
+          - targets: ['messaging-service:8084']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+
+      # Notification Service (Node.js)
+      - job_name: 'notification-service'
+        static_configs:
+          - targets: ['notification-service:8086']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+
+      # Event Service (Go)
+      - job_name: 'event-service'
+        static_configs:
+          - targets: ['event-service:8083']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+
+      # Auth Service (Node.js)
+      - job_name: 'auth-service'
+        static_configs:
+          - targets: ['auth-service:8080']
+        metrics_path: '/metrics'
+        scrape_interval: 10s
+
+      # RabbitMQ (prometheus plugin enabled)
+      - job_name: 'rabbitmq'
+        static_configs:
+          - targets: ['rabbitmq:15692']
+        metrics_path: '/metrics'
+        scrape_interval: 30s
+
+      # Redis (via redis_exporter)
+      - job_name: 'redis-exporter'
+        static_configs:
+          - targets: ['redis-exporter:9121']
+        scrape_interval: 30s
+
+      # Node Exporter (system metrics)
+      - job_name: 'node-exporter'
+        static_configs:
+          - targets: ['node-exporter:9100']
+        scrape_interval: 30s
+

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: messaging-service-config
+  namespace: pulse
+data:
+  PORT: "8084"
+  ENVIRONMENT: "production"
+  MONGODB_URL: "mongodb://pulse_user:pulse_user@mongodb:27017/messaging_db?authSource=admin"
+  MONGODB_NAME: "messaging_db"
+  REDIS_URL: "redis://redis:6379"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+  USER_SERVICE_URL: "http://user-service:8081"
+
+
+
+

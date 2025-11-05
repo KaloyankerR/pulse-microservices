@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-init
+  namespace: pulse
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: init-databases
+        image: postgres:15-alpine
+        command:
+          - /bin/sh
+          - -c
+          - |
+            set -e
+            echo "Waiting for PostgreSQL to be ready..."
+            until pg_isready -h postgres -U postgres; do
+              sleep 2
+            done
+            echo "PostgreSQL is ready. Creating databases and users..."
+            psql -h postgres -U postgres <<-EOSQL || true
+              DO \$\$
+              BEGIN
+                IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'pulse_auth') THEN
+                  CREATE USER pulse_auth WITH PASSWORD 'pulse_auth';
+                END IF;
+                IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'pulse_user') THEN
+                  CREATE USER pulse_user WITH PASSWORD 'pulse_user';
+                END IF;
+              END
+              \$\$;
+            EOSQL
+            psql -h postgres -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'pulse_auth_db'" | grep -q 1 || psql -h postgres -U postgres -c "CREATE DATABASE pulse_auth_db OWNER pulse_auth"
+            psql -h postgres -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'pulse_user_db'" | grep -q 1 || psql -h postgres -U postgres -c "CREATE DATABASE pulse_user_db OWNER pulse_user"
+            psql -h postgres -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'pulse_posts'" | grep -q 1 || psql -h postgres -U postgres -c "CREATE DATABASE pulse_posts OWNER pulse_user"
+            psql -h postgres -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'pulse_social'" | grep -q 1 || psql -h postgres -U postgres -c "CREATE DATABASE pulse_social OWNER pulse_user"
+            psql -h postgres -U postgres <<-EOSQL
+              GRANT ALL PRIVILEGES ON DATABASE pulse_auth_db TO pulse_auth;
+              GRANT ALL PRIVILEGES ON DATABASE pulse_user_db TO pulse_user;
+              GRANT ALL PRIVILEGES ON DATABASE pulse_posts TO pulse_user;
+              GRANT ALL PRIVILEGES ON DATABASE pulse_social TO pulse_user;
+            EOSQL
+            echo "Databases initialized successfully"
+        env:
+        - name: PGHOST
+          value: postgres
+        - name: PGUSER
+          value: postgres
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pulse-secrets
+              key: postgres-root-password
+

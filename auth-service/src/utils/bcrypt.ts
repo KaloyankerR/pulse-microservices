@@ -44,7 +44,3 @@ class BcryptUtil {
 }
 
 export default BcryptUtil;
-
-
-
-
