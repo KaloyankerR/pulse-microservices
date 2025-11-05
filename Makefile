@@ -211,6 +211,47 @@ sonar-all: ## Run SonarQube analysis for all services
 	@echo "✅ All SonarQube analyses complete! View results at http://localhost:9001"
 
 # =============================================================================
+# Load Testing (k6)
+# =============================================================================
+
+load-test-create-user: ## Create test user for load testing
+	@echo "👤 Creating test user for load testing..."
+	@cd load-tests && ./scripts/create-test-user.sh
+
+load-test-baseline: load-test-create-user ## Run baseline load tests (normal load)
+	@echo "🚀 Running baseline load tests..."
+	@mkdir -p load-tests/results
+	@k6 run --out json=load-tests/results/baseline-summary.json --out csv=load-tests/results/baseline-metrics.csv load-tests/scenarios/baseline/baseline.js
+	@echo "✅ Baseline load tests complete! Check results in load-tests/results/"
+
+load-test-stress: ## Run stress load tests (find breaking point)
+	@echo "🚀 Running stress load tests..."
+	@mkdir -p load-tests/results
+	@k6 run --out json=load-tests/results/stress-summary.json --out csv=load-tests/results/stress-metrics.csv load-tests/scenarios/stress/stress.js
+	@echo "✅ Stress load tests complete! Check results in load-tests/results/"
+
+load-test-spike: ## Run spike load tests (sudden load increase)
+	@echo "🚀 Running spike load tests..."
+	@mkdir -p load-tests/results
+	@k6 run --out json=load-tests/results/spike-summary.json --out csv=load-tests/results/spike-metrics.csv load-tests/scenarios/spike/spike.js
+	@echo "✅ Spike load tests complete! Check results in load-tests/results/"
+
+load-test-soak: ## Run soak load tests (sustained load)
+	@echo "🚀 Running soak load tests..."
+	@mkdir -p load-tests/results
+	@k6 run --out json=load-tests/results/soak-summary.json --out csv=load-tests/results/soak-metrics.csv load-tests/scenarios/soak/soak.js
+	@echo "✅ Soak load tests complete! Check results in load-tests/results/"
+
+load-test-simple: ## Run simple baseline tests (public endpoints only, no auth required)
+	@echo "🚀 Running simple baseline load tests (public endpoints only)..."
+	@mkdir -p load-tests/results
+	@k6 run --out json=load-tests/results/simple-baseline-summary.json --out csv=load-tests/results/simple-baseline-metrics.csv load-tests/scenarios/baseline/simple-baseline.js
+	@echo "✅ Simple baseline load tests complete! Check results in load-tests/results/"
+
+load-test-all: load-test-baseline load-test-stress load-test-spike load-test-soak ## Run all load test scenarios
+	@echo "✅ All load tests complete!"
+
+# =============================================================================
 # Database Operations
 # =============================================================================
 

@@ -32,3 +32,5 @@ router.get('/:id/follow-status', authenticateToken, userController.getFollowStat
 export default router;
 
 
+
+
