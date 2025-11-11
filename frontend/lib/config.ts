@@ -19,6 +19,11 @@ export const API_ENDPOINTS = {
     byId: (id: string) => `/api/v1/users/${id}`,
     search: '/api/v1/users/search',
     updateProfile: '/api/v1/users/profile',
+    updateProfileById: (id: string) => `/api/v1/users/${id}`,
+    deleteUser: (id: string) => `/api/v1/users/${id}`,
+    banUser: (id: string) => `/api/v1/users/${id}/ban`,
+    unbanUser: (id: string) => `/api/v1/users/${id}/unban`,
+    getAllUsers: '/api/v1/users/all',
   },
   // Post endpoints
   posts: {

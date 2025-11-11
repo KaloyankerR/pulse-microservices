@@ -30,7 +30,7 @@ class JwtUtil {
     }
   }
 
-  static generateTokens(user: { id: string; email: string; username?: string; role?: string }): TokenResponse {
+  static generateTokens(user: { id: string; email: string; username?: string; role: string }): TokenResponse {
     const payload: JWTPayload = {
       iss: 'pulse-auth-service', // Issuer claim for Kong
       sub: user.email, // Subject claim (standard JWT)
@@ -38,7 +38,7 @@ class JwtUtil {
       userId: user.id, // For post-service compatibility
       email: user.email,
       username: user.username,
-      role: user.role || 'USER', // Add role claim
+      role: user.role, // Role is required
     };
 
     return {

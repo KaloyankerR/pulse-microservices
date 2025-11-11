@@ -140,9 +140,21 @@ export default function SearchPage() {
                           size="md"
                         />
                         <div>
-                          <p className="font-semibold text-gray-900">
-                            {user.displayName || user.username}
-                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-gray-900">
+                              {user.displayName || user.username}
+                            </p>
+                            {user.role === 'MODERATOR' && (
+                              <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full">
+                                MODERATOR
+                              </span>
+                            )}
+                            {user.banned && (
+                              <span className="px-2 py-0.5 text-xs font-bold bg-red-100 text-red-800 rounded-full">
+                                BANNED
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">
                             @{user.username}
                           </p>

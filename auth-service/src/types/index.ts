@@ -7,7 +7,7 @@ export interface JWTPayload extends JwtPayload {
   userId: string;
   email: string;
   username?: string;
-  role?: string;
+  role: string;
   iss?: string;
   sub?: string;
 }
@@ -70,6 +70,8 @@ export interface User {
   id: string;
   email: string;
   passwordHash?: string;
+  role: string;
+  banned: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -129,6 +129,79 @@ class AuthController {
       next(error);
     }
   }
+
+  async banUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await authService.banUser(id);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async unbanUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await authService.unbanUser(id);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateUserRole(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+      const result = await authService.updateUserRole(id, role);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getUserAuthData(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const result = await authService.getUserAuthData(id);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AuthController();

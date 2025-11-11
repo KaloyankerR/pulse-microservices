@@ -72,3 +72,45 @@ export const optionalAuth = async (
   }
 };
 
+export const requireModerator = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Authentication required',
+        },
+      });
+      return;
+    }
+
+    const userRole = req.user.role || 'USER';
+    if (userRole !== 'MODERATOR') {
+      res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Moderator access required',
+        },
+      });
+      return;
+    }
+
+    next();
+  } catch (error: any) {
+    logger.error('Moderator authorization error:', error);
+    res.status(403).json({
+      success: false,
+      error: {
+        code: 'FORBIDDEN',
+        message: 'Moderator access required',
+      },
+    });
+  }
+};
+

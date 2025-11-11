@@ -59,5 +59,64 @@ export const usersApi = {
       data: response.data || { users: [], pagination: {} },
     };
   },
+
+  async updateProfileById(id: string, data: Partial<User>): Promise<User> {
+    const response = await apiClient.put<ApiResponse<{ user: User }>>(
+      API_ENDPOINTS.users.updateProfileById(id),
+      data
+    );
+    if (!response.data || !response.data.user) {
+      throw new Error('Invalid response structure from updateProfile endpoint');
+    }
+    const user = response.data.user;
+    return {
+      ...user,
+      avatarUrl: cleanAvatarUrl(user.avatarUrl)
+    };
+  },
+
+  async deleteUser(id: string): Promise<{ message: string }> {
+    const response = await apiClient.delete<ApiResponse<{ message: string }>>(
+      API_ENDPOINTS.users.deleteUser(id)
+    );
+    if (!response.data) {
+      throw new Error('Invalid response structure from deleteUser endpoint');
+    }
+    return response.data;
+  },
+
+  async banUser(id: string): Promise<{ message: string }> {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>(
+      API_ENDPOINTS.users.banUser(id),
+      {}
+    );
+    if (!response.data) {
+      throw new Error('Invalid response structure from banUser endpoint');
+    }
+    return response.data;
+  },
+
+  async unbanUser(id: string): Promise<{ message: string }> {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>(
+      API_ENDPOINTS.users.unbanUser(id),
+      {}
+    );
+    if (!response.data) {
+      throw new Error('Invalid response structure from unbanUser endpoint');
+    }
+    return response.data;
+  },
+
+  async getAllUsers(page = 1, limit = 20): Promise<{ data: { users: User[]; pagination: any } }> {
+    const response = await apiClient.get<{ success: boolean; data: { users: User[]; pagination: any } }>(
+      API_ENDPOINTS.users.getAllUsers,
+      {
+        params: { page, limit },
+      }
+    );
+    return {
+      data: response.data || { users: [], pagination: {} },
+    };
+  },
 };
 

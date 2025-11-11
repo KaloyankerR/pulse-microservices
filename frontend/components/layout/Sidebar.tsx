@@ -45,9 +45,16 @@ export function Sidebar() {
                 size="lg"
               />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 truncate">
-                  {user?.displayName || user?.username}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-gray-900 truncate">
+                    {user?.displayName || user?.username}
+                  </p>
+                  {user?.role === 'MODERATOR' && (
+                    <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full flex-shrink-0">
+                      MOD
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500 truncate">@{user?.username}</p>
               </div>
             </div>
@@ -82,9 +89,16 @@ export function Sidebar() {
                       size="md"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 truncate">
-                        {rec.displayName || rec.username}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-900 truncate">
+                          {rec.displayName || rec.username}
+                        </p>
+                        {rec.role === 'MODERATOR' && (
+                          <span className="px-1.5 py-0.5 text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full flex-shrink-0">
+                            MOD
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-gray-500 truncate">
                         @{rec.username}
                       </p>

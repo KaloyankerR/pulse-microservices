@@ -22,6 +22,8 @@ interface PostCardProps {
 export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
   const { user } = useAuthStore();
   const isOwnPost = user?.id === post.author_id;
+  const isModerator = user?.role === 'MODERATOR';
+  const canDelete = isOwnPost || isModerator;
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentContent, setCommentContent] = useState('');
@@ -106,12 +108,13 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
             </div>
           </Link>
 
-          {isOwnPost && (
+          {canDelete && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onDelete?.(post.id)}
               className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              title={isModerator && !isOwnPost ? 'Delete as moderator' : 'Delete post'}
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -178,10 +181,11 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
                           <span className="text-xs text-gray-500">
                             {formatRelativeTime(comment.createdAt)}
                           </span>
-                          {user?.id === comment.author_id && (
+                          {(user?.id === comment.author_id || isModerator) && (
                             <button
                               onClick={() => handleDeleteComment(comment.id)}
                               className="text-red-600 hover:text-red-700"
+                              title={isModerator && user?.id !== comment.author_id ? 'Delete as moderator' : 'Delete comment'}
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>

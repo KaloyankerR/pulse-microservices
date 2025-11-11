@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
 import userController from '../controllers/userController';
-import { authenticateToken, optionalAuth } from '../middleware/auth';
+import { authenticateToken, optionalAuth, requireModerator } from '../middleware/auth';
 import { validateRequest, schemas } from '../middleware/validation';
 import { userLimiter } from '../middleware/rateLimiter';
 
@@ -16,6 +16,9 @@ router.post('/create-profile', validateRequest(schemas.createProfile), userContr
 router.get('/profile', authenticateToken, userController.getCurrentUserProfile);
 router.put('/profile', authenticateToken, validateRequest(schemas.updateProfile), userController.updateCurrentUserProfile);
 
+// Moderator-only routes (must come before /:id routes)
+router.get('/all', authenticateToken, requireModerator, validateRequest(schemas.pagination, 'query'), userController.getAllUsers);
+
 // Public routes (with optional authentication)
 router.get('/search', validateRequest(schemas.searchUsers, 'query'), optionalAuth, userController.searchUsers);
 router.get('/:id', optionalAuth, userController.getUserById);
@@ -28,6 +31,10 @@ router.delete('/:id', authenticateToken, userController.deleteUser);
 router.post('/:id/follow', authenticateToken, userController.followUser);
 router.delete('/:id/follow', authenticateToken, userController.unfollowUser);
 router.get('/:id/follow-status', authenticateToken, userController.getFollowStatus);
+
+// Moderator-only routes
+router.post('/:id/ban', authenticateToken, requireModerator, userController.banUser);
+router.post('/:id/unban', authenticateToken, requireModerator, userController.unbanUser);
 
 export default router;
 

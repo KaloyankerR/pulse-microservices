@@ -75,8 +75,9 @@ class UserController {
     try {
       const { id } = req.params;
 
-      // Check if user is updating their own profile
-      if (req.user!.id !== id) {
+      // Check if user is updating their own profile OR is a moderator
+      const isModerator = req.user!.role === 'MODERATOR';
+      if (req.user!.id !== id && !isModerator) {
         throw new AppError('Can only update your own profile', 403, 'FORBIDDEN');
       }
 
@@ -101,8 +102,9 @@ class UserController {
     try {
       const { id } = req.params;
 
-      // Check if user is deleting their own account
-      if (req.user!.id !== id) {
+      // Check if user is deleting their own account OR is a moderator
+      const isModerator = req.user!.role === 'MODERATOR';
+      if (req.user!.id !== id && !isModerator) {
         throw new AppError('Can only delete your own account', 403, 'FORBIDDEN');
       }
 
@@ -331,6 +333,70 @@ class UserController {
         success: true,
         data: {
           user,
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async banUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const authHeader = req.headers.authorization;
+      const result = await userService.banUser(id, authHeader);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async unbanUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const authHeader = req.headers.authorization;
+      const result = await userService.unbanUser(id, authHeader);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getAllUsers(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { page, limit } = req.query;
+      const authHeader = req.headers.authorization;
+      const result = await userService.getAllUsers(
+        parseInt(page as string) || 1,
+        parseInt(limit as string) || 20,
+        authHeader,
+      );
+
+      res.status(200).json({
+        success: true,
+        data: {
+          users: result.users,
+          pagination: result.pagination,
         },
         meta: {
           timestamp: new Date().toISOString(),

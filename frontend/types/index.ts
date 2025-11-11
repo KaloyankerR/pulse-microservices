@@ -7,6 +7,8 @@ export interface User {
   displayName?: string;
   avatarUrl?: string;
   bio?: string;
+  role?: string;
+  banned?: boolean;
   createdAt: string;
   updatedAt: string;
   followersCount?: number;

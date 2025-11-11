@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Home, MessageCircle, Search, User, Calendar } from 'lucide-react';
+import { Bell, Home, MessageCircle, Search, User, Calendar, Shield } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/lib/stores/auth-store';
@@ -40,6 +40,7 @@ export function Navbar() {
     { href: '/search', icon: Search, label: 'Search' },
     { href: '/messages', icon: MessageCircle, label: 'Messages' },
     { href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount },
+    ...(user?.role === 'MODERATOR' ? [{ href: '/moderator', icon: Shield, label: 'Moderator' }] : []),
   ];
 
   return (
@@ -68,8 +69,11 @@ export function Navbar() {
                     'relative p-2 rounded-lg transition-colors',
                     isActive
                       ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      : item.href === '/moderator'
+                        ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   )}
+                  title={item.label}
                 >
                   <Icon className="w-6 h-6" />
                   {item.badge && item.badge > 0 ? (
@@ -99,9 +103,16 @@ export function Navbar() {
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                 <div className="p-3 border-b border-gray-200">
-                  <p className="font-semibold text-gray-900">
-                    {user?.displayName || user?.username}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-900">
+                      {user?.displayName || user?.username}
+                    </p>
+                    {user?.role === 'MODERATOR' && (
+                      <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full">
+                        MOD
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-500">@{user?.username}</p>
                 </div>
                 <div className="py-2">
@@ -113,6 +124,16 @@ export function Navbar() {
                     <User className="w-4 h-4 inline mr-2" />
                     Profile
                   </Link>
+                  {user?.role === 'MODERATOR' && (
+                    <Link
+                      href="/moderator"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      <Shield className="w-4 h-4 inline mr-2" />
+                      Moderator Dashboard
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       logout();

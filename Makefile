@@ -263,22 +263,48 @@ db-reset-all: db-drop-all db-build-all ## Drop and rebuild all databases (Postgr
 
 db-reset: db-reset-all ## Reset all databases (drop and recreate) - alias for db-reset-all
 
+db-migrate: ## Apply Prisma migrations to all services
+	@echo "🔄 Applying database migrations..."
+	@echo "  → Migrating auth-service..."
+	@cd auth-service && DATABASE_URL="postgresql://pulse_auth:pulse_auth@localhost:5432/pulse_auth_db" npx prisma migrate deploy 2>/dev/null || \
+		(cd auth-service && DATABASE_URL="postgresql://pulse_auth:pulse_auth@localhost:5432/pulse_auth_db" npx prisma db push --skip-generate && echo "    ✅ Auth service schema updated")
+	@cd auth-service && DATABASE_URL="postgresql://pulse_auth:pulse_auth@localhost:5432/pulse_auth_db" npx prisma generate 2>/dev/null || echo "    ⚠️  Auth service Prisma generate failed"
+	@echo "  → Migrating user-service..."
+	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_user_db" npx prisma migrate deploy 2>/dev/null || \
+		(cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_user_db" npx prisma db push --skip-generate && echo "    ✅ User service schema updated")
+	@echo "  → Migrating social-service..."
+	@cd social-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_social" npx prisma migrate deploy 2>/dev/null || \
+		(cd social-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_social" npx prisma db push --skip-generate && echo "    ✅ Social service schema updated")
+	@echo "✅ All migrations applied!"
+
 db-setup: ## Create databases for the first time
-	@echo "Creating databases..."
-	@psql -d postgres -c "CREATE USER pulse_user WITH PASSWORD 'pulse_user';" 2>/dev/null || echo "User already exists"
-	@psql -d postgres -c "CREATE DATABASE pulse_users OWNER pulse_user;" 2>/dev/null || echo "pulse_users already exists"
+	@echo "Creating databases and users..."
+	@psql -d postgres -c "CREATE USER pulse_auth WITH PASSWORD 'pulse_auth';" 2>/dev/null || echo "User pulse_auth already exists"
+	@psql -d postgres -c "CREATE USER pulse_user WITH PASSWORD 'pulse_user';" 2>/dev/null || echo "User pulse_user already exists"
+	@psql -d postgres -c "CREATE DATABASE pulse_auth_db OWNER pulse_auth;" 2>/dev/null || echo "pulse_auth_db already exists"
+	@psql -d postgres -c "CREATE DATABASE pulse_user_db OWNER pulse_user;" 2>/dev/null || echo "pulse_user_db already exists"
 	@psql -d postgres -c "CREATE DATABASE pulse_posts OWNER pulse_user;" 2>/dev/null || echo "pulse_posts already exists"
-	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_users TO pulse_user;"
+	@psql -d postgres -c "CREATE DATABASE pulse_social OWNER pulse_user;" 2>/dev/null || echo "pulse_social already exists"
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_auth_db TO pulse_auth;"
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_user_db TO pulse_user;"
 	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_posts TO pulse_user;"
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_social TO pulse_user;"
 	@echo "Initializing schemas..."
-	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_users" npx prisma db push --skip-generate
-	@psql -U pulse_user -d pulse_posts -f post-service/init.sql
+	@cd auth-service && DATABASE_URL="postgresql://pulse_auth:pulse_auth@localhost:5432/pulse_auth_db" npx prisma db push --skip-generate || echo "⚠️  Auth service schema push failed (may need manual migration)"
+	@cd auth-service && DATABASE_URL="postgresql://pulse_auth:pulse_auth@localhost:5432/pulse_auth_db" npx prisma generate || echo "⚠️  Auth service Prisma generate failed"
+	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_user_db" npx prisma db push --skip-generate || echo "⚠️  User service schema push failed"
+	@cd social-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_social" npx prisma db push --skip-generate || echo "⚠️  Social service schema push failed"
+	@psql -U pulse_user -d pulse_posts -f post-service/init.sql 2>/dev/null || echo "⚠️  Post service init.sql failed (may already be applied)"
+	@echo "Creating MongoDB databases and collections..."
+	@mongosh < config/mongodb/init.js 2>/dev/null || echo "⚠️  MongoDB initialization completed or skipped"
 	@echo "✅ Database setup complete!"
 
 # Database Reset Commands
 db-drop-all: ## Drop all databases (PostgreSQL + MongoDB)
 	@echo "🗑️  Dropping all databases..."
 	@echo "Dropping PostgreSQL databases..."
+	@psql -d postgres -c "DROP DATABASE IF EXISTS pulse_auth_db WITH (FORCE);" 2>/dev/null || true
+	@psql -d postgres -c "DROP DATABASE IF EXISTS pulse_user_db WITH (FORCE);" 2>/dev/null || true
 	@psql -d postgres -c "DROP DATABASE IF EXISTS pulse_users WITH (FORCE);" 2>/dev/null || true
 	@psql -d postgres -c "DROP DATABASE IF EXISTS pulse_posts WITH (FORCE);" 2>/dev/null || true
 	@psql -d postgres -c "DROP DATABASE IF EXISTS pulse_social WITH (FORCE);" 2>/dev/null || true
@@ -289,19 +315,33 @@ db-drop-all: ## Drop all databases (PostgreSQL + MongoDB)
 
 db-build-all: ## Build all databases (PostgreSQL + MongoDB)
 	@echo "🏗️  Building all databases..."
+	@echo "Creating PostgreSQL users..."
+	@psql -d postgres -c "CREATE USER pulse_auth WITH PASSWORD 'pulse_auth';" 2>/dev/null || echo "User pulse_auth already exists"
+	@psql -d postgres -c "CREATE USER pulse_user WITH PASSWORD 'pulse_user';" 2>/dev/null || echo "User pulse_user already exists"
 	@echo "Creating PostgreSQL databases..."
-	@psql -d postgres -c "CREATE DATABASE pulse_users OWNER pulse_user;" 2>/dev/null || echo "pulse_users already exists"
+	@psql -d postgres -c "CREATE DATABASE pulse_auth_db OWNER pulse_auth;" 2>/dev/null || echo "pulse_auth_db already exists"
+	@psql -d postgres -c "CREATE DATABASE pulse_user_db OWNER pulse_user;" 2>/dev/null || echo "pulse_user_db already exists"
+	@psql -d postgres -c "CREATE DATABASE pulse_users OWNER pulse_user;" 2>/dev/null || echo "pulse_users already exists (legacy)"
 	@psql -d postgres -c "CREATE DATABASE pulse_posts OWNER pulse_user;" 2>/dev/null || echo "pulse_posts already exists"
 	@psql -d postgres -c "CREATE DATABASE pulse_social OWNER pulse_user;" 2>/dev/null || echo "pulse_social already exists"
-	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_users TO pulse_user;"
-	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_posts TO pulse_user;"
-	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_social TO pulse_user;"
+	@echo "Granting privileges..."
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_auth_db TO pulse_auth;" 2>/dev/null || true
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_user_db TO pulse_user;" 2>/dev/null || true
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_users TO pulse_user;" 2>/dev/null || true
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_posts TO pulse_user;" 2>/dev/null || true
+	@psql -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE pulse_social TO pulse_user;" 2>/dev/null || true
 	@echo "Applying PostgreSQL schemas..."
-	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_users" npx prisma db push --skip-generate
-	@cd social-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_social" npx prisma db push --skip-generate
-	@psql -U pulse_user -d pulse_posts -f post-service/init.sql
+	@echo "  → Applying auth-service schema..."
+	@cd auth-service && DATABASE_URL="postgresql://pulse_auth:pulse_auth@localhost:5432/pulse_auth_db" npx prisma db push --skip-generate 2>/dev/null || echo "    ⚠️  Auth service schema push failed (may need manual migration)"
+	@cd auth-service && DATABASE_URL="postgresql://pulse_auth:pulse_auth@localhost:5432/pulse_auth_db" npx prisma generate 2>/dev/null || echo "    ⚠️  Auth service Prisma generate failed"
+	@echo "  → Applying user-service schema..."
+	@cd user-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_user_db" npx prisma db push --skip-generate 2>/dev/null || echo "    ⚠️  User service schema push failed"
+	@echo "  → Applying social-service schema..."
+	@cd social-service && DATABASE_URL="postgresql://pulse_user:pulse_user@localhost:5432/pulse_social" npx prisma db push --skip-generate 2>/dev/null || echo "    ⚠️  Social service schema push failed"
+	@echo "  → Applying post-service schema..."
+	@psql -U pulse_user -d pulse_posts -f post-service/init.sql 2>/dev/null || echo "    ⚠️  Post service init.sql failed (may already be applied)"
 	@echo "Creating MongoDB databases and collections..."
-	@mongosh < config/mongodb/init.js 2>/dev/null || echo "MongoDB initialization completed"
+	@mongosh < config/mongodb/init.js 2>/dev/null || echo "⚠️  MongoDB initialization completed or skipped"
 	@echo "✅ All databases built!"
 
 # =============================================================================

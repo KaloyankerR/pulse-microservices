@@ -1,6 +1,7 @@
 import prisma from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
+import axios from 'axios';
 import {
   UserProfile, CreateProfileRequest, UpdateProfileRequest, SearchUsersResponse, FollowResponse,
 } from '../types';
@@ -760,6 +761,221 @@ class UserService {
       return { isFollowing: !!followRelation };
     } catch (error: any) {
       logger.error('Get follow status error:', error);
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
+  async banUser(userId: string, authHeader?: string): Promise<{ message: string }> {
+    try {
+      const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:8080';
+      
+      logger.info('Banning user via auth-service', { userId, authServiceUrl });
+
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (authHeader) {
+        headers['Authorization'] = authHeader;
+      }
+
+      const response = await axios.post(
+        `${authServiceUrl}/api/v1/auth/users/${userId}/ban`,
+        {},
+        {
+          headers,
+          timeout: 5000,
+        },
+      );
+
+      if (response.data && response.data.success) {
+        logger.info('User banned successfully', { userId });
+        return { message: 'User banned successfully' };
+      }
+
+      throw new AppError('Failed to ban user', 500, 'BAN_FAILED');
+    } catch (error: any) {
+      logger.error('Ban user error:', {
+        userId,
+        error: error.message,
+        status: error.response?.status,
+        responseData: error.response?.data,
+      });
+
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      if (error.response?.status === 404) {
+        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+      }
+
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.error?.message || 'Invalid request';
+        throw new AppError(errorMessage, 400, 'INVALID_REQUEST');
+      }
+
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+        throw new AppError('Auth service is unavailable', 503, 'SERVICE_UNAVAILABLE');
+      }
+
+      throw new AppError(
+        `Failed to ban user: ${error.message || 'Unknown error'}`,
+        500,
+        'BAN_FAILED',
+      );
+    }
+  }
+
+  async unbanUser(userId: string, authHeader?: string): Promise<{ message: string }> {
+    try {
+      const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:8080';
+      
+      logger.info('Unbanning user via auth-service', { userId, authServiceUrl });
+
+      const headers: any = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (authHeader) {
+        headers['Authorization'] = authHeader;
+      }
+
+      const response = await axios.post(
+        `${authServiceUrl}/api/v1/auth/users/${userId}/unban`,
+        {},
+        {
+          headers,
+          timeout: 5000,
+        },
+      );
+
+      if (response.data && response.data.success) {
+        logger.info('User unbanned successfully', { userId });
+        return { message: 'User unbanned successfully' };
+      }
+
+      throw new AppError('Failed to unban user', 500, 'UNBAN_FAILED');
+    } catch (error: any) {
+      logger.error('Unban user error:', {
+        userId,
+        error: error.message,
+        status: error.response?.status,
+        responseData: error.response?.data,
+      });
+
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      if (error.response?.status === 404) {
+        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+      }
+
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.error?.message || 'Invalid request';
+        throw new AppError(errorMessage, 400, 'INVALID_REQUEST');
+      }
+
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+        throw new AppError('Auth service is unavailable', 503, 'SERVICE_UNAVAILABLE');
+      }
+
+      throw new AppError(
+        `Failed to unban user: ${error.message || 'Unknown error'}`,
+        500,
+        'UNBAN_FAILED',
+      );
+    }
+  }
+
+  async getAllUsers(page: number = 1, limit: number = 20, authHeader?: string): Promise<SearchUsersResponse> {
+    try {
+      const skip = (page - 1) * limit;
+      const validLimit = Math.min(100, Math.max(1, Math.floor(limit) || 20));
+      const validPage = Math.max(1, Math.floor(page) || 1);
+
+      const users = await prisma.userProfile.findMany({
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          bio: true,
+          avatarUrl: true,
+          verified: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: validLimit,
+      });
+
+      const totalCount = await prisma.userProfile.count();
+
+      // Get follower counts and auth data (role, banned) for each user
+      const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:8080';
+
+      const usersWithStats = await Promise.all(
+        users.map(async (user) => {
+          const [followersCount, followingCount] = await Promise.all([
+            prisma.userFollow.count({ where: { followingId: user.id } }),
+            prisma.userFollow.count({ where: { followerId: user.id } }),
+          ]);
+
+          // Fetch role and banned status from auth-service via internal API
+          let role = 'USER';
+          let banned = false;
+          try {
+            // Call auth-service internal endpoint to get user auth data
+            const headers: any = {};
+            if (authHeader) {
+              headers['Authorization'] = authHeader;
+            }
+            const authResponse = await axios.get(
+              `${authServiceUrl}/api/v1/auth/users/${user.id}/auth-data`,
+              {
+                headers,
+                timeout: 2000,
+              },
+            );
+            if (authResponse.data?.data) {
+              role = authResponse.data.data.role || 'USER';
+              banned = authResponse.data.data.banned || false;
+            }
+          } catch (authError: any) {
+            // If endpoint doesn't exist or fails, default to USER and not banned
+            logger.debug('Could not fetch auth data for user', { userId: user.id, error: authError.message });
+          }
+
+          return {
+            ...user,
+            followersCount,
+            followingCount,
+            role,
+            banned,
+          };
+        }),
+      );
+
+      const totalPages = Math.ceil(totalCount / validLimit);
+
+      return {
+        users: usersWithStats,
+        pagination: {
+          page: validPage,
+          limit: validLimit,
+          totalCount,
+          totalPages,
+          hasNext: validPage < totalPages,
+          hasPrev: validPage > 1,
+        },
+      };
+    } catch (error: any) {
+      logger.error('Get all users error:', error);
       if (error instanceof AppError) {
         throw error;
       }

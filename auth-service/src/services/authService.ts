@@ -49,11 +49,15 @@ class AuthService {
         data: {
           email,
           passwordHash: hashedPassword,
+          role: 'USER',
+          banned: false,
         },
         select: {
           id: true,
           email: true,
           passwordHash: true,
+          role: true,
+          banned: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -155,6 +159,11 @@ class AuthService {
         throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
       }
 
+      // Check if user is banned
+      if (user.banned) {
+        throw new AppError('Account has been banned', 403, 'ACCOUNT_BANNED');
+      }
+
       // Verify password
       const isPasswordValid = await BcryptUtil.comparePassword(password, user.passwordHash);
       if (!isPasswordValid) {
@@ -235,12 +244,12 @@ class AuthService {
         }
       }
 
-      // Generate tokens (include username from profile if available)
+      // Generate tokens (include username from profile if available, role from database)
       const tokens = JwtUtil.generateTokens({
         id: user.id,
         email: user.email,
         username: userProfile?.username,
-        role: 'USER',
+        role: user.role,
       });
 
       // Build user response with profile data if available, otherwise use defaults
@@ -287,6 +296,11 @@ class AuthService {
         throw new AppError('Invalid refresh token', 401, 'INVALID_TOKEN');
       }
 
+      // Check if user is banned
+      if (user.banned) {
+        throw new AppError('Account has been banned', 403, 'ACCOUNT_BANNED');
+      }
+
       // Fetch username from user-service for token
       let username: string | undefined;
       try {
@@ -301,12 +315,12 @@ class AuthService {
         logger.warn('Failed to fetch username for token refresh', { userId: user.id });
       }
 
-      // Generate new tokens
+      // Generate new tokens (use role from database)
       const tokens = JwtUtil.generateTokens({
         id: user.id,
         email: user.email,
         username,
-        role: 'USER',
+        role: user.role,
       });
 
       logger.info('Token refreshed successfully', { userId: user.id });
@@ -325,6 +339,8 @@ class AuthService {
         select: {
           id: true,
           email: true,
+          role: true,
+          banned: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -350,6 +366,8 @@ class AuthService {
           return {
             ...profile,
             email: user.email,
+            role: user.role,
+            banned: user.banned,
           };
         } else {
           logger.warn('Unexpected profile response structure in getCurrentUser', {
@@ -360,6 +378,8 @@ class AuthService {
           return {
             id: user.id,
             email: user.email,
+            role: user.role,
+            banned: user.banned,
             createdAt: user.createdAt,
             updatedAt: user.updatedAt,
           };
@@ -375,6 +395,8 @@ class AuthService {
         return {
           id: user.id,
           email: user.email,
+          role: user.role,
+          banned: user.banned,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         };
@@ -432,6 +454,124 @@ class AuthService {
       return { message: 'Password changed successfully' };
     } catch (error: any) {
       logger.error('Change password error:', error);
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
+  async banUser(userId: string): Promise<{ message: string }> {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+      }
+
+      if (user.banned) {
+        throw new AppError('User is already banned', 400, 'ALREADY_BANNED');
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { banned: true },
+      });
+
+      logger.info('User banned successfully', { userId });
+      return { message: 'User banned successfully' };
+    } catch (error: any) {
+      logger.error('Ban user error:', error);
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
+  async unbanUser(userId: string): Promise<{ message: string }> {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+      }
+
+      if (!user.banned) {
+        throw new AppError('User is not banned', 400, 'NOT_BANNED');
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { banned: false },
+      });
+
+      logger.info('User unbanned successfully', { userId });
+      return { message: 'User unbanned successfully' };
+    } catch (error: any) {
+      logger.error('Unban user error:', error);
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
+  async updateUserRole(userId: string, role: string): Promise<{ message: string }> {
+    try {
+      const validRoles = ['USER', 'MODERATOR'];
+      if (!validRoles.includes(role)) {
+        throw new AppError(`Invalid role. Must be one of: ${validRoles.join(', ')}`, 400, 'INVALID_ROLE');
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { role: role as any },
+      });
+
+      logger.info('User role updated successfully', { userId, role });
+      return { message: 'User role updated successfully' };
+    } catch (error: any) {
+      logger.error('Update user role error:', error);
+      if (error instanceof AppError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
+  async getUserAuthData(userId: string): Promise<{ role: string; banned: boolean }> {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          role: true,
+          banned: true,
+        },
+      });
+
+      if (!user) {
+        throw new AppError('User not found', 404, 'USER_NOT_FOUND');
+      }
+
+      return {
+        role: user.role,
+        banned: user.banned,
+      };
+    } catch (error: any) {
+      logger.error('Get user auth data error:', error);
       if (error instanceof AppError) {
         throw error;
       }

@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { PostCard } from '@/components/post/PostCard';
 import { Spinner } from '@/components/ui/Spinner';
 import { Card, CardContent } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { User } from '@/types';
 import { usersApi } from '@/lib/api/users';
 import { useUserPosts } from '@/lib/hooks/use-posts';
@@ -17,11 +19,17 @@ import { formatNumber } from '@/lib/utils';
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const userId = params.id as string;
   const { user: currentUser } = useAuthStore();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({ displayName: '', bio: '', avatarUrl: '' });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBanConfirm, setShowBanConfirm] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const { posts, isLoading: postsLoading, error: postsError } = useUserPosts(userId);
   const { status: followStatus, follow: followUser, unfollow: unfollowUser, isLoading: followStatusLoading } = useFollowStatus(userId);
@@ -48,6 +56,10 @@ export default function ProfilePage() {
   };
 
   const isOwnProfile = currentUser?.id === userId;
+  const isModerator = currentUser?.role === 'MODERATOR';
+  const canEdit = isOwnProfile || isModerator;
+  const canDelete = isOwnProfile || isModerator;
+  const canBan = isModerator && !isOwnProfile;
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -89,6 +101,91 @@ export default function ProfilePage() {
       fetchUser();
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (user && isEditing) {
+      setEditData({
+        displayName: user.displayName || '',
+        bio: user.bio || '',
+        avatarUrl: user.avatarUrl || '',
+      });
+    }
+  }, [user, isEditing]);
+
+  const handleEdit = async () => {
+    if (!user) return;
+    
+    try {
+      setIsProcessing(true);
+      const updatedUser = await usersApi.updateProfileById(userId, editData);
+      setUser(updatedUser);
+      setIsEditing(false);
+      setError(null);
+    } catch (error: any) {
+      setError(error.response?.data?.error?.message || error.message || 'Failed to update profile');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    
+    try {
+      setIsProcessing(true);
+      await usersApi.deleteUser(userId);
+      if (isOwnProfile) {
+        // If deleting own profile, logout and redirect
+        const { logout } = useAuthStore.getState();
+        await logout();
+        router.push('/');
+      } else {
+        // If moderator deleting another user, redirect to home
+        router.push('/');
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.error?.message || error.message || 'Failed to delete user');
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBan = async () => {
+    if (!user) return;
+    
+    try {
+      setIsProcessing(true);
+      await usersApi.banUser(userId);
+      // Refetch user to get updated banned status
+      const updatedUser = await usersApi.getUserById(userId);
+      setUser(updatedUser);
+      setShowBanConfirm(false);
+      setError(null);
+    } catch (error: any) {
+      setError(error.response?.data?.error?.message || error.message || 'Failed to ban user');
+      setShowBanConfirm(false);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!user) return;
+    
+    try {
+      setIsProcessing(true);
+      await usersApi.unbanUser(userId);
+      // Refetch user to get updated banned status
+      const updatedUser = await usersApi.getUserById(userId);
+      setUser(updatedUser);
+      setError(null);
+    } catch (error: any) {
+      setError(error.response?.data?.error?.message || error.message || 'Failed to unban user');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -135,24 +232,147 @@ export default function ProfilePage() {
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                      {user.displayName || user.username}
-                    </h1>
-                    <p className="text-gray-500">@{user.username}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h1 className="text-2xl font-bold text-gray-900">
+                        {user.displayName || user.username}
+                      </h1>
+                      {user.role === 'MODERATOR' && (
+                        <span className="px-3 py-1 text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full shadow-sm flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          MODERATOR
+                        </span>
+                      )}
+                      {user.banned && (
+                        <span className="px-3 py-1 text-xs font-bold bg-red-100 text-red-800 rounded-full">
+                          BANNED
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-gray-500">@{user.username}</p>
+                      {user.role === 'MODERATOR' && (
+                        <span className="text-xs text-blue-600 font-medium">• Verified Moderator</span>
+                      )}
+                    </div>
                   </div>
-                  {!isOwnProfile && (
-                    <Button
-                      onClick={followStatus?.is_following ? unfollow : follow}
-                      variant={followStatus?.is_following ? 'secondary' : 'primary'}
-                      disabled={followStatusLoading}
-                    >
-                      {followStatusLoading ? 'Loading...' : (followStatus?.is_following ? 'Following' : 'Follow')}
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {!isOwnProfile && (
+                      <Button
+                        onClick={followStatus?.is_following ? unfollow : follow}
+                        variant={followStatus?.is_following ? 'secondary' : 'primary'}
+                        disabled={followStatusLoading}
+                      >
+                        {followStatusLoading ? 'Loading...' : (followStatus?.is_following ? 'Following' : 'Follow')}
+                      </Button>
+                    )}
+                    {canEdit && !isEditing && (
+                      <Button
+                        onClick={() => setIsEditing(true)}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        Edit
+                      </Button>
+                    )}
+                    {canDelete && !isEditing && (
+                      <Button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        variant="secondary"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        Delete
+                      </Button>
+                    )}
+                    {canBan && !user.banned && (
+                      <Button
+                        onClick={() => setShowBanConfirm(true)}
+                        variant="secondary"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        Ban
+                      </Button>
+                    )}
+                    {canBan && user.banned && (
+                      <Button
+                        onClick={handleUnban}
+                        variant="secondary"
+                        size="sm"
+                        disabled={isProcessing}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        {isProcessing ? 'Processing...' : 'Unban'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
-                {user.bio && (
-                  <p className="mt-3 text-gray-700">{user.bio}</p>
+                {isEditing ? (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Display Name
+                      </label>
+                      <Input
+                        value={editData.displayName}
+                        onChange={(e) => setEditData({ ...editData, displayName: e.target.value })}
+                        placeholder="Display Name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Bio
+                      </label>
+                      <Textarea
+                        value={editData.bio}
+                        onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
+                        placeholder="Bio"
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Avatar URL
+                      </label>
+                      <Input
+                        value={editData.avatarUrl}
+                        onChange={(e) => setEditData({ ...editData, avatarUrl: e.target.value })}
+                        placeholder="Avatar URL"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleEdit}
+                        disabled={isProcessing}
+                        variant="primary"
+                      >
+                        {isProcessing ? 'Saving...' : 'Save'}
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setIsEditing(false);
+                          setError(null);
+                        }}
+                        variant="secondary"
+                        disabled={isProcessing}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  user.bio && (
+                    <p className="mt-3 text-gray-700">{user.bio}</p>
+                  )
+                )}
+                
+                {error && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                    {error}
+                  </div>
                 )}
 
                 <div className="flex items-center space-x-6 mt-4">
@@ -205,6 +425,68 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="max-w-md w-full mx-4">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete User</h3>
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to delete this user? This action cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  variant="secondary"
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  variant="primary"
+                  disabled={isProcessing}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {isProcessing ? 'Deleting...' : 'Delete'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Ban Confirmation Modal */}
+      {showBanConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="max-w-md w-full mx-4">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Ban User</h3>
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to ban this user? They will not be able to login until unbanned.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  onClick={() => setShowBanConfirm(false)}
+                  variant="secondary"
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleBan}
+                  variant="primary"
+                  disabled={isProcessing}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {isProcessing ? 'Banning...' : 'Ban User'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
