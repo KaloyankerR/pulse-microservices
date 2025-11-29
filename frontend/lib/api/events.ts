@@ -12,9 +12,10 @@ interface EventsResponse {
 }
 
 export const eventsApi = {
-  async getEvents(page = 0, size = 20): Promise<Event[]> {
+  async getEvents(page = 0, size = 20, signal?: AbortSignal): Promise<Event[]> {
     const response = await apiClient.get<EventsResponse>(API_ENDPOINTS.events.list, {
       params: { page, size },
+      signal,
     });
     
     if (!response.events) {
@@ -41,8 +42,10 @@ export const eventsApi = {
     }));
   },
 
-  async getEventById(id: string): Promise<Event> {
-    const response = await apiClient.get<any>(API_ENDPOINTS.events.byId(id));
+  async getEventById(id: string, signal?: AbortSignal): Promise<Event> {
+    const response = await apiClient.get<any>(API_ENDPOINTS.events.byId(id), {
+      signal,
+    });
     
     // Transform snake_case to camelCase for frontend compatibility
     return {

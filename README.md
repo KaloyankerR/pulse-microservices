@@ -336,3 +336,17 @@ docker-compose logs -f frontend
 docker-compose restart frontend
 ```
 
+---
+
+Use the root Makefile targets:
+
+make k8s-start — spins up Minikube (4 GB RAM, 2 CPU) and enables the ingress addon.
+make k8s-build — builds every service image inside the Minikube Docker daemon.
+make k8s-deploy — applies namespaces, secrets/configmaps, databases, services, gateway, frontend, monitoring, ingress, and triggers the Postgres init job.
+make k8s-status — verify all pods in the pulse namespace are running/ready.
+When the frontend pod is ready, make k8s-port-forward — exposes the frontend at http://localhost:3000 (and Kong at http://localhost:8000/8001).
+
+
+make k8s-port-forward (if running) ctrl+C or pkill -f "kubectl port-forward" to stop tunnels.
+make k8s-delete removes the pulse namespace and all deployed resources.
+make k8s-stop shuts down the Minikube cluster itself.

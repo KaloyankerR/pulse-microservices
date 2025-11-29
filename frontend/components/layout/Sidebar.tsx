@@ -173,25 +173,6 @@ export function Sidebar() {
             </CardContent>
           </Card>
         )}
-
-        {/* Footer */}
-        <div className="text-xs text-gray-500 px-4 space-x-2">
-          <a href="#" className="hover:underline">
-            About
-          </a>
-          <span>·</span>
-          <a href="#" className="hover:underline">
-            Help
-          </a>
-          <span>·</span>
-          <a href="#" className="hover:underline">
-            Terms
-          </a>
-          <span>·</span>
-          <a href="#" className="hover:underline">
-            Privacy
-          </a>
-        </div>
       </div>
     </aside>
   );

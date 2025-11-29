@@ -500,6 +500,57 @@ class NotificationController {
     }
   }
 
+  // DELETE /api/notifications/all
+  async deleteAllNotifications(req: AuthenticatedRequest, res: Response): Promise<void> {
+    const startTime = Date.now();
+
+    try {
+      const userId = req.user!.id;
+
+      logger.info('Deleting all notifications', { userId });
+
+      const result = await NotificationService.deleteAllNotifications(userId);
+
+      metrics.incrementHttpRequest('DELETE', '/api/notifications/all', 200);
+      metrics.recordHttpRequestDuration('DELETE', '/api/notifications/all', Date.now() - startTime);
+
+      const response: ApiResponse = {
+        success: true,
+        data: {
+          deleted_count: result.deletedCount,
+          message: `${result.deletedCount} notification(s) deleted successfully`,
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      };
+
+      res.status(200).json(response);
+    } catch (error) {
+      logger.logError(error, {
+        userId: req.user?.id,
+        action: 'deleteAllNotifications',
+      });
+      metrics.incrementHttpRequest('DELETE', '/api/notifications/all', 500);
+      metrics.recordHttpRequestDuration('DELETE', '/api/notifications/all', Date.now() - startTime);
+
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          message: 'Failed to delete all notifications',
+          code: 'DELETE_ALL_NOTIFICATIONS_ERROR',
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+          version: 'v1',
+        },
+      };
+
+      res.status(500).json(response);
+    }
+  }
+
   // DELETE /api/notifications/cleanup
   async cleanupOldNotifications(req: AuthenticatedRequest, res: Response): Promise<void> {
     const startTime = Date.now();

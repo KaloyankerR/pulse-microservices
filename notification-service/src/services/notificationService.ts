@@ -336,6 +336,36 @@ class NotificationService {
     }
   }
 
+  // Delete all notifications for a user
+  async deleteAllNotifications(userId: string): Promise<{ deletedCount: number }> {
+    const startTime = Date.now();
+
+    try {
+      const result = (await Notification.deleteMany({
+        recipient_id: userId,
+      })) as { deletedCount: number };
+
+      logger.logNotification('deleted_all', 'all', userId, {
+        deleted_count: result.deletedCount,
+      });
+
+      // Invalidate cache for user notifications
+      await this.invalidateUserNotificationCache(userId);
+
+      // @ts-ignore - metrics function signature
+      metrics.incrementDatabaseOperation('deleteMany', 'notifications', 'success');
+      metrics.recordDatabaseOperationDuration('deleteMany', Date.now() - startTime);
+
+      return result;
+    } catch (error) {
+      logger.logError(error, { userId, action: 'deleteAllNotifications' });
+      // @ts-ignore - metrics function signature
+      metrics.incrementDatabaseOperation('deleteMany', 'notifications', 'error');
+      metrics.recordDatabaseOperationDuration('deleteMany', Date.now() - startTime);
+      throw error;
+    }
+  }
+
   // Cleanup old notifications
   async cleanupOldNotifications(userId: string, daysOld = 30): Promise<{ deletedCount: number }> {
     const startTime = Date.now();

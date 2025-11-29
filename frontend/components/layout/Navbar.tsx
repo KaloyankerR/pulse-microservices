@@ -9,13 +9,16 @@ import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { useUnreadCount } from '@/lib/hooks/use-notifications';
 import { cn } from '@/lib/utils';
+import { NotificationsPopup } from '@/components/notifications/NotificationsPopup';
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuthStore();
   const { count: unreadCount } = useUnreadCount(isAuthenticated);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -23,23 +26,25 @@ export function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
+      }
     }
 
-    if (isDropdownOpen) {
+    if (isDropdownOpen || isNotificationsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isDropdownOpen]);
+  }, [isDropdownOpen, isNotificationsOpen]);
 
   const navItems = [
     { href: '/feed', icon: Home, label: 'Feed' },
     { href: '/events', icon: Calendar, label: 'Events' },
     { href: '/search', icon: Search, label: 'Search' },
     { href: '/messages', icon: MessageCircle, label: 'Messages' },
-    { href: '/notifications', icon: Bell, label: 'Notifications', badge: unreadCount },
     ...(user?.role === 'MODERATOR' ? [{ href: '/moderator', icon: Shield, label: 'Moderator' }] : []),
   ];
 
@@ -76,14 +81,34 @@ export function Navbar() {
                   title={item.label}
                 >
                   <Icon className="w-6 h-6" />
-                  {item.badge && item.badge > 0 ? (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                      {item.badge > 99 ? '99+' : item.badge}
-                    </span>
-                  ) : null}
                 </Link>
               );
             })}
+
+            {/* Notifications Button with Popup */}
+            <div className="relative" ref={notificationsRef}>
+              <button
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className={cn(
+                  'relative p-2 rounded-lg transition-colors',
+                  isNotificationsOpen
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                )}
+                title="Notifications"
+              >
+                <Bell className="w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              <NotificationsPopup
+                isOpen={isNotificationsOpen}
+                onClose={() => setIsNotificationsOpen(false)}
+              />
+            </div>
 
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>

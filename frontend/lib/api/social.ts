@@ -57,11 +57,12 @@ export const socialApi = {
     return response.data!;
   },
 
-  async getRecommendations(limit = 10): Promise<UserWithSocial[]> {
+  async getRecommendations(limit = 10, signal?: AbortSignal): Promise<UserWithSocial[]> {
     const response = await apiClient.get<ApiResponse<{ recommendations: UserWithSocial[] }>>(
       API_ENDPOINTS.social.recommendations,
       {
         params: { limit },
+        signal,
       }
     );
     return response.data?.recommendations || [];

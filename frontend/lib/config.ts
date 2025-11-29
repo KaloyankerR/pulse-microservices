@@ -60,6 +60,8 @@ export const API_ENDPOINTS = {
     unreadCount: '/api/notifications/unread-count',
     markRead: (id: string) => `/api/notifications/${id}/read`,
     markAllRead: '/api/notifications/read-all',
+    delete: (id: string) => `/api/notifications/${id}`,
+    deleteAll: '/api/notifications/all',
     preferences: '/api/notifications/preferences',
   },
   // Event endpoints

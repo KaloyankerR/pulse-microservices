@@ -118,11 +118,21 @@ export function useRecommendations(limit = 10, enabled = true) {
       return;
     }
 
+    // Create AbortController for this request
+    const abortController = new AbortController();
+    let isMounted = true;
+
     const fetchRecommendations = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await socialApi.getRecommendations(limit);
+        const data = await socialApi.getRecommendations(limit, abortController.signal);
+        
+        // Check if component is still mounted and request wasn't aborted
+        if (!isMounted || abortController.signal.aborted) {
+          return;
+        }
+        
         // Ensure we always set an array
         const recommendations = Array.isArray(data) ? data : [];
         setRecommendations(recommendations);
@@ -133,15 +143,33 @@ export function useRecommendations(limit = 10, enabled = true) {
           timestamp: Date.now()
         });
       } catch (err: any) {
+        // Don't set error if request was aborted
+        if (abortController.signal.aborted || !isMounted) {
+          return;
+        }
+        
+        // Check if it's an axios cancel error
+        if (err.name === 'CanceledError' || err.message === 'canceled') {
+          return;
+        }
+        
         setError(err.message || 'Failed to fetch recommendations');
         // Set empty array on error to prevent .map() issues
         setRecommendations([]);
       } finally {
-        setIsLoading(false);
+        if (isMounted && !abortController.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchRecommendations();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, [limit, enabled]);
 
   return { recommendations, isLoading, error };

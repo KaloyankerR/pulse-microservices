@@ -36,6 +36,14 @@ export const notificationsApi = {
     await apiClient.put(API_ENDPOINTS.notifications.markAllRead);
   },
 
+  async deleteNotification(notificationId: string): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.notifications.delete(notificationId));
+  },
+
+  async deleteAllNotifications(): Promise<void> {
+    await apiClient.delete(API_ENDPOINTS.notifications.deleteAll);
+  },
+
   async getPreferences(): Promise<NotificationPreferences> {
     const response = await apiClient.get<ApiResponse<NotificationPreferences>>(
       API_ENDPOINTS.notifications.preferences

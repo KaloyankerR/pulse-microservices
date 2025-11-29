@@ -338,6 +338,41 @@ router.delete('/cleanup', apiLimiter, validateCleanup, (req, res, next) => notif
 
 /**
  * @swagger
+ * /api/notifications/all:
+ *   delete:
+ *     summary: Delete all notifications for the authenticated user
+ *     tags: [Notifications]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All notifications deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     deleted_count:
+ *                       type: integer
+ *                       example: 10
+ *                     message:
+ *                       type: string
+ *                       example: "10 notification(s) deleted successfully"
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/all', apiLimiter, (req, res, next) => notificationController.deleteAllNotifications(req as AuthenticatedRequest, res));
+
+/**
+ * @swagger
  * /api/notifications/{id}/read:
  *   put:
  *     summary: Mark notification as read

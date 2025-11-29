@@ -63,7 +63,7 @@ export function useEvents(page = 0, size = 20) {
   const [error, setError] = useState<string | null>(null);
   const { user: currentUser } = useAuthStore();
 
-  const fetchEvents = useCallback(async () => {
+  useEffect(() => {
     // Check if token exists before making API call
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('accessToken');
@@ -75,30 +75,63 @@ export function useEvents(page = 0, size = 20) {
       }
     }
 
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await eventsApi.getEvents(page, size);
-      
-      // Ensure we always set an array
-      const eventsArray = Array.isArray(data) ? data : [];
-      
-      // Enrich events with creator information
-      const enrichedEvents = await enrichEventsWithCreators(eventsArray, currentUser);
-      setEvents(enrichedEvents);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to fetch events';
-      setError(errorMessage);
-      // Set empty array on error to prevent .map() issues
-      setEvents([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, size, currentUser]);
+    // Create AbortController for this request
+    const abortController = new AbortController();
+    let isMounted = true;
 
-  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const data = await eventsApi.getEvents(page, size, abortController.signal);
+        
+        // Check if component is still mounted and request wasn't aborted
+        if (!isMounted || abortController.signal.aborted) {
+          return;
+        }
+        
+        // Ensure we always set an array
+        const eventsArray = Array.isArray(data) ? data : [];
+        
+        // Enrich events with creator information
+        const enrichedEvents = await enrichEventsWithCreators(eventsArray, currentUser);
+        
+        // Check again after async enrichment
+        if (!isMounted || abortController.signal.aborted) {
+          return;
+        }
+        
+        setEvents(enrichedEvents);
+      } catch (err: any) {
+        // Don't set error if request was aborted
+        if (abortController.signal.aborted || !isMounted) {
+          return;
+        }
+        
+        // Check if it's an axios cancel error
+        if (err.name === 'CanceledError' || err.message === 'canceled' || err.code === 'ERR_CANCELED') {
+          return;
+        }
+        
+        const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to fetch events';
+        setError(errorMessage);
+        // Set empty array on error to prevent .map() issues
+        setEvents([]);
+      } finally {
+        if (isMounted && !abortController.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     fetchEvents();
-  }, [fetchEvents]);
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [page, size, currentUser?.id]); // Only depend on currentUser.id to avoid unnecessary refetches
 
   const createEvent = async (data: CreateEventRequest) => {
     try {
@@ -182,11 +215,43 @@ export function useEvents(page = 0, size = 20) {
     }
   };
 
+  const refetch = useCallback(async () => {
+    // Check if token exists before making API call
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setIsLoading(false);
+        setError('Authentication required');
+        setEvents([]);
+        return;
+      }
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await eventsApi.getEvents(page, size);
+      
+      // Ensure we always set an array
+      const eventsArray = Array.isArray(data) ? data : [];
+      
+      // Enrich events with creator information
+      const enrichedEvents = await enrichEventsWithCreators(eventsArray, currentUser);
+      setEvents(enrichedEvents);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to fetch events';
+      setError(errorMessage);
+      setEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, size, currentUser]);
+
   return {
     events,
     isLoading,
     error,
-    refetch: fetchEvents,
+    refetch,
     createEvent,
     updateEvent,
     deleteEvent,
@@ -201,42 +266,75 @@ export function useEvent(id: string) {
   const { user: currentUser } = useAuthStore();
 
   useEffect(() => {
-    const fetchEvent = async () => {
-      if (!id) {
+    if (!id) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if token exists before making API call
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
         setIsLoading(false);
+        setError('Authentication required');
+        setEvent(null);
         return;
       }
+    }
 
-      // Check if token exists before making API call
-      if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-          setIsLoading(false);
-          setError('Authentication required');
-          setEvent(null);
-          return;
-        }
-      }
+    // Create AbortController for this request
+    const abortController = new AbortController();
+    let isMounted = true;
 
+    const fetchEvent = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await eventsApi.getEventById(id);
+        const data = await eventsApi.getEventById(id, abortController.signal);
+        
+        // Check if component is still mounted and request wasn't aborted
+        if (!isMounted || abortController.signal.aborted) {
+          return;
+        }
         
         // Enrich event with creator information
         const enrichedEvents = await enrichEventsWithCreators([data], currentUser);
+        
+        // Check again after async enrichment
+        if (!isMounted || abortController.signal.aborted) {
+          return;
+        }
+        
         setEvent(enrichedEvents[0]);
       } catch (err: any) {
+        // Don't set error if request was aborted
+        if (abortController.signal.aborted || !isMounted) {
+          return;
+        }
+        
+        // Check if it's an axios cancel error
+        if (err.name === 'CanceledError' || err.message === 'canceled' || err.code === 'ERR_CANCELED') {
+          return;
+        }
+        
         const errorMessage = err.response?.data?.error?.message || err.message || 'Failed to fetch event';
         setError(errorMessage);
         setEvent(null);
       } finally {
-        setIsLoading(false);
+        if (isMounted && !abortController.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchEvent();
-  }, [id, currentUser]);
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [id, currentUser?.id]); // Only depend on currentUser.id to avoid unnecessary refetches
 
   const updateEvent = async (data: UpdateEventRequest) => {
     if (!event) return;
