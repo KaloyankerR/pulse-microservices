@@ -128,4 +128,3 @@ prisma/migrations/
 # Build artifacts
 dist/
 build/
-
