@@ -34,9 +34,6 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/main .
 
-# Copy environment example file
-COPY --from=builder /app/env.example .
-
 # Change ownership to appuser
 RUN chown -R appuser:appuser /root/
 

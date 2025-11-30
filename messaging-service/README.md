@@ -64,7 +64,6 @@ messaging-service/
 │       └── logger.go
 ├── tests/                      # Tests
 ├── Dockerfile
-├── env.example
 ├── go.mod
 └── README.md
 ```
@@ -145,11 +144,7 @@ GET    /ws?token=<jwt_token>                   # WebSocket connection
 
 ## 🔧 Configuration
 
-Copy `env.example` to `.env` and configure:
-
-```bash
-cp env.example .env
-```
+Create a `.env` file with the following environment variables:
 
 ### Environment Variables
 
@@ -185,10 +180,7 @@ go mod download
 ```
 
 3. **Configure environment:**
-```bash
-cp env.example .env
-# Edit .env with your configuration
-```
+Create a `.env` file with your configuration (see Environment Variables section above).
 
 4. **Run the service:**
 ```bash

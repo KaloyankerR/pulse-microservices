@@ -37,12 +37,7 @@ Modern Next.js 14 frontend for the Pulse microservices platform.
 npm install
 ```
 
-2. Copy environment variables:
-```bash
-cp env.example .env.local
-```
-
-3. Update `.env.local` with your configuration:
+2. Create `.env.local` file with your configuration:
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_WS_URL=ws://localhost:8084

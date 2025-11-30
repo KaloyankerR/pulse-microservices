@@ -43,10 +43,7 @@ A comprehensive notification microservice for the Pulse social media platform th
    ```
 
 2. **Environment configuration**
-   ```bash
-   cp env.example .env
-   # Edit .env with your configuration
-   ```
+   Create a `.env` file with your configuration (see Configuration section below).
 
 3. **Start the service**
    ```bash
