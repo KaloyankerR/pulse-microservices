@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Avatar } from '@/components/ui/Avatar';
@@ -20,26 +20,50 @@ export default function SearchPage() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserWithSocial[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    if (!query.trim() || query.length < 2) {
+      setResults([]);
+      setHasSearched(false);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    debounceTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await usersApi.searchUsers(query, 1, 20);
+        setResults(response.data?.users || []);
+        setHasSearched(true);
+        setError(null);
+      } catch (err: any) {
+        console.error('Search failed:', err);
+        setResults([]);
+        setHasSearched(true);
+        setError(err.message || 'Failed to search users');
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [query]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!query.trim()) return;
-
-    try {
-      setIsLoading(true);
-      setHasSearched(true);
-      
-      const response = await usersApi.searchUsers(query);
-      const users = response.data.users;
-      setResults(users);
-      
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    // Search is handled automatically by debounced effect
   };
 
   // Show authentication message if not authenticated
@@ -85,7 +109,7 @@ export default function SearchPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ml-16 sm:ml-20">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Search Users</h1>
 
         {/* Search Form */}
@@ -110,6 +134,15 @@ export default function SearchPage() {
           <div className="flex justify-center py-12">
             <Spinner size="lg" />
           </div>
+        ) : error ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-red-500 text-lg">Error searching users</p>
+              <p className="text-gray-400 text-sm mt-2">
+                {error || 'Unknown error'}
+              </p>
+            </CardContent>
+          </Card>
         ) : hasSearched ? (
           (results && results.length === 0) ? (
             <Card>

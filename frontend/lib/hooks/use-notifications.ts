@@ -3,7 +3,7 @@ import { notificationsApi } from '../api/notifications';
 import { Notification } from '@/types';
 import { useNotificationStore } from '../stores/notification-store';
 
-export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
+export function useNotifications(page = 1, limit = 20, unreadOnly = false, enabled = true) {
   const storeNotifications = useNotificationStore((state) => state.notifications);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -11,6 +11,14 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
   const [hasMore, setHasMore] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
+    // Only fetch if enabled
+    if (!enabled) {
+      setIsLoading(false);
+      setNotifications([]);
+      setHasMore(false);
+      return;
+    }
+
     // Check if token exists before making API call
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('accessToken');
@@ -31,14 +39,22 @@ export function useNotifications(page = 1, limit = 20, unreadOnly = false) {
       setNotifications(Array.isArray(response?.data?.notifications) ? response.data.notifications : []);
       setHasMore(response?.data?.pagination?.has_next || false);
     } catch (err: any) {
-      setError(err.message || 'Failed to fetch notifications');
-      // Set empty array on error to prevent .map() issues
-      setNotifications([]);
-      setHasMore(false);
+      // Silently handle 502/503/504 errors (service unavailable)
+      const status = err?.response?.status;
+      if (status === 502 || status === 503 || status === 504) {
+        // Service unavailable - don't show error, just use empty array
+        setError(null);
+        setNotifications([]);
+        setHasMore(false);
+      } else {
+        setError(err.message || 'Failed to fetch notifications');
+        setNotifications([]);
+        setHasMore(false);
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [page, limit, unreadOnly]);
+  }, [page, limit, unreadOnly, enabled]);
 
   useEffect(() => {
     fetchNotifications();
@@ -115,8 +131,15 @@ export function useUnreadCount(enabled = true) {
       const unreadCount = await notificationsApi.getUnreadCount();
       setCount(unreadCount);
       useNotificationStore.getState().setUnreadCount(unreadCount);
-    } catch (err) {
-      setCount(0);
+    } catch (err: any) {
+      // Silently handle 502/503/504 errors (service unavailable)
+      const status = err?.response?.status;
+      if (status === 502 || status === 503 || status === 504) {
+        // Service unavailable - keep existing count, don't update
+        setCount(0);
+      } else {
+        setCount(0);
+      }
     } finally {
       setIsLoading(false);
     }

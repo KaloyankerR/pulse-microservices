@@ -40,20 +40,20 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 px-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-[#F5EFE7] px-4">
+      <Card variant="pink" className="w-full max-w-md">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4">
-            <span className="text-white font-bold text-3xl">P</span>
+          <div className="mx-auto w-16 h-16 bg-[#1A1A1A] border-[3px] border-[#1A1A1A] shadow-[4px_4px_0px_#1A1A1A] flex items-center justify-center mb-4">
+            <span className="text-white font-black text-3xl">P</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Join Pulse</h1>
-          <p className="text-gray-600">Create your account</p>
+          <h1 className="text-3xl font-black text-[#1A1A1A]">Join Pulse</h1>
+          <p className="text-[#1A1A1A] font-bold opacity-80">Create your account</p>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <div className="bg-[#FF9B85] border-[3px] border-[#1A1A1A] text-[#1A1A1A] px-4 py-3 shadow-[4px_4px_0px_#1A1A1A] font-bold">
                 {error}
               </div>
             )}
@@ -105,6 +105,7 @@ export default function RegisterPage() {
 
             <Button
               type="submit"
+              variant="primary"
               className="w-full"
               isLoading={isLoading}
               disabled={isLoading}
@@ -114,11 +115,11 @@ export default function RegisterPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-600">
+            <p className="text-[#1A1A1A] font-bold">
               Already have an account?{' '}
               <Link
                 href="/auth/login"
-                className="text-blue-600 hover:text-blue-700 font-semibold"
+                className="text-[#1A1A1A] hover:underline font-black"
               >
                 Sign in
               </Link>

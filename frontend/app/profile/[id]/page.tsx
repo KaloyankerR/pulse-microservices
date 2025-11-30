@@ -14,6 +14,7 @@ import { User } from '@/types';
 import { usersApi } from '@/lib/api/users';
 import { useUserPosts } from '@/lib/hooks/use-posts';
 import { useFollowStatus, useSocialStats } from '@/lib/hooks/use-social';
+import { socialApi } from '@/lib/api/social';
 import { useAuthStore } from '@/lib/stores/auth-store';
 import { formatNumber } from '@/lib/utils';
 
@@ -22,76 +23,32 @@ export default function ProfilePage() {
   const router = useRouter();
   const userId = params.id as string;
   const { user: currentUser } = useAuthStore();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ displayName: '', bio: '', avatarUrl: '' });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBanConfirm, setShowBanConfirm] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isBanning, setIsBanning] = useState(false);
+  const [isUnbanning, setIsUnbanning] = useState(false);
 
-  const { posts, isLoading: postsLoading, error: postsError } = useUserPosts(userId);
-  const { status: followStatus, follow: followUser, unfollow: unfollowUser, isLoading: followStatusLoading } = useFollowStatus(userId);
-  const { stats: socialStats, isLoading: statsLoading, refetch: refetchStats } = useSocialStats(userId);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { posts = [], isLoading: postsLoading, error: postsError } = useUserPosts(userId);
+  const { status: followStatus, isLoading: followStatusLoading, follow: followUser, unfollow: unfollowUser } = useFollowStatus(userId);
+  const { stats: socialStats, isLoading: statsLoading } = useSocialStats(userId);
 
-  const follow = async () => {
-    try {
-      await followUser();
-      // Refetch social stats to get updated counts
-      refetchStats();
-    } catch (error: any) {
-      console.error('Failed to follow user:', error);
-    }
-  };
-
-  const unfollow = async () => {
-    try {
-      await unfollowUser();
-      // Refetch social stats to get updated counts
-      refetchStats();
-    } catch (error: any) {
-      console.error('Failed to unfollow user:', error);
-    }
-  };
-
-  const isOwnProfile = currentUser?.id === userId;
-  const isModerator = currentUser?.role === 'MODERATOR';
-  const canEdit = isOwnProfile || isModerator;
-  const canDelete = isOwnProfile || isModerator;
-  const canBan = isModerator && !isOwnProfile;
-
+  // Fetch user profile
   useEffect(() => {
     const fetchUser = async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await usersApi.getUserById(userId);
-        setUser(data);
-      } catch (error: any) {
-        // Log error for debugging
-        console.error('Failed to fetch user:', error);
-        
-        // Extract error message from response
-        const errorMessage = error.response?.data?.error?.message || 
-                           error.message || 
-                           'Failed to load user profile';
-        const errorCode = error.response?.data?.error?.code || 
-                         error.response?.status === 404 ? 'USER_NOT_FOUND' : 'UNKNOWN_ERROR';
-        
-        setError(errorMessage);
-        setUser(null);
-        
-        // Log additional details for debugging
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Error details:', {
-            message: errorMessage,
-            code: errorCode,
-            status: error.response?.status,
-            userId,
-            response: error.response?.data,
-          });
-        }
+        const userData = await usersApi.getUserById(userId);
+        setUser(userData);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch user profile');
       } finally {
         setIsLoading(false);
       }
@@ -101,6 +58,13 @@ export default function ProfilePage() {
       fetchUser();
     }
   }, [userId]);
+
+
+  const isOwnProfile = currentUser?.id === userId;
+  const isModerator = currentUser?.role === 'MODERATOR';
+  const canEdit = isOwnProfile || isModerator;
+  const canDelete = isOwnProfile || isModerator;
+  const canBan = isModerator && !isOwnProfile;
 
   useEffect(() => {
     if (user && isEditing) {
@@ -116,15 +80,14 @@ export default function ProfilePage() {
     if (!user) return;
     
     try {
-      setIsProcessing(true);
+      setIsUpdating(true);
       const updatedUser = await usersApi.updateProfileById(userId, editData);
       setUser(updatedUser);
       setIsEditing(false);
-      setError(null);
     } catch (error: any) {
-      setError(error.response?.data?.error?.message || error.message || 'Failed to update profile');
+      console.error('Failed to update profile:', error);
     } finally {
-      setIsProcessing(false);
+      setIsUpdating(false);
     }
   };
 
@@ -132,7 +95,7 @@ export default function ProfilePage() {
     if (!user) return;
     
     try {
-      setIsProcessing(true);
+      setIsDeleting(true);
       await usersApi.deleteUser(userId);
       if (isOwnProfile) {
         // If deleting own profile, logout and redirect
@@ -144,10 +107,10 @@ export default function ProfilePage() {
         router.push('/');
       }
     } catch (error: any) {
-      setError(error.response?.data?.error?.message || error.message || 'Failed to delete user');
+      console.error('Failed to delete user:', error);
       setShowDeleteConfirm(false);
     } finally {
-      setIsProcessing(false);
+      setIsDeleting(false);
     }
   };
 
@@ -155,18 +118,15 @@ export default function ProfilePage() {
     if (!user) return;
     
     try {
-      setIsProcessing(true);
+      setIsBanning(true);
       await usersApi.banUser(userId);
-      // Refetch user to get updated banned status
-      const updatedUser = await usersApi.getUserById(userId);
-      setUser(updatedUser);
+      setUser({ ...user, banned: true });
       setShowBanConfirm(false);
-      setError(null);
     } catch (error: any) {
-      setError(error.response?.data?.error?.message || error.message || 'Failed to ban user');
+      console.error('Failed to ban user:', error);
       setShowBanConfirm(false);
     } finally {
-      setIsProcessing(false);
+      setIsBanning(false);
     }
   };
 
@@ -174,35 +134,32 @@ export default function ProfilePage() {
     if (!user) return;
     
     try {
-      setIsProcessing(true);
+      setIsUnbanning(true);
       await usersApi.unbanUser(userId);
-      // Refetch user to get updated banned status
-      const updatedUser = await usersApi.getUserById(userId);
-      setUser(updatedUser);
-      setError(null);
+      setUser({ ...user, banned: false });
     } catch (error: any) {
-      setError(error.response?.data?.error?.message || error.message || 'Failed to unban user');
+      console.error('Failed to unban user:', error);
     } finally {
-      setIsProcessing(false);
+      setIsUnbanning(false);
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex justify-center py-12">
+        <div className="flex justify-center py-12 ml-16 sm:ml-20">
           <Spinner size="lg" />
         </div>
       </div>
     );
   }
 
-  if (!user) {
+  if (error && !user) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="text-center py-12">
+        <div className="text-center py-12 ml-16 sm:ml-20">
           <p className="text-gray-500 text-lg">
             {error || 'User not found'}
           </p>
@@ -218,7 +175,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ml-16 sm:ml-20">
         {/* Profile Header */}
         <Card className="mb-6">
           <CardContent className="p-6">
@@ -260,7 +217,7 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     {!isOwnProfile && (
                       <Button
-                        onClick={followStatus?.is_following ? unfollow : follow}
+                        onClick={followStatus?.is_following ? () => unfollowUser() : () => followUser()}
                         variant={followStatus?.is_following ? 'secondary' : 'primary'}
                         disabled={followStatusLoading}
                       >
@@ -301,10 +258,10 @@ export default function ProfilePage() {
                         onClick={handleUnban}
                         variant="secondary"
                         size="sm"
-                        disabled={isProcessing}
+                        disabled={isUnbanning}
                         className="text-green-600 hover:text-green-700"
                       >
-                        {isProcessing ? 'Processing...' : 'Unban'}
+                        {isUnbanning ? 'Processing...' : 'Unban'}
                       </Button>
                     )}
                   </div>
@@ -346,18 +303,17 @@ export default function ProfilePage() {
                     <div className="flex gap-2">
                       <Button
                         onClick={handleEdit}
-                        disabled={isProcessing}
+                        disabled={isUpdating}
                         variant="primary"
                       >
-                        {isProcessing ? 'Saving...' : 'Save'}
+                        {isUpdating ? 'Saving...' : 'Save'}
                       </Button>
                       <Button
                         onClick={() => {
                           setIsEditing(false);
-                          setError(null);
                         }}
                         variant="secondary"
-                        disabled={isProcessing}
+                        disabled={isUpdating}
                       >
                         Cancel
                       </Button>
@@ -369,11 +325,6 @@ export default function ProfilePage() {
                   )
                 )}
                 
-                {error && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-                    {error}
-                  </div>
-                )}
 
                 <div className="flex items-center space-x-6 mt-4">
                   <div>
@@ -439,17 +390,17 @@ export default function ProfilePage() {
                 <Button
                   onClick={() => setShowDeleteConfirm(false)}
                   variant="secondary"
-                  disabled={isProcessing}
+                  disabled={isDeleting}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleDelete}
                   variant="primary"
-                  disabled={isProcessing}
+                  disabled={isDeleting}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  {isProcessing ? 'Deleting...' : 'Delete'}
+                  {isDeleting ? 'Deleting...' : 'Delete'}
                 </Button>
               </div>
             </CardContent>
@@ -470,17 +421,17 @@ export default function ProfilePage() {
                 <Button
                   onClick={() => setShowBanConfirm(false)}
                   variant="secondary"
-                  disabled={isProcessing}
+                  disabled={isBanning}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleBan}
                   variant="primary"
-                  disabled={isProcessing}
+                  disabled={isBanning}
                   className="bg-red-600 hover:bg-red-700"
                 >
-                  {isProcessing ? 'Banning...' : 'Ban User'}
+                  {isBanning ? 'Banning...' : 'Ban User'}
                 </Button>
               </div>
             </CardContent>

@@ -1,26 +1,134 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Neo-Brutalist Color Palette */
+  --color-yellow: #F4C542;
+  --color-yellow-dark: #E5A920;
+  --color-black: #1A1A1A;
+  --color-white: #FFFFFF;
+  --color-cream: #F5EFE7;
+  --color-pink: #FFB6D9;
+  --color-blue: #87CEEB;
+  --color-coral: #FF9B85;
+  --color-mint: #B8D4A8;
+  
+  /* Brutalist Shadows */
+  --shadow-brutal-small: 4px 4px 0px #1A1A1A;
+  --shadow-brutal-medium: 6px 6px 0px #1A1A1A;
+  --shadow-brutal-large: 8px 8px 0px #1A1A1A;
+  --shadow-brutal-xl: 12px 12px 0px #1A1A1A;
+  
+  /* Borders */
+  --border-width-thin: 2px;
+  --border-width-medium: 3px;
+  --border-width-thick: 4px;
+  --border-width-heavy: 6px;
+  --border-color: #1A1A1A;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+  
+  /* Background */
+  --background: var(--color-cream);
+  --foreground: var(--color-black);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: monospace, 'Courier New', Courier;
+  --font-sans: system-ui, -apple-system, sans-serif;
+  
+  /* Brutalist Colors */
+  --color-yellow: var(--color-yellow);
+  --color-yellow-dark: var(--color-yellow-dark);
+  --color-black: var(--color-black);
+  --color-white: var(--color-white);
+  --color-cream: var(--color-cream);
+  --color-pink: var(--color-pink);
+  --color-blue: var(--color-blue);
+  --color-coral: var(--color-coral);
+  --color-mint: var(--color-mint);
 }
 
-@media (prefers-color-scheme: dark) {
+/* Remove dark mode - brutalist design uses light mode only */
+/* @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
-}
+} */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-cream);
+  color: var(--color-black);
+  font-family: monospace, 'Courier New', Courier, system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Brutalist Utility Classes */
+.brutal-shadow-small {
+  box-shadow: var(--shadow-brutal-small);
+}
+
+.brutal-shadow-medium {
+  box-shadow: var(--shadow-brutal-medium);
+}
+
+.brutal-shadow-large {
+  box-shadow: var(--shadow-brutal-large);
+}
+
+.brutal-shadow-xl {
+  box-shadow: var(--shadow-brutal-xl);
+}
+
+.brutal-border {
+  border: var(--border-width-medium) solid var(--border-color);
+}
+
+.brutal-border-thin {
+  border: var(--border-width-thin) solid var(--border-color);
+}
+
+.brutal-border-thick {
+  border: var(--border-width-thick) solid var(--border-color);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 900;
+  color: var(--color-black);
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: 3rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+/* Remove all border-radius globally */
+* {
+  border-radius: 0 !important;
+}
+
+/* Focus states for accessibility */
+*:focus-visible {
+  outline: 3px solid var(--color-black);
+  outline-offset: 2px;
 }

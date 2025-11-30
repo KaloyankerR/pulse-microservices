@@ -23,48 +23,50 @@ export default function MessagesPage() {
     useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSending, setIsSending] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [newChatRecipient, setNewChatRecipient] = useState('');
-  const [isCreatingChat, setIsCreatingChat] = useState(false);
-  const [userSuggestions, setUserSuggestions] = useState<User[]>([]);
-  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [sentMessageIds, setSentMessageIds] = useState<Set<string>>(new Set());
+  const [userSuggestions, setUserSuggestions] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [participantDetails, setParticipantDetails] = useState<Map<string, User>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
+  // Fetch conversations
   useEffect(() => {
     const fetchConversations = async () => {
+      if (!isAuthenticated) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         const data = await messagesApi.getConversations();
         const conversationsArray = Array.isArray(data) ? data : [];
         
-        // Remove duplicates based on conversation ID
+        // Remove duplicates
         const uniqueConversations = conversationsArray.filter((conv, index, self) => 
           index === self.findIndex(c => c.id === conv.id)
         );
         
         setConversations(uniqueConversations);
-        
+
         // Fetch participant details for direct conversations
         const participantIds = new Set<string>();
-        uniqueConversations.forEach(conv => {
+        uniqueConversations.forEach((conv) => {
           if (conv.type === 'DIRECT') {
-            const otherParticipantId = getOtherParticipantId(conv);
+            const otherParticipantId = conv.participants?.find((p) => p !== user?.id);
             if (otherParticipantId) {
               participantIds.add(otherParticipantId);
             }
           }
         });
-        
+
         // Fetch user details for all participants
         const participantDetailsMap = new Map<string, User>();
         for (const participantId of participantIds) {
@@ -87,46 +89,81 @@ export default function MessagesPage() {
 
     if (isAuthenticated) {
       fetchConversations();
-    } else {
-      setConversations([]);
-      setIsLoading(false);
     }
   }, [isAuthenticated, user?.id]);
 
+  // Fetch messages when conversation is selected
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedConversation?.id) {
+        setMessages([]);
+        return;
+      }
+
+      try {
+        setIsLoadingMessages(true);
+        const data = await messagesApi.getConversationMessages(selectedConversation.id);
+        // Reverse messages so newest appear at bottom
+        setMessages(Array.isArray(data) ? [...data].reverse() : []);
+      } catch (error) {
+        console.error('Failed to fetch messages:', error);
+        setMessages([]);
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
+
+    fetchMessages();
+  }, [selectedConversation?.id]);
+
   // Debounced user search
-  const searchUsers = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < 2) {
+  useEffect(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    if (!newChatRecipient.trim() || newChatRecipient.length < 2 || !showNewChatModal) {
       setUserSuggestions([]);
+      setIsSearchingUsers(false);
       return;
     }
 
-    try {
-      setIsSearchingUsers(true);
-      const response = await usersApi.searchUsers(query);
-      const users = response.data?.users || [];
-      // Filter out current user from suggestions
-      const filteredUsers = users.filter(u => u.id !== user?.id);
-      setUserSuggestions(filteredUsers);
-    } catch (error) {
-      console.error('Failed to search users:', error);
-      setUserSuggestions([]);
-    } finally {
-      setIsSearchingUsers(false);
-    }
-  }, [user?.id]);
-
-  // Debounce the search
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (newChatRecipient.trim()) {
-        searchUsers(newChatRecipient);
-      } else {
+    setIsSearchingUsers(true);
+    debounceTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await usersApi.searchUsers(newChatRecipient, 1, 20);
+        const users = response.data?.users || [];
+        // Filter out current user from suggestions
+        const filteredUsers = users.filter((u) => u.id !== user?.id);
+        setUserSuggestions(filteredUsers);
+      } catch (error) {
+        console.error('Failed to search users:', error);
         setUserSuggestions([]);
+      } finally {
+        setIsSearchingUsers(false);
       }
     }, 300);
 
-    return () => clearTimeout(timeoutId);
-  }, [newChatRecipient, searchUsers]);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, [newChatRecipient, showNewChatModal, user?.id]);
+
+  // Helper function to get other participant ID
+  const getOtherParticipantId = (conversation: Conversation) => {
+    if (conversation.type === 'GROUP') {
+      return null;
+    }
+    return conversation.participants?.find((p) => p !== user?.id) || null;
+  };
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
 
   const handleUserSelect = (selectedUser: User) => {
     setSelectedUser(selectedUser);
@@ -144,25 +181,7 @@ export default function MessagesPage() {
     setShowNewChatModal(false);
     setNewChatRecipient('');
     setSelectedUser(null);
-    setUserSuggestions([]);
   };
-
-  useEffect(() => {
-    if (selectedConversation) {
-      const fetchMessages = async () => {
-        try {
-          const data = await messagesApi.getConversationMessages(
-            selectedConversation.id
-          );
-          // Reverse the messages so newest appear at the bottom
-          setMessages(data.reverse());
-        } catch (error) {
-        }
-      };
-
-      fetchMessages();
-    }
-  }, [selectedConversation]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,12 +195,10 @@ export default function MessagesPage() {
         content: messageText,
       });
       
-      // Track this message as sent by the current user
-      setSentMessageIds(prev => new Set([...prev, newMessage.id]));
-      
       setMessages((prev) => [...prev, newMessage]);
       setMessageText('');
     } catch (error) {
+      console.error('Failed to send message:', error);
     } finally {
       setIsSending(false);
     }
@@ -201,11 +218,10 @@ export default function MessagesPage() {
 
     try {
       setIsCreatingChat(true);
-      // Use selected user ID - we now require a selected user
       const participantId = selectedUser.id;
       
       // Check if conversation already exists with this participant
-      const existingConversation = conversations?.find(conv => 
+      const existingConversation = conversations.find(conv => 
         conv.type === 'DIRECT' && 
         conv.participants.includes(participantId) &&
         conv.participants.includes(user?.id || '')
@@ -224,9 +240,9 @@ export default function MessagesPage() {
       );
       
       // Check if conversation was already added to prevent duplicates
-      const isDuplicate = conversations?.some(conv => conv.id === conversation.id);
+      const isDuplicate = conversations.some(conv => conv.id === conversation.id);
       if (!isDuplicate) {
-        setConversations(prev => [conversation, ...(prev || [])]);
+        setConversations(prev => [conversation, ...prev]);
         
         // Fetch participant details for the new conversation
         const otherParticipantId = getOtherParticipantId(conversation);
@@ -239,11 +255,11 @@ export default function MessagesPage() {
           }
         }
       }
+      
       setSelectedConversation(conversation);
       handleCloseModal();
     } catch (error) {
       console.error('Failed to create conversation:', error);
-      // You could add a toast notification here
     } finally {
       setIsCreatingChat(false);
     }
@@ -269,7 +285,6 @@ export default function MessagesPage() {
       }
     } catch (error) {
       console.error('Failed to delete conversation:', error);
-      // You could add a toast notification here
     }
   };
 
@@ -320,15 +335,6 @@ export default function MessagesPage() {
     return null;
   };
 
-  const getOtherParticipantId = (conversation: Conversation) => {
-    if (conversation.type === 'GROUP') {
-      return null;
-    }
-    return conversation.participants?.find(
-      (p) => p !== user?.id
-    );
-  };
-
   // Show authentication message if not authenticated
   if (!authLoading && !isAuthenticated) {
     return (
@@ -372,7 +378,7 @@ export default function MessagesPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ml-16 sm:ml-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
           {/* Conversations List */}
           <Card className="lg:col-span-1 overflow-hidden flex flex-col">
@@ -472,58 +478,47 @@ export default function MessagesPage() {
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {messages.map((message, index) => {
-                    // Try multiple ways to determine if this is the user's message
-                    let isOwnMessage = false;
-                    
-                    // Method 1: Check if sender_id matches user ID
-                    if (message.sender_id === user?.id || message.sender_id === user?.id?.toString()) {
-                      isOwnMessage = true;
-                    }
-                    // Method 2: Check if we tracked this message as sent by the current user
-                    else if (sentMessageIds.has(message.id)) {
-                      isOwnMessage = true;
-                    }
-                    // Method 3: If sender_id is empty, use fallback heuristics
-                    else if (message.sender_id === '') {
-                      // Since we can't rely on sender_id, we'll use a more sophisticated approach
-                      // For now, let's assume messages sent by the current user are the ones that appear
-                      // in a pattern that makes sense (this is a temporary solution)
-                      
-                      // For now, let's use a simple heuristic:
-                      // If this is a new conversation or the user just sent a message,
-                      // assume the most recent messages are from the current user
-                      const isRecentMessage = index < 2; // First 2 messages are likely from current user
-                      isOwnMessage = isRecentMessage;
-                    }
+                  {isLoadingMessages ? (
+                    <div className="flex justify-center py-8">
+                      <Spinner size="md" />
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No messages yet. Say hello!
+                    </div>
+                  ) : (
+                    messages.map((message) => {
+                      // Check if sender_id matches user ID
+                      const isOwnMessage = message.sender_id === user?.id || message.sender_id === user?.id?.toString();
                     
 
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          isOwnMessage ? 'justify-end' : 'justify-start'
-                        }`}
-                      >
+                      return (
                         <div
-                          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
-                            isOwnMessage
-                              ? 'bg-blue-500 text-white rounded-br-md'
-                              : 'bg-gray-100 text-gray-900 rounded-bl-md'
+                          key={message.id}
+                          className={`flex ${
+                            isOwnMessage ? 'justify-end' : 'justify-start'
                           }`}
                         >
-                          <p className="text-sm leading-relaxed">{message.content}</p>
-                          <p
-                            className={`text-xs mt-2 ${
-                              isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                          <div
+                            className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                              isOwnMessage
+                                ? 'bg-blue-500 text-white rounded-br-md'
+                                : 'bg-gray-100 text-gray-900 rounded-bl-md'
                             }`}
                           >
-                            {formatRelativeTime(message.created_at)}
-                          </p>
+                            <p className="text-sm leading-relaxed">{message.content}</p>
+                            <p
+                              className={`text-xs mt-2 ${
+                                isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                              }`}
+                            >
+                              {formatRelativeTime(message.created_at)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
 

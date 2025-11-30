@@ -10,9 +10,9 @@ interface AvatarProps {
   className?: string;
 }
 
-// Function to generate consistent colors based on name
+// Function to generate consistent flat colors based on name (brutalist design)
 function getAvatarColor(name: string): string {
-  if (!name) return 'from-gray-500 to-gray-600';
+  if (!name) return '#87CEEB'; // Default blue
   
   // Create a simple hash from the name for consistent colors
   let hash = 0;
@@ -20,18 +20,13 @@ function getAvatarColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   
-  // Use hash to select from predefined color combinations
+  // Use hash to select from brutalist accent palette
   const colors = [
-    'from-blue-500 to-blue-600',
-    'from-purple-500 to-purple-600', 
-    'from-green-500 to-green-600',
-    'from-red-500 to-red-600',
-    'from-yellow-500 to-yellow-600',
-    'from-pink-500 to-pink-600',
-    'from-indigo-500 to-indigo-600',
-    'from-teal-500 to-teal-600',
-    'from-orange-500 to-orange-600',
-    'from-cyan-500 to-cyan-600',
+    '#F4C542', // yellow
+    '#FFB6D9', // pink
+    '#87CEEB', // blue
+    '#FF9B85', // coral
+    '#B8D4A8', // mint
   ];
   
   return colors[Math.abs(hash) % colors.length];
@@ -59,7 +54,7 @@ export function Avatar({ src, alt, name, username, size = 'md', className }: Ava
         src={cleanSrc}
         alt={alt || name || 'Avatar'}
         className={cn(
-          'rounded-full object-cover',
+          'object-cover border-[3px] border-[#1A1A1A] shadow-[4px_4px_0px_#1A1A1A]',
           sizes[size],
           className
         )}
@@ -71,15 +66,16 @@ export function Avatar({ src, alt, name, username, size = 'md', className }: Ava
   // Use username for consistent color generation, fallback to name
   const colorKey = username || name || '';
   const initials = name ? getInitials(name) : '?';
-  const colorClass = getAvatarColor(colorKey);
+  const backgroundColor = getAvatarColor(colorKey);
 
   return (
     <div
       className={cn(
-        `rounded-full bg-gradient-to-br ${colorClass} flex items-center justify-center text-white font-semibold`,
+        'flex items-center justify-center text-[#1A1A1A] font-black border-[3px] border-[#1A1A1A] shadow-[4px_4px_0px_#1A1A1A]',
         sizes[size],
         className
       )}
+      style={{ backgroundColor }}
     >
       {initials}
     </div>

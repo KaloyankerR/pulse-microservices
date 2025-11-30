@@ -13,13 +13,13 @@ import { Calendar, MapPin, Video } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/utils';
 
 export function Sidebar() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const { recommendations, isLoading } = useRecommendations(5, isAuthenticated);
   const { events, isLoading: eventsLoading } = useEvents(0, 5);
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
 
   // Don't render sidebar if not authenticated
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
     return null;
   }
 
@@ -32,51 +32,20 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden lg:block w-80 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
-      <div className="space-y-4">
-        {/* User Profile Card */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-3">
-              <Avatar
-                src={user?.avatarUrl}
-                name={user?.displayName || user?.username}
-                username={user?.username}
-                size="lg"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-gray-900 truncate">
-                    {user?.displayName || user?.username}
-                  </p>
-                  {user?.role === 'MODERATOR' && (
-                    <span className="px-2 py-0.5 text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full flex-shrink-0">
-                      MOD
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 truncate">@{user?.username}</p>
-              </div>
-            </div>
-            <Link href={`/profile/${user?.id}`}>
-              <Button variant="secondary" size="sm" className="w-full mt-3">
-                View Profile
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
+    <aside className="hidden lg:block w-80 sticky top-0 h-screen overflow-y-auto bg-[#B8D4A8] border-l-[3px] border-[#1A1A1A] p-6">
+      <div className="space-y-6">
         {/* Who to Follow */}
         {!isLoading && recommendations.length > 0 && (
-          <Card>
+          <Card variant="cream">
             <CardHeader>
-              <h3 className="font-bold text-gray-900">Who to follow</h3>
+              <h3 className="font-black text-[#1A1A1A]">Who to follow</h3>
             </CardHeader>
             <CardContent className="p-0">
               {recommendations.map((rec, index) => (
                 <div
                   key={rec.id || `rec-${index}`}
-                  className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between p-4 border-b-[2px] border-[#1A1A1A] last:border-b-0 hover:bg-[#F5EFE7]"
+                  style={{ transition: 'none' }}
                 >
                   <Link
                     href={`/profile/${rec.id}`}
@@ -90,16 +59,16 @@ export function Sidebar() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900 truncate">
+                        <p className="font-black text-[#1A1A1A] truncate">
                           {rec.displayName || rec.username}
                         </p>
                         {rec.role === 'MODERATOR' && (
-                          <span className="px-1.5 py-0.5 text-xs font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full flex-shrink-0">
+                          <span className="px-1.5 py-0.5 text-xs font-black bg-[#87CEEB] text-[#1A1A1A] border-[2px] border-[#1A1A1A] inline-block shadow-[2px_2px_0px_#1A1A1A] flex-shrink-0">
                             MOD
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 truncate">
+                      <p className="text-sm font-bold text-[#1A1A1A] opacity-70 truncate">
                         @{rec.username}
                       </p>
                     </div>
@@ -120,11 +89,11 @@ export function Sidebar() {
 
         {/* Upcoming Events */}
         {!eventsLoading && events.length > 0 && (
-          <Card>
+          <Card variant="cream">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-gray-900">Upcoming Events</h3>
-                <Link href="/events" className="text-sm text-blue-600 hover:underline">
+                <h3 className="font-black text-[#1A1A1A]">Upcoming Events</h3>
+                <Link href="/events" className="text-sm font-bold text-[#1A1A1A] hover:underline">
                   View all
                 </Link>
               </div>
@@ -133,14 +102,15 @@ export function Sidebar() {
               {events.slice(0, 3).map((event, index) => (
                 <div
                   key={event.id || `event-${index}`}
-                  className="p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                  className="p-4 border-b-[2px] border-[#1A1A1A] last:border-b-0 hover:bg-[#F5EFE7]"
+                  style={{ transition: 'none' }}
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0">
                       {event.event_type === 'PHYSICAL' ? (
-                        <MapPin className="w-4 h-4 text-blue-600 mt-1" />
+                        <MapPin className="w-4 h-4 text-[#1A1A1A] mt-1" />
                       ) : (
-                        <Video className="w-4 h-4 text-purple-600 mt-1" />
+                        <Video className="w-4 h-4 text-[#1A1A1A] mt-1" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -148,11 +118,11 @@ export function Sidebar() {
                         href={`/events/${event.id}`}
                         className="block hover:underline"
                       >
-                        <p className="font-medium text-gray-900 truncate">
+                        <p className="font-black text-[#1A1A1A] truncate">
                           {event.title}
                         </p>
                       </Link>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm font-bold text-[#1A1A1A] opacity-70 mt-1">
                         {new Date(event.start_date).toLocaleDateString([], { 
                           month: 'short', 
                           day: 'numeric',
@@ -160,7 +130,7 @@ export function Sidebar() {
                           minute: '2-digit'
                         })}
                       </p>
-                      <div className="flex items-center mt-2 text-xs text-gray-500">
+                      <div className="flex items-center mt-2 text-xs font-bold text-[#1A1A1A] opacity-70">
                         <Calendar className="w-3 h-3 mr-1" />
                         <span>
                           {event.rsvp_counts.yes + event.rsvp_counts.maybe} going

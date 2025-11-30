@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { CreateEventRequest } from '@/types';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Card, CardContent } from '@/components/ui/Card';
 import { MapPin, Video, Calendar } from 'lucide-react';
@@ -121,161 +122,148 @@ export function CreateEvent({ onEventCreate }: CreateEventProps) {
   };
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-          
-          {/* Event Title */}
-          <div className="mb-4">
-            <label htmlFor="title" className="block text-sm font-medium text-black mb-2">
-              Event Title *
-            </label>
-            <input
-              id="title"
-              type="text"
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
-              placeholder="Enter event title"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black placeholder:text-gray-600"
-              maxLength={100}
-            />
-          </div>
-
-          {/* Event Description */}
-          <div className="mb-4">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description *
-            </label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Describe your event..."
-              rows={3}
-              className="w-full"
-              maxLength={500}
-            />
-            <div className="text-sm text-gray-500 mt-1">
-              {formData.description.length}/500 characters
-            </div>
-          </div>
-
-          {/* Event Type */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Event Type *
-            </label>
-            <div className="flex space-x-4">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="event_type"
-                  value="PHYSICAL"
-                  checked={formData.event_type === 'PHYSICAL'}
-                  onChange={() => handleEventTypeChange('PHYSICAL')}
-                  className="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
-                />
-                <MapPin className="w-4 h-4 mr-1 text-gray-600" />
-                <span className="text-gray-700">Physical Event</span>
-              </label>
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="radio"
-                  name="event_type"
-                  value="VIRTUAL"
-                  checked={formData.event_type === 'VIRTUAL'}
-                  onChange={() => handleEventTypeChange('VIRTUAL')}
-                  className="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 focus:ring-2"
-                />
-                <Video className="w-4 h-4 mr-1 text-gray-600" />
-                <span className="text-gray-700">Virtual Event</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Location (Physical Events) */}
-          {formData.event_type === 'PHYSICAL' && (
+    <Card variant="coral">
+      <CardContent className="p-0">
+        <div className="p-6">
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <div className="mb-4 bg-[#FF9B85] border-[3px] border-[#1A1A1A] text-[#1A1A1A] px-4 py-3 shadow-[4px_4px_0px_#1A1A1A] font-bold">
+                {error}
+              </div>
+            )}
+            
+            {/* Event Title */}
             <div className="mb-4">
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                Location *
-              </label>
-              <input
-                id="location"
+              <Input
+                id="title"
+                label="Event Title *"
                 type="text"
-                value={formData.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                placeholder="Enter event location"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-600"
-                maxLength={200}
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+                placeholder="Enter event title"
+                maxLength={100}
               />
             </div>
-          )}
 
-          {/* Virtual Link (Virtual Events) */}
-          {formData.event_type === 'VIRTUAL' && (
+            {/* Event Description */}
             <div className="mb-4">
-              <label htmlFor="virtual_link" className="block text-sm font-medium text-gray-700 mb-2">
-                Virtual Link *
+              <Textarea
+                id="description"
+                label="Description *"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Describe your event..."
+                rows={3}
+                maxLength={500}
+              />
+              <div className="text-sm font-bold text-[#1A1A1A] opacity-70 mt-2">
+                {formData.description.length}/500 characters
+              </div>
+            </div>
+
+            {/* Event Type */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-[#1A1A1A] mb-3">
+                Event Type *
               </label>
-              <input
-                id="virtual_link"
-                type="url"
-                value={formData.virtual_link}
-                onChange={(e) => handleInputChange('virtual_link', e.target.value)}
-                placeholder="https://meet.google.com/..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-gray-600"
+              <div className="flex space-x-4">
+                <label className="flex items-center cursor-pointer border-[3px] border-[#1A1A1A] p-3 bg-white shadow-[4px_4px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1A1A1A]"
+                  style={{ transition: 'none' }}>
+                  <input
+                    type="radio"
+                    name="event_type"
+                    value="PHYSICAL"
+                    checked={formData.event_type === 'PHYSICAL'}
+                    onChange={() => handleEventTypeChange('PHYSICAL')}
+                    className="mr-2 w-4 h-4 accent-[#1A1A1A]"
+                  />
+                  <MapPin className="w-4 h-4 mr-1 text-[#1A1A1A]" />
+                  <span className="font-bold text-[#1A1A1A]">Physical Event</span>
+                </label>
+                <label className="flex items-center cursor-pointer border-[3px] border-[#1A1A1A] p-3 bg-white shadow-[4px_4px_0px_#1A1A1A] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_#1A1A1A]"
+                  style={{ transition: 'none' }}>
+                  <input
+                    type="radio"
+                    name="event_type"
+                    value="VIRTUAL"
+                    checked={formData.event_type === 'VIRTUAL'}
+                    onChange={() => handleEventTypeChange('VIRTUAL')}
+                    className="mr-2 w-4 h-4 accent-[#1A1A1A]"
+                  />
+                  <Video className="w-4 h-4 mr-1 text-[#1A1A1A]" />
+                  <span className="font-bold text-[#1A1A1A]">Virtual Event</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Location (Physical Events) */}
+            {formData.event_type === 'PHYSICAL' && (
+              <div className="mb-4">
+                <Input
+                  id="location"
+                  label="Location *"
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  placeholder="Enter event location"
+                  maxLength={200}
+                />
+              </div>
+            )}
+
+            {/* Virtual Link (Virtual Events) */}
+            {formData.event_type === 'VIRTUAL' && (
+              <div className="mb-4">
+                <Input
+                  id="virtual_link"
+                  label="Virtual Link *"
+                  type="url"
+                  value={formData.virtual_link}
+                  onChange={(e) => handleInputChange('virtual_link', e.target.value)}
+                  placeholder="https://meet.google.com/..."
+                />
+              </div>
+            )}
+
+            {/* Start Date/Time */}
+            <div className="mb-4">
+              <Input
+                id="start_date"
+                label="Start Date & Time *"
+                type="datetime-local"
+                value={formData.start_date}
+                onChange={(e) => handleInputChange('start_date', e.target.value)}
+                min={getMinDateTime()}
               />
             </div>
-          )}
 
-          {/* Start Date/Time */}
-          <div className="mb-4">
-            <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-2">
-              Start Date & Time *
-            </label>
-            <input
-              id="start_date"
-              type="datetime-local"
-              value={formData.start_date}
-              onChange={(e) => handleInputChange('start_date', e.target.value)}
-              min={getMinDateTime()}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-            />
-          </div>
+            {/* End Date/Time */}
+            <div className="mb-4">
+              <Input
+                id="end_date"
+                label="End Date & Time *"
+                type="datetime-local"
+                value={formData.end_date}
+                onChange={(e) => handleInputChange('end_date', e.target.value)}
+                min={getMinEndDateTime()}
+              />
+            </div>
 
-          {/* End Date/Time */}
-          <div className="mb-4">
-            <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-2">
-              End Date & Time *
-            </label>
-            <input
-              id="end_date"
-              type="datetime-local"
-              value={formData.end_date}
-              onChange={(e) => handleInputChange('end_date', e.target.value)}
-              min={getMinEndDateTime()}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={!formData.title.trim() || !formData.description.trim() || !formData.start_date || !formData.end_date || isSubmitting}
-              isLoading={isSubmitting}
-              className="flex items-center"
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              Create Event
-            </Button>
-          </div>
-        </form>
+            {/* Submit Button */}
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={!formData.title.trim() || !formData.description.trim() || !formData.start_date || !formData.end_date || isSubmitting}
+                isLoading={isSubmitting}
+                className="flex items-center"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Create Event
+              </Button>
+            </div>
+          </form>
+        </div>
       </CardContent>
     </Card>
   );

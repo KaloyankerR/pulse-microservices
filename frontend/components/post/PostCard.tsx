@@ -84,83 +84,89 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
   };
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <Link
-            href={`/profile/${post.author_id}`}
-            className="flex items-center space-x-3 flex-1"
-          >
-            <Avatar
-              src={post.author?.avatarUrl}
-              name={post.author?.displayName || post.author?.username}
-              username={post.author?.username}
-              size="md"
-            />
-            <div>
-              <p className="font-semibold text-gray-900 hover:underline">
-                {post.author?.displayName || post.author?.username}
-              </p>
-              <p className="text-sm text-gray-500">
-                @{post.author?.username} · {formatRelativeTime(post.createdAt)}
-              </p>
-            </div>
-          </Link>
-
-          {canDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete?.(post.id)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              title={isModerator && !isOwnPost ? 'Delete as moderator' : 'Delete post'}
+    <Card 
+      variant="default"
+    >
+      <CardContent className="p-0">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex items-start justify-between mb-4">
+            <Link
+              href={`/profile/${post.author_id}`}
+              className="flex items-center space-x-3 flex-1"
             >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
+              <Avatar
+                src={post.author?.avatarUrl}
+                name={post.author?.displayName || post.author?.username}
+                username={post.author?.username}
+                size="md"
+              />
+              <div>
+                <p className="font-black text-[#1A1A1A] hover:underline">
+                  {post.author?.displayName || post.author?.username}
+                </p>
+                <p className="text-sm font-bold text-[#1A1A1A] opacity-70">
+                  @{post.author?.username} · {formatRelativeTime(post.createdAt)}
+                </p>
+              </div>
+            </Link>
 
-        {/* Content */}
-        <p className="text-gray-900 mb-4 whitespace-pre-wrap">{post.content}</p>
+            {canDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete?.(post.id)}
+                className="text-[#FF9B85] hover:text-[#1A1A1A] hover:bg-[#FF9B85]"
+                title={isModerator && !isOwnPost ? 'Delete as moderator' : 'Delete post'}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
 
-        {/* Actions */}
-        <div className="flex items-center space-x-6 pt-2 border-t border-gray-100">
-          <button
-            onClick={handleLikeToggle}
-            className="flex items-center space-x-2 text-gray-600 hover:text-red-600 transition-colors"
-          >
-            <Heart
-              className={`w-5 h-5 ${
-                post.is_liked ? 'fill-red-600 text-red-600' : ''
-              }`}
-            />
-            <span className="text-sm font-medium">{post.likes_count}</span>
-          </button>
+          {/* Content */}
+          <p className="text-[#1A1A1A] mb-4 whitespace-pre-wrap font-medium">{post.content}</p>
 
-          <button
-            onClick={handleToggleComments}
-            className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">
-              {post.comments_count || 0} {post.comments_count === 1 ? 'Comment' : 'Comments'}
-            </span>
-          </button>
+          {/* Actions */}
+          <div className="flex items-center space-x-6 pt-4 border-t-[3px] border-[#1A1A1A]">
+            <button
+              onClick={handleLikeToggle}
+              className="flex items-center space-x-2 font-bold text-[#1A1A1A] hover:text-[#FF9B85]"
+              style={{ transition: 'none' }}
+            >
+              <Heart
+                className={`w-5 h-5 ${
+                  post.is_liked ? 'fill-[#FF9B85] text-[#FF9B85]' : ''
+                }`}
+              />
+              <span className="text-sm">{post.likes_count}</span>
+            </button>
+
+            <button
+              onClick={handleToggleComments}
+              className="flex items-center space-x-2 font-bold text-[#1A1A1A] hover:text-[#87CEEB]"
+              style={{ transition: 'none' }}
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-sm">
+                {post.comments_count || 0} {post.comments_count === 1 ? 'Comment' : 'Comments'}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Comments Section */}
         {showComments && (
-          <div className="mt-4 pt-4 border-t border-gray-100">
+          <div className="mt-0 pt-0 border-t-[3px] border-[#1A1A1A] bg-[#F5EFE7] p-6">
             {/* Comments List */}
             {isLoadingComments ? (
               <div className="text-center py-4">
-                <span className="text-sm text-gray-500">Loading comments...</span>
+                <span className="text-sm font-bold text-[#1A1A1A] opacity-70">Loading comments...</span>
               </div>
             ) : comments.length > 0 ? (
-              <div className="space-y-3 mb-4">
+              <div className="space-y-4 mb-4">
                 {comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-2">
+                  <div key={comment.id} className="flex space-x-3">
                     <Link href={`/profile/${comment.author_id}`}>
                       <Avatar
                         src={comment.author?.avatarUrl}
@@ -169,43 +175,44 @@ export function PostCard({ post, onLike, onUnlike, onDelete }: PostCardProps) {
                         size="sm"
                       />
                     </Link>
-                    <div className="flex-1 bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-1">
+                    <div className="flex-1 bg-white border-[3px] border-[#1A1A1A] shadow-[4px_4px_0px_#1A1A1A] p-3">
+                      <div className="flex items-center justify-between mb-2">
                         <Link
                           href={`/profile/${comment.author_id}`}
-                          className="font-semibold text-sm text-gray-900 hover:underline"
+                          className="font-black text-sm text-[#1A1A1A] hover:underline"
                         >
                           {comment.author?.displayName || comment.author?.username}
                         </Link>
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs font-bold text-[#1A1A1A] opacity-70">
                             {formatRelativeTime(comment.createdAt)}
                           </span>
                           {(user?.id === comment.author_id || isModerator) && (
                             <button
                               onClick={() => handleDeleteComment(comment.id)}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-[#FF9B85] hover:text-[#1A1A1A] hover:bg-[#FF9B85] p-1"
                               title={isModerator && user?.id !== comment.author_id ? 'Delete as moderator' : 'Delete comment'}
+                              style={{ transition: 'none' }}
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
                           )}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-900">{comment.content}</p>
+                      <p className="text-sm text-[#1A1A1A] font-medium">{comment.content}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-4">
-                <span className="text-sm text-gray-500">No comments yet</span>
+                <span className="text-sm font-bold text-[#1A1A1A] opacity-70">No comments yet</span>
               </div>
             )}
 
             {/* Comment Form */}
             {user && (
-              <form onSubmit={handleSubmitComment} className="flex space-x-2">
+              <form onSubmit={handleSubmitComment} className="flex space-x-3">
                 <Avatar
                   src={user.avatarUrl}
                   name={user.displayName || user.username}

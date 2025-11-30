@@ -39,51 +39,54 @@ export function CreatePost({ onPostCreate }: CreatePostProps) {
   const isOverLimit = remainingChars < 0;
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        <form onSubmit={handleSubmit}>
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-          <div className="flex space-x-3">
-            <Avatar
-              src={user?.avatarUrl}
-              name={user?.displayName || user?.username}
-              username={user?.username}
-              size="md"
-            />
-            <div className="flex-1">
-              <Textarea
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value);
-                  setError(null); // Clear error on input change
-                }}
-                placeholder="What's on your mind?"
-                rows={3}
-                className="mb-2"
+    <Card variant="yellow">
+      <CardContent className="p-0">
+        <div className="p-6">
+          <form onSubmit={handleSubmit}>
+            {error && (
+              <div className="mb-4 bg-[#FF9B85] border-[3px] border-[#1A1A1A] text-[#1A1A1A] px-4 py-3 shadow-[4px_4px_0px_#1A1A1A] font-bold">
+                {error}
+              </div>
+            )}
+            <div className="flex space-x-4">
+              <Avatar
+                src={user?.avatarUrl}
+                name={user?.displayName || user?.username}
+                username={user?.username}
+                size="md"
               />
-              <div className="flex items-center justify-between">
-                <span
-                  className={`text-sm ${
-                    isOverLimit ? 'text-red-600' : 'text-gray-500'
-                  }`}
-                >
-                  {remainingChars} characters remaining
-                </span>
-                <Button
-                  type="submit"
-                  disabled={!content.trim() || isOverLimit || isSubmitting}
-                  isLoading={isSubmitting}
-                >
-                  Post
-                </Button>
+              <div className="flex-1">
+                <Textarea
+                  value={content}
+                  onChange={(e) => {
+                    setContent(e.target.value);
+                    setError(null); // Clear error on input change
+                  }}
+                  placeholder="What's on your mind?"
+                  rows={3}
+                  className="mb-3"
+                />
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`text-sm font-bold ${
+                      isOverLimit ? 'text-[#FF9B85]' : 'text-[#1A1A1A] opacity-70'
+                    }`}
+                  >
+                    {remainingChars} characters remaining
+                  </span>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={!content.trim() || isOverLimit || isSubmitting}
+                    isLoading={isSubmitting}
+                  >
+                    Post
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </CardContent>
     </Card>
   );

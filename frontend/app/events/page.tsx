@@ -18,7 +18,7 @@ type EventTypeFilter = 'ALL' | 'PHYSICAL' | 'VIRTUAL';
 export default function EventsPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuthStore();
-  const { events, isLoading, error, createEvent, rsvpToEvent, deleteEvent } = useEvents();
+  const { events = [], isLoading, error, createEvent, rsvpToEvent, deleteEvent } = useEvents();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [filter, setFilter] = useState<FilterType>('UPCOMING');
   const [eventTypeFilter, setEventTypeFilter] = useState<EventTypeFilter>('ALL');
@@ -109,7 +109,7 @@ export default function EventsPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ml-16 sm:ml-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
@@ -205,7 +205,9 @@ export default function EventsPage() {
                   <p className="text-red-600 text-lg font-medium">
                     Failed to load events
                   </p>
-                  <p className="text-red-500 text-sm mt-2">{error}</p>
+                  <p className="text-red-500 text-sm mt-2">
+                    {error || 'Unknown error'}
+                  </p>
                 </div>
               </div>
             ) : sortedEvents.length === 0 ? (

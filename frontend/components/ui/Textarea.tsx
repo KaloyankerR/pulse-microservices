@@ -12,24 +12,25 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-bold text-[#1A1A1A] mb-2">
             {label}
           </label>
         )}
         <textarea
           className={cn(
-            'w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none text-gray-900 placeholder:text-gray-600',
+            'w-full px-4 py-3 border-[3px] border-[#1A1A1A] bg-white text-[#1A1A1A] placeholder:text-[#1A1A1A] placeholder:opacity-60 focus:outline-none focus:shadow-[4px_4px_0px_#1A1A1A] resize-none font-medium',
             error
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-gray-300',
+              ? 'border-[#FF9B85] focus:border-[#FF9B85] focus:shadow-[4px_4px_0px_#FF9B85]'
+              : '',
             className
           )}
           ref={ref}
+          style={{ transition: 'none' }}
           {...props}
         />
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-sm font-bold text-[#FF9B85]">{error}</p>}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+          <p className="mt-2 text-sm font-medium text-[#1A1A1A] opacity-70">{helperText}</p>
         )}
       </div>
     );
