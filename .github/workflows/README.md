@@ -18,10 +18,12 @@ Runs on every push and pull request to `main` and `develop` branches.
 
 **Services Tested:**
 - `user-service` (Node.js + Prisma + PostgreSQL)
+- `auth-service` (Node.js + Prisma + PostgreSQL)
 - `social-service` (Node.js + Prisma + PostgreSQL)
+- `notification-service` (Node.js + MongoDB + Redis + RabbitMQ)
 - `messaging-service` (Go + PostgreSQL + Redis + RabbitMQ)
 - `post-service` (Go + PostgreSQL)
-- `notification-service` (Node.js + MongoDB + Redis + RabbitMQ) - Currently disabled
+- `event-service` (Go)
 
 **Deployment Behavior:**
 - **Pull Requests**: Builds images but doesn't push to Docker Hub

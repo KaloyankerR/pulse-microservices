@@ -18,10 +18,12 @@ on:
         options:
           - all
           - user-service
+          - auth-service
           - social-service
           - notification-service
           - messaging-service
           - post-service
+          - event-service
       environment:
         description: 'Deployment environment'
         required: true
@@ -52,10 +54,12 @@ jobs:
     outputs:
       services: ${{ steps.filter.outputs.services }}
       user-service: ${{ steps.filter.outputs.user-service }}
+      auth-service: ${{ steps.filter.outputs.auth-service }}
       social-service: ${{ steps.filter.outputs.social-service }}
       notification-service: ${{ steps.filter.outputs.notification-service }}
       messaging-service: ${{ steps.filter.outputs.messaging-service }}
       post-service: ${{ steps.filter.outputs.post-service }}
+      event-service: ${{ steps.filter.outputs.event-service }}
     
     steps:
       - name: Checkout code
@@ -69,12 +73,14 @@ jobs:
           # For manual dispatch or tags, run all services
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || [[ "${{ github.ref }}" == refs/tags/* ]]; then
             echo "🎯 Manual trigger or tag detected - running all services"
-            echo "services=[\"user-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
+            echo "services=[\"user-service\",\"auth-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\",\"event-service\"]" >> $GITHUB_OUTPUT
             echo "user-service=true" >> $GITHUB_OUTPUT
+            echo "auth-service=true" >> $GITHUB_OUTPUT
             echo "social-service=true" >> $GITHUB_OUTPUT
             echo "notification-service=true" >> $GITHUB_OUTPUT
             echo "messaging-service=true" >> $GITHUB_OUTPUT
             echo "post-service=true" >> $GITHUB_OUTPUT
+            echo "event-service=true" >> $GITHUB_OUTPUT
             exit 0
           fi
           
@@ -103,12 +109,14 @@ jobs:
           ROOT_CHANGES=$(echo "$CHANGED_FILES" | grep -E '^(docker-compose|\.github|Makefile|config/)' || true)
           if [[ -n "$ROOT_CHANGES" ]]; then
             echo "🌍 Root-level changes detected - running all services"
-            echo "services=[\"user-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
+            echo "services=[\"user-service\",\"auth-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\",\"event-service\"]" >> $GITHUB_OUTPUT
             echo "user-service=true" >> $GITHUB_OUTPUT
+            echo "auth-service=true" >> $GITHUB_OUTPUT
             echo "social-service=true" >> $GITHUB_OUTPUT
             echo "notification-service=true" >> $GITHUB_OUTPUT
             echo "messaging-service=true" >> $GITHUB_OUTPUT
             echo "post-service=true" >> $GITHUB_OUTPUT
+            echo "event-service=true" >> $GITHUB_OUTPUT
             exit 0
           fi
           
@@ -119,6 +127,14 @@ jobs:
             echo "user-service=true" >> $GITHUB_OUTPUT
           else
             echo "user-service=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if echo "$CHANGED_FILES" | grep -q "^auth-service/"; then
+            echo "✅ auth-service changed"
+            SERVICES+=("auth-service")
+            echo "auth-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "auth-service=false" >> $GITHUB_OUTPUT
           fi
           
           if echo "$CHANGED_FILES" | grep -q "^social-service/"; then
@@ -153,10 +169,18 @@ jobs:
             echo "post-service=false" >> $GITHUB_OUTPUT
           fi
           
+          if echo "$CHANGED_FILES" | grep -q "^event-service/"; then
+            echo "✅ event-service changed"
+            SERVICES+=("event-service")
+            echo "event-service=true" >> $GITHUB_OUTPUT
+          else
+            echo "event-service=false" >> $GITHUB_OUTPUT
+          fi
+          
           # If no services changed, run all (safety fallback)
           if [ ${#SERVICES[@]} -eq 0 ]; then
             echo "⚠️ No service changes detected - running all services as fallback"
-            echo "services=[\"user-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\"]" >> $GITHUB_OUTPUT
+            echo "services=[\"user-service\",\"auth-service\",\"social-service\",\"notification-service\",\"messaging-service\",\"post-service\",\"event-service\"]" >> $GITHUB_OUTPUT
           else
             # Convert array to JSON
             SERVICES_JSON=$(printf '%s\n' "${SERVICES[@]}" | jq -R . | jq -s -c .)
@@ -183,9 +207,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # Node.js services (user-service, social-service, notification-service)
+      # Node.js services (user-service, auth-service, social-service, notification-service)
       - name: Setup Node.js
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'auth-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -193,25 +217,25 @@ jobs:
           cache-dependency-path: ${{ matrix.service }}/package-lock.json
       
       - name: Install Node dependencies
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'auth-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm ci
       
       - name: Generate Prisma Client
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'auth-service' || matrix.service == 'social-service'
         working-directory: ./${{ matrix.service }}
         run: npm run db:generate
       
-      # Go services (messaging-service, post-service)
+      # Go services (messaging-service, post-service, event-service)
       - name: Setup Go
-        if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
+        if: matrix.service == 'messaging-service' || matrix.service == 'post-service' || matrix.service == 'event-service'
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
           cache-dependency-path: ${{ matrix.service }}/go.sum
       
       - name: Build Go service
-        if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
+        if: matrix.service == 'messaging-service' || matrix.service == 'post-service' || matrix.service == 'event-service'
         working-directory: ./${{ matrix.service }}
         run: |
           go mod download
@@ -291,9 +315,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      # Node.js services (user-service, social-service, notification-service)
+      # Node.js services (user-service, auth-service, social-service, notification-service)
       - name: Setup Node.js
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'auth-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -301,17 +325,17 @@ jobs:
           cache-dependency-path: ${{ matrix.service }}/package-lock.json
       
       - name: Install Node dependencies
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'auth-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm ci
       
       - name: Generate Prisma Client
-        if: matrix.service == 'user-service' || matrix.service == 'social-service'
+        if: matrix.service == 'user-service' || matrix.service == 'auth-service' || matrix.service == 'social-service'
         working-directory: ./${{ matrix.service }}
         run: npm run db:generate
       
       - name: Run Node tests
-        if: matrix.service == 'user-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
+        if: matrix.service == 'user-service' || matrix.service == 'auth-service' || matrix.service == 'social-service' || matrix.service == 'notification-service'
         working-directory: ./${{ matrix.service }}
         run: npm test
         env:
@@ -322,23 +346,23 @@ jobs:
           RABBITMQ_URL: amqp://guest:guest@localhost:5672/
           JWT_SECRET: test-secret-key-for-ci
       
-      # Go services (messaging-service, post-service)
+      # Go services (messaging-service, post-service, event-service)
       - name: Setup Go
-        if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
+        if: matrix.service == 'messaging-service' || matrix.service == 'post-service' || matrix.service == 'event-service'
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
           cache-dependency-path: ${{ matrix.service }}/go.sum
       
       - name: Install Go dependencies
-        if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
+        if: matrix.service == 'messaging-service' || matrix.service == 'post-service' || matrix.service == 'event-service'
         working-directory: ./${{ matrix.service }}
         run: |
           go mod download
           go mod verify
       
       - name: Run Go tests
-        if: matrix.service == 'messaging-service' || matrix.service == 'post-service'
+        if: matrix.service == 'messaging-service' || matrix.service == 'post-service' || matrix.service == 'event-service'
         working-directory: ./${{ matrix.service }}
         run: go test ./... -v
         env:
