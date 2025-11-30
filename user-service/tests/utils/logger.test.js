@@ -1,4 +1,4 @@
-const logger = require('../../src/utils/logger');
+const logger = require('../../src/utils/logger').default || require('../../src/utils/logger');
 
 describe('Logger', () => {
   it('should have info method', () => {

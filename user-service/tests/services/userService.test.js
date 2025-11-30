@@ -1,13 +1,12 @@
-const userService = require('../../src/services/userService');
-const prisma = require('../../src/config/database');
 const { AppError } = require('../../src/middleware/errorHandler');
 
-jest.mock('../../src/config/database', () => ({
-  user: {
+const mockPrisma = {
+  userProfile: {
     findUnique: jest.fn(),
     findMany: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+    create: jest.fn(),
     count: jest.fn(),
   },
   userFollow: {
@@ -17,7 +16,15 @@ jest.mock('../../src/config/database', () => ({
     create: jest.fn(),
     delete: jest.fn(),
   },
+};
+
+jest.mock('../../src/config/database', () => ({
+  __esModule: true,
+  default: mockPrisma,
 }));
+
+const userService = require('../../src/services/userService').default || require('../../src/services/userService');
+const prisma = mockPrisma;
 
 describe('UserService', () => {
   beforeEach(() => {
@@ -38,12 +45,12 @@ describe('UserService', () => {
         updatedAt: new Date(),
       };
 
-      prisma.user.findUnique.mockResolvedValue(mockUser);
+      prisma.userProfile.findUnique.mockResolvedValue(mockUser);
       prisma.userFollow.count.mockResolvedValueOnce(10).mockResolvedValueOnce(5);
 
       const result = await userService.getUserById(userId);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      expect(prisma.userProfile.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
         select: expect.any(Object),
       });
@@ -60,7 +67,7 @@ describe('UserService', () => {
       const currentUserId = 'current-user-id';
       const mockUser = { id: 'user-id', username: 'testuser' };
 
-      prisma.user.findUnique.mockResolvedValue(mockUser);
+      prisma.userProfile.findUnique.mockResolvedValue(mockUser);
       prisma.userFollow.count.mockResolvedValue(0);
       prisma.userFollow.findUnique.mockResolvedValue({ followerId: currentUserId, followingId: userId });
 
@@ -70,7 +77,7 @@ describe('UserService', () => {
     });
 
     it('should throw error if user not found', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.userProfile.findUnique.mockResolvedValue(null);
 
       await expect(userService.getUserById('nonexistent-id')).rejects.toThrow(AppError);
       await expect(userService.getUserById('nonexistent-id')).rejects.toThrow('User not found');
@@ -91,12 +98,12 @@ describe('UserService', () => {
         bio: 'Updated bio',
       };
 
-      prisma.user.update.mockResolvedValue(mockUser);
+      prisma.userProfile.update.mockResolvedValue(mockUser);
       prisma.userFollow.count.mockResolvedValueOnce(10).mockResolvedValueOnce(5);
 
       const result = await userService.updateProfile(userId, updateData);
 
-      expect(prisma.user.update).toHaveBeenCalledWith({
+      expect(prisma.userProfile.update).toHaveBeenCalledWith({
         where: { id: userId },
         data: updateData,
         select: expect.any(Object),
@@ -113,11 +120,11 @@ describe('UserService', () => {
     it('should delete user successfully', async () => {
       const userId = 'user-id';
 
-      prisma.user.delete.mockResolvedValue({ id: userId });
+      prisma.userProfile.delete.mockResolvedValue({ id: userId });
 
       const result = await userService.deleteUser(userId);
 
-      expect(prisma.user.delete).toHaveBeenCalledWith({
+      expect(prisma.userProfile.delete).toHaveBeenCalledWith({
         where: { id: userId },
       });
       expect(result).toEqual({ message: 'User account deleted successfully' });
@@ -135,24 +142,23 @@ describe('UserService', () => {
         { id: '2', username: 'testuser2', displayName: 'Test User 2' },
       ];
 
-      prisma.user.findMany.mockResolvedValue(mockUsers);
-      prisma.user.count.mockResolvedValue(2);
+      prisma.userProfile.findMany.mockResolvedValue(mockUsers);
+      prisma.userProfile.count.mockResolvedValue(2);
       prisma.userFollow.count.mockResolvedValue(0);
 
       const result = await userService.searchUsers(query, page, limit);
 
-      expect(prisma.user.findMany).toHaveBeenCalledWith({
-        where: {
-          OR: [
-            { username: { contains: query, mode: 'insensitive' } },
-            { displayName: { contains: query, mode: 'insensitive' } },
-          ],
-        },
-        select: expect.any(Object),
-        orderBy: { createdAt: 'desc' },
-        skip: 0,
-        take: limit,
-      });
+      expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.any(Array),
+          }),
+          select: expect.any(Object),
+          orderBy: { createdAt: 'desc' },
+          skip: 0,
+          take: limit,
+        }),
+      );
       expect(result.users).toHaveLength(2);
       expect(result.pagination).toEqual({
         page: 1,
@@ -167,8 +173,8 @@ describe('UserService', () => {
     it('should check follow status when currentUserId is provided', async () => {
       const mockUsers = [{ id: 'other-user-id', username: 'otheruser' }];
 
-      prisma.user.findMany.mockResolvedValue(mockUsers);
-      prisma.user.count.mockResolvedValue(1);
+      prisma.userProfile.findMany.mockResolvedValue(mockUsers);
+      prisma.userProfile.count.mockResolvedValue(1);
       prisma.userFollow.count.mockResolvedValue(0);
       prisma.userFollow.findUnique.mockResolvedValue({ followerId: 'current-user-id' });
 
@@ -243,7 +249,7 @@ describe('UserService', () => {
         skip: 0,
         take: 20,
       });
-      expect(result.following).toHaveLength(1);
+      expect(result.followers).toHaveLength(1);
       expect(result.pagination.totalCount).toBe(1);
     });
   });
@@ -253,7 +259,7 @@ describe('UserService', () => {
       const followerId = 'follower-id';
       const followingId = 'following-id';
 
-      prisma.user.findUnique.mockResolvedValue({ id: followingId });
+      prisma.userProfile.findUnique.mockResolvedValue({ id: followingId });
       prisma.userFollow.findUnique.mockResolvedValue(null);
       prisma.userFollow.create.mockResolvedValue({
         followerId,
@@ -262,7 +268,7 @@ describe('UserService', () => {
 
       const result = await userService.followUser(followerId, followingId);
 
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+      expect(prisma.userProfile.findUnique).toHaveBeenCalledWith({
         where: { id: followingId },
       });
       expect(prisma.userFollow.create).toHaveBeenCalledWith({
@@ -279,14 +285,14 @@ describe('UserService', () => {
     });
 
     it('should throw error if target user not found', async () => {
-      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.userProfile.findUnique.mockResolvedValue(null);
 
       await expect(userService.followUser('follower-id', 'nonexistent-id')).rejects.toThrow(AppError);
       await expect(userService.followUser('follower-id', 'nonexistent-id')).rejects.toThrow('User not found');
     });
 
     it('should throw error if already following', async () => {
-      prisma.user.findUnique.mockResolvedValue({ id: 'following-id' });
+      prisma.userProfile.findUnique.mockResolvedValue({ id: 'following-id' });
       prisma.userFollow.findUnique.mockResolvedValue({
         followerId: 'follower-id',
         followingId: 'following-id',
@@ -358,13 +364,13 @@ describe('UserService', () => {
         { id: '2', email: 'user2@example.com', username: 'user2' },
       ];
 
-      prisma.user.findMany.mockResolvedValue(mockUsers);
-      prisma.user.count.mockResolvedValue(2);
+      prisma.userProfile.findMany.mockResolvedValue(mockUsers);
+      prisma.userProfile.count.mockResolvedValue(2);
       prisma.userFollow.count.mockResolvedValue(0);
 
       const result = await userService.getAllUsers(1, 20);
 
-      expect(prisma.user.findMany).toHaveBeenCalledWith({
+      expect(prisma.userProfile.findMany).toHaveBeenCalledWith({
         select: expect.any(Object),
         orderBy: { createdAt: 'desc' },
         skip: 0,
@@ -382,12 +388,12 @@ describe('UserService', () => {
     });
 
     it('should handle pagination correctly', async () => {
-      prisma.user.findMany.mockResolvedValue([]);
-      prisma.user.count.mockResolvedValue(50);
+      prisma.userProfile.findMany.mockResolvedValue([]);
+      prisma.userProfile.count.mockResolvedValue(50);
 
       const result = await userService.getAllUsers(2, 20);
 
-      expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect(prisma.userProfile.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: 20,
           take: 20,

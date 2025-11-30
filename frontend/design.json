@@ -1,0 +1,214 @@
+{
+  "designSystem": {
+    "name": "Neo-Brutalist Design System",
+    "philosophy": "Bold, unapologetic design with heavy borders, flat colors, and strong geometric shapes",
+    
+    "colors": {
+      "primary": {
+        "yellow": "#F4C542",
+        "yellowDark": "#E5A920"
+      },
+      "neutral": {
+        "black": "#1A1A1A",
+        "white": "#FFFFFF",
+        "cream": "#F5EFE7"
+      },
+      "accent": {
+        "pink": "#FFB6D9",
+        "blue": "#87CEEB",
+        "coral": "#FF9B85",
+        "mint": "#B8D4A8"
+      },
+      "borders": {
+        "default": "#1A1A1A",
+        "width": "3px"
+      }
+    },
+
+    "typography": {
+      "fontFamily": {
+        "primary": "monospace, 'Courier New', Courier",
+        "fallback": "system-ui, -apple-system, sans-serif"
+      },
+      "weights": {
+        "regular": 400,
+        "bold": 700,
+        "black": 900
+      },
+      "sizes": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.5rem",
+        "2xl": "2rem",
+        "3xl": "3rem"
+      },
+      "letterSpacing": {
+        "tight": "-0.02em",
+        "normal": "0",
+        "wide": "0.02em"
+      }
+    },
+
+    "spacing": {
+      "scale": "8px base unit",
+      "values": {
+        "xs": "4px",
+        "sm": "8px",
+        "md": "16px",
+        "lg": "24px",
+        "xl": "32px",
+        "2xl": "48px",
+        "3xl": "64px"
+      }
+    },
+
+    "borders": {
+      "width": {
+        "thin": "2px",
+        "medium": "3px",
+        "thick": "4px",
+        "heavy": "6px"
+      },
+      "style": "solid",
+      "color": "#1A1A1A",
+      "radius": {
+        "none": "0px",
+        "sm": "4px",
+        "md": "8px"
+      }
+    },
+
+    "shadows": {
+      "brutal": {
+        "small": "4px 4px 0px #1A1A1A",
+        "medium": "6px 6px 0px #1A1A1A",
+        "large": "8px 8px 0px #1A1A1A",
+        "xl": "12px 12px 0px #1A1A1A"
+      },
+      "offset": {
+        "description": "Hard offset shadows with no blur",
+        "pattern": "[offset-x] [offset-y] [blur=0] [color]"
+      }
+    },
+
+    "components": {
+      "card": {
+        "border": "3px solid #1A1A1A",
+        "borderRadius": "0px",
+        "boxShadow": "6px 6px 0px #1A1A1A",
+        "padding": "24px",
+        "backgroundColor": "varies by context"
+      },
+      "button": {
+        "primary": {
+          "border": "3px solid #1A1A1A",
+          "borderRadius": "0px",
+          "backgroundColor": "#1A1A1A",
+          "color": "#FFFFFF",
+          "padding": "12px 24px",
+          "fontWeight": "700",
+          "textTransform": "none",
+          "transition": "none",
+          "hover": {
+            "transform": "translate(2px, 2px)",
+            "boxShadow": "4px 4px 0px #1A1A1A"
+          }
+        },
+        "secondary": {
+          "border": "3px solid #1A1A1A",
+          "backgroundColor": "#FFFFFF",
+          "color": "#1A1A1A"
+        }
+      },
+      "input": {
+        "border": "3px solid #1A1A1A",
+        "borderRadius": "0px",
+        "padding": "12px 16px",
+        "backgroundColor": "#FFFFFF",
+        "outline": "none",
+        "focus": {
+          "borderColor": "#1A1A1A",
+          "boxShadow": "4px 4px 0px #1A1A1A"
+        }
+      },
+      "sidebar": {
+        "backgroundColor": "#B8D4A8",
+        "border": "3px solid #1A1A1A",
+        "width": "240px"
+      },
+      "navigation": {
+        "item": {
+          "padding": "12px 16px",
+          "border": "none",
+          "active": {
+            "backgroundColor": "#1A1A1A",
+            "color": "#FFFFFF"
+          },
+          "hover": {
+            "backgroundColor": "rgba(0, 0, 0, 0.1)"
+          }
+        }
+      },
+      "badge": {
+        "border": "2px solid #1A1A1A",
+        "padding": "8px 16px",
+        "backgroundColor": "transparent",
+        "display": "inline-block"
+      },
+      "iconButton": {
+        "size": "40px",
+        "border": "3px solid #1A1A1A",
+        "borderRadius": "0px",
+        "backgroundColor": "#FFFFFF",
+        "hover": {
+          "backgroundColor": "#F5EFE7"
+        }
+      }
+    },
+
+    "layout": {
+      "maxWidth": "1440px",
+      "containerPadding": "24px",
+      "gridGap": "24px",
+      "sectionSpacing": "48px"
+    },
+
+    "designPrinciples": {
+      "1": "No gradients - only flat, solid colors",
+      "2": "Heavy black borders (3px+) on all major elements",
+      "3": "Hard drop shadows with no blur",
+      "4": "Minimal to no border radius (sharp corners)",
+      "5": "High contrast color combinations",
+      "6": "Geometric, boxy layouts",
+      "7": "Bold, chunky typography",
+      "8": "Playful color blocking",
+      "9": "No subtle transitions - instant state changes",
+      "10": "Visual weight through thickness and boldness"
+    },
+
+    "animations": {
+      "philosophy": "Minimal or none - when used, instant/sharp",
+      "transitions": {
+        "duration": "0ms or 100ms max",
+        "easing": "linear or steps()",
+        "properties": ["transform", "background-color"]
+      }
+    },
+
+    "accessibility": {
+      "contrast": {
+        "minimum": "4.5:1 for normal text",
+        "large": "3:1 for large text"
+      },
+      "focusStates": {
+        "outlineWidth": "3px",
+        "outlineColor": "#1A1A1A",
+        "outlineOffset": "2px"
+      }
+    }
+  }
+}
+
+

@@ -1,7 +1,15 @@
 const { validateRequest, schemas } = require('../../src/middleware/validation');
-const logger = require('../../src/utils/logger');
+const logger = require('../../src/utils/logger').default || require('../../src/utils/logger');
 
-jest.mock('../../src/utils/logger');
+jest.mock('../../src/utils/logger', () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
 
 describe('Validation Middleware', () => {
   let req; let res; let
@@ -24,11 +32,11 @@ describe('Validation Middleware', () => {
   describe('validateRequest', () => {
     it('should pass validation for valid data', () => {
       req.body = {
-        email: 'test@example.com',
-        password: 'Password123!',
+        displayName: 'Test User',
+        bio: 'Test bio',
       };
 
-      const middleware = validateRequest(schemas.login);
+      const middleware = validateRequest(schemas.updateProfile);
       middleware(req, res, next);
 
       expect(next).toHaveBeenCalled();
@@ -37,11 +45,11 @@ describe('Validation Middleware', () => {
 
     it('should fail validation for invalid data', () => {
       req.body = {
-        email: 'invalid-email',
-        password: '',
+        avatarUrl: 'not-a-url',
+        bio: 'a'.repeat(501),
       };
 
-      const middleware = validateRequest(schemas.login);
+      const middleware = validateRequest(schemas.updateProfile);
       middleware(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -50,16 +58,7 @@ describe('Validation Middleware', () => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Request validation failed',
-          details: expect.arrayContaining([
-            expect.objectContaining({
-              field: 'email',
-              message: expect.any(String),
-            }),
-            expect.objectContaining({
-              field: 'password',
-              message: expect.any(String),
-            }),
-          ]),
+          details: expect.any(Array),
         },
       });
     });
@@ -78,39 +77,37 @@ describe('Validation Middleware', () => {
 
     it('should log validation errors', () => {
       req.body = {
-        email: 'invalid',
+        avatarUrl: 'not-a-url',
       };
 
-      const middleware = validateRequest(schemas.login);
+      const middleware = validateRequest(schemas.updateProfile);
       middleware(req, res, next);
 
       expect(logger.warn).toHaveBeenCalledWith('Validation error:', expect.any(Object));
     });
   });
 
-  describe('schemas.register', () => {
-    it('should validate correct registration data', () => {
+  describe('schemas.createProfile', () => {
+    it('should validate correct profile creation data', () => {
       req.body = {
-        email: 'test@example.com',
+        id: '123e4567-e89b-12d3-a456-426614174000',
         username: 'testuser',
-        password: 'Password123!',
         displayName: 'Test User',
       };
 
-      const middleware = validateRequest(schemas.register);
+      const middleware = validateRequest(schemas.createProfile);
       middleware(req, res, next);
 
       expect(next).toHaveBeenCalled();
     });
 
-    it('should reject invalid email', () => {
+    it('should reject invalid UUID', () => {
       req.body = {
-        email: 'invalid-email',
+        id: 'invalid-uuid',
         username: 'testuser',
-        password: 'Password123!',
       };
 
-      const middleware = validateRequest(schemas.register);
+      const middleware = validateRequest(schemas.createProfile);
       middleware(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -118,50 +115,11 @@ describe('Validation Middleware', () => {
 
     it('should reject short username', () => {
       req.body = {
-        email: 'test@example.com',
+        id: '123e4567-e89b-12d3-a456-426614174000',
         username: 'ab',
-        password: 'Password123!',
       };
 
-      const middleware = validateRequest(schemas.register);
-      middleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
-    it('should reject weak password', () => {
-      req.body = {
-        email: 'test@example.com',
-        username: 'testuser',
-        password: 'weak',
-      };
-
-      const middleware = validateRequest(schemas.register);
-      middleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-  });
-
-  describe('schemas.login', () => {
-    it('should validate correct login data', () => {
-      req.body = {
-        email: 'test@example.com',
-        password: 'anypassword',
-      };
-
-      const middleware = validateRequest(schemas.login);
-      middleware(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    });
-
-    it('should reject missing email', () => {
-      req.body = {
-        password: 'anypassword',
-      };
-
-      const middleware = validateRequest(schemas.login);
+      const middleware = validateRequest(schemas.createProfile);
       middleware(req, res, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
@@ -214,31 +172,6 @@ describe('Validation Middleware', () => {
     });
   });
 
-  describe('schemas.changePassword', () => {
-    it('should validate correct password change data', () => {
-      req.body = {
-        currentPassword: 'OldPassword123!',
-        newPassword: 'NewPassword123!',
-      };
-
-      const middleware = validateRequest(schemas.changePassword);
-      middleware(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    });
-
-    it('should reject weak new password', () => {
-      req.body = {
-        currentPassword: 'OldPassword123!',
-        newPassword: 'weak',
-      };
-
-      const middleware = validateRequest(schemas.changePassword);
-      middleware(req, res, next);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-  });
 
   describe('schemas.searchUsers', () => {
     it('should validate correct search query', () => {

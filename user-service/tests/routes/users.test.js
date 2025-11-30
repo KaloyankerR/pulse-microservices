@@ -1,14 +1,54 @@
 const express = require('express');
 const request = require('supertest');
-const userRoutes = require('../../src/routes/users');
-const userController = require('../../src/controllers/userController');
-const { authenticateToken, optionalAuth } = require('../../src/middleware/auth');
 
-jest.mock('../../src/controllers/userController');
-jest.mock('../../src/middleware/auth');
+const mockUserController = {
+  getCurrentUserProfile: jest.fn((req, res) => res.status(200).json({ success: true, data: { user: {} } })),
+  updateCurrentUserProfile: jest.fn((req, res) => res.status(200).json({ success: true, data: { user: {} } })),
+  searchUsers: jest.fn((req, res) => res.status(200).json({ success: true, data: { users: [] } })),
+  getUserById: jest.fn((req, res) => res.status(200).json({ success: true, data: { user: {} } })),
+  getFollowers: jest.fn((req, res) => res.status(200).json({ success: true, data: { followers: [] } })),
+  getFollowing: jest.fn((req, res) => res.status(200).json({ success: true, data: { following: [] } })),
+  updateProfile: jest.fn((req, res) => res.status(200).json({ success: true, data: { user: {} } })),
+  deleteUser: jest.fn((req, res) => res.status(200).json({ success: true, data: { message: 'Deleted' } })),
+  followUser: jest.fn((req, res) => res.status(200).json({ success: true, data: { message: 'Followed' } })),
+  unfollowUser: jest.fn((req, res) => res.status(200).json({ success: true, data: { message: 'Unfollowed' } })),
+  getFollowStatus: jest.fn((req, res) => res.status(200).json({ success: true, data: { isFollowing: false } })),
+  createProfile: jest.fn((req, res) => res.status(201).json({ success: true, data: { user: {} } })),
+  getAllUsers: jest.fn((req, res) => res.status(200).json({ success: true, data: { users: [] } })),
+  banUser: jest.fn((req, res) => res.status(200).json({ success: true, data: { message: 'Banned' } })),
+  unbanUser: jest.fn((req, res) => res.status(200).json({ success: true, data: { message: 'Unbanned' } })),
+};
+
+jest.mock('../../src/controllers/userController', () => ({
+  __esModule: true,
+  default: mockUserController,
+}));
+
+jest.mock('../../src/middleware/auth', () => ({
+  authenticateToken: jest.fn((req, res, next) => {
+    req.user = { id: 'user-id', email: 'test@example.com' };
+    next();
+  }),
+  optionalAuth: jest.fn((req, res, next) => next()),
+  requireModerator: jest.fn((req, res, next) => next()),
+}));
+
 jest.mock('../../src/middleware/rateLimiter', () => ({
   userLimiter: (req, res, next) => next(),
 }));
+
+jest.mock('../../src/middleware/validation', () => ({
+  validateRequest: () => (req, res, next) => next(),
+  schemas: {
+    createProfile: {},
+    updateProfile: {},
+    searchUsers: {},
+    pagination: {},
+  },
+}));
+
+const userRoutes = require('../../src/routes/users').default || require('../../src/routes/users');
+const userController = mockUserController;
 
 describe('User Routes', () => {
   let app;
@@ -18,24 +58,11 @@ describe('User Routes', () => {
     app.use(express.json());
     app.use('/api/v1/users', userRoutes);
     jest.clearAllMocks();
-
-    // Mock authenticateToken
-    authenticateToken.mockImplementation((req, res, next) => {
-      req.user = { id: 'user-id', email: 'test@example.com' };
-      next();
-    });
-
-    // Mock optionalAuth
-    optionalAuth.mockImplementation((req, res, next) => {
-      next();
-    });
   });
 
   describe('GET /api/v1/users/profile', () => {
     it('should call getCurrentUserProfile controller', async () => {
-      userController.getCurrentUserProfile.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { user: {} } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .get('/api/v1/users/profile')
@@ -48,9 +75,7 @@ describe('User Routes', () => {
 
   describe('PUT /api/v1/users/profile', () => {
     it('should call updateCurrentUserProfile controller', async () => {
-      userController.updateCurrentUserProfile.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { user: {} } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .put('/api/v1/users/profile')
@@ -64,9 +89,7 @@ describe('User Routes', () => {
 
   describe('GET /api/v1/users/search', () => {
     it('should call searchUsers controller', async () => {
-      userController.searchUsers.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { users: [] } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .get('/api/v1/users/search')
@@ -79,9 +102,7 @@ describe('User Routes', () => {
 
   describe('GET /api/v1/users/:id', () => {
     it('should call getUserById controller', async () => {
-      userController.getUserById.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { user: {} } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .get('/api/v1/users/user-id-123');
@@ -93,9 +114,7 @@ describe('User Routes', () => {
 
   describe('GET /api/v1/users/:id/followers', () => {
     it('should call getFollowers controller', async () => {
-      userController.getFollowers.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { followers: [] } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .get('/api/v1/users/user-id-123/followers');
@@ -107,9 +126,7 @@ describe('User Routes', () => {
 
   describe('GET /api/v1/users/:id/following', () => {
     it('should call getFollowing controller', async () => {
-      userController.getFollowing.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { following: [] } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .get('/api/v1/users/user-id-123/following');
@@ -121,9 +138,7 @@ describe('User Routes', () => {
 
   describe('PUT /api/v1/users/:id', () => {
     it('should call updateProfile controller with authentication', async () => {
-      userController.updateProfile.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { user: {} } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .put('/api/v1/users/user-id')
@@ -137,9 +152,7 @@ describe('User Routes', () => {
 
   describe('DELETE /api/v1/users/:id', () => {
     it('should call deleteUser controller with authentication', async () => {
-      userController.deleteUser.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { message: 'Deleted' } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .delete('/api/v1/users/user-id')
@@ -152,9 +165,7 @@ describe('User Routes', () => {
 
   describe('POST /api/v1/users/:id/follow', () => {
     it('should call followUser controller with authentication', async () => {
-      userController.followUser.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { message: 'Followed' } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .post('/api/v1/users/other-user-id/follow')
@@ -167,9 +178,7 @@ describe('User Routes', () => {
 
   describe('DELETE /api/v1/users/:id/follow', () => {
     it('should call unfollowUser controller with authentication', async () => {
-      userController.unfollowUser.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { message: 'Unfollowed' } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .delete('/api/v1/users/other-user-id/follow')
@@ -182,9 +191,7 @@ describe('User Routes', () => {
 
   describe('GET /api/v1/users/:id/follow-status', () => {
     it('should call getFollowStatus controller with authentication', async () => {
-      userController.getFollowStatus.mockImplementation((req, res) => {
-        res.status(200).json({ success: true, data: { isFollowing: false } });
-      });
+      jest.clearAllMocks();
 
       const response = await request(app)
         .get('/api/v1/users/other-user-id/follow-status')

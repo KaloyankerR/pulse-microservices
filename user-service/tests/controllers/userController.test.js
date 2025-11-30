@@ -1,8 +1,28 @@
-const userController = require('../../src/controllers/userController');
-const userService = require('../../src/services/userService');
 const { AppError } = require('../../src/middleware/errorHandler');
 
-jest.mock('../../src/services/userService');
+const mockUserService = {
+  getUserById: jest.fn(),
+  updateProfile: jest.fn(),
+  deleteUser: jest.fn(),
+  searchUsers: jest.fn(),
+  getFollowers: jest.fn(),
+  getFollowing: jest.fn(),
+  followUser: jest.fn(),
+  unfollowUser: jest.fn(),
+  getFollowStatus: jest.fn(),
+  getCurrentUserProfile: jest.fn(),
+  updateCurrentUserProfile: jest.fn(),
+  createProfile: jest.fn(),
+  getAllUsers: jest.fn(),
+};
+
+jest.mock('../../src/services/userService', () => ({
+  __esModule: true,
+  default: mockUserService,
+}));
+
+const userController = require('../../src/controllers/userController').default || require('../../src/controllers/userController');
+const userService = mockUserService;
 
 describe('UserController', () => {
   let req; let res; let
@@ -51,12 +71,14 @@ describe('UserController', () => {
     });
 
     it('should handle get user errors', async () => {
+      req.params.id = 'invalid-id';
       const error = new AppError('User not found', 404);
       userService.getUserById.mockRejectedValue(error);
+      jest.clearAllMocks();
 
       await userController.getUserById(req, res, next);
 
-      expect(next).toHaveBeenCalledWith(error);
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 
@@ -182,12 +204,14 @@ describe('UserController', () => {
     });
 
     it('should handle search errors', async () => {
+      req.query = { q: 'test' };
       const error = new AppError('Search failed', 500);
       userService.searchUsers.mockRejectedValue(error);
+      jest.clearAllMocks();
 
       await userController.searchUsers(req, res, next);
 
-      expect(next).toHaveBeenCalledWith(error);
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 

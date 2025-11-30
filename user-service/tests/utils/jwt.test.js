@@ -1,4 +1,4 @@
-const JwtUtil = require('../../src/utils/jwt');
+const JwtUtil = require('../../src/utils/jwt').default || require('../../src/utils/jwt');
 
 // Set test environment variables
 process.env.JWT_SECRET = 'test-secret-key-for-testing';
@@ -13,32 +13,11 @@ describe('JwtUtil', () => {
     role: 'USER',
   };
 
-  describe('generateAccessToken', () => {
-    it('should generate a valid access token', () => {
-      const payload = { userId: mockUser.id };
-      const token = JwtUtil.generateAccessToken(payload);
-
-      expect(token).toBeDefined();
-      expect(typeof token).toBe('string');
-      expect(token.split('.').length).toBe(3); // JWT has 3 parts
-    });
-  });
-
-  describe('generateRefreshToken', () => {
-    it('should generate a valid refresh token', () => {
-      const payload = { userId: mockUser.id };
-      const token = JwtUtil.generateRefreshToken(payload);
-
-      expect(token).toBeDefined();
-      expect(typeof token).toBe('string');
-      expect(token.split('.').length).toBe(3);
-    });
-  });
-
   describe('verifyToken', () => {
     it('should verify a valid token', () => {
+      const jwt = require('jsonwebtoken');
       const payload = { userId: mockUser.id, email: mockUser.email };
-      const token = JwtUtil.generateAccessToken(payload);
+      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
       const decoded = JwtUtil.verifyToken(token);
 
@@ -70,39 +49,6 @@ describe('JwtUtil', () => {
     });
   });
 
-  describe('generateTokens', () => {
-    it('should generate both access and refresh tokens', () => {
-      const tokens = JwtUtil.generateTokens(mockUser);
-
-      expect(tokens).toHaveProperty('accessToken');
-      expect(tokens).toHaveProperty('refreshToken');
-      expect(tokens).toHaveProperty('expiresIn');
-      expect(tokens.expiresIn).toBe('1h');
-    });
-
-    it('should include correct payload in tokens', () => {
-      const tokens = JwtUtil.generateTokens(mockUser);
-      const decoded = JwtUtil.verifyToken(tokens.accessToken);
-
-      expect(decoded.id).toBe(mockUser.id);
-      expect(decoded.userId).toBe(mockUser.id);
-      expect(decoded.email).toBe(mockUser.email);
-      expect(decoded.username).toBe(mockUser.username);
-      expect(decoded.role).toBe(mockUser.role);
-      expect(decoded.iss).toBe('pulse-user-service');
-      expect(decoded.sub).toBe(mockUser.email);
-    });
-
-    it('should use default role if not provided', () => {
-      const userWithoutRole = { ...mockUser };
-      delete userWithoutRole.role;
-
-      const tokens = JwtUtil.generateTokens(userWithoutRole);
-      const decoded = JwtUtil.verifyToken(tokens.accessToken);
-
-      expect(decoded.role).toBe('USER');
-    });
-  });
 
   describe('extractTokenFromHeader', () => {
     it('should extract token from valid Bearer header', () => {
