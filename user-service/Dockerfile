@@ -56,9 +56,6 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/package*.json ./
 
-# Create logs directory and set permissions
-RUN mkdir -p logs
-
 # Switch to non-root user
 USER nodejs
 
@@ -88,8 +85,8 @@ COPY . .
 # Generate Prisma client (don't need full build in dev)
 RUN npx prisma generate
 
-# Create logs directory and set permissions
-RUN mkdir -p logs && chown -R nodejs:nodejs /app
+# Set permissions
+RUN chown -R nodejs:nodejs /app
 
 # Don't switch user in dev mode to avoid permission issues
 # USER nodejs

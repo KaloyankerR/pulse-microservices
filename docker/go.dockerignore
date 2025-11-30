@@ -1,0 +1,54 @@
+# Test files
+*_test.go
+tests/
+*.test
+test-*
+
+# Build artifacts
+main
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Coverage files
+*.out
+coverage/
+*.coverprofile
+*.cover
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+docs/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files
+.env
+.env.local
+env.example
+
+# SonarQube
+sonar-project.properties
+.scannerwork
+
+# Logs
+*.log
+logs/
+
+# Development files
+Makefile
+

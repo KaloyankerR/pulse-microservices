@@ -26,9 +26,6 @@ RUN npm run build
 # Prune dev dependencies
 RUN npm prune --production && npm cache clean --force
 
-# Create logs directory
-RUN mkdir -p logs
-
 # Expose port
 EXPOSE 8085
 

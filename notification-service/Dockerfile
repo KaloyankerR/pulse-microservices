@@ -23,9 +23,6 @@ RUN npm install && npm cache clean --force
 # Copy application code
 COPY . .
 
-# Create logs directory
-RUN mkdir -p logs
-
 # Switch to non-root user
 USER nodejs
 
@@ -56,9 +53,6 @@ RUN npm run build
 
 # Remove dev dependencies after build
 RUN npm prune --production && npm cache clean --force
-
-# Create logs directory
-RUN mkdir -p logs
 
 # Switch to non-root user
 USER nodejs
