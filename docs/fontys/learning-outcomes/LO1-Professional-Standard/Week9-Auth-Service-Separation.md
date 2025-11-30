@@ -21,7 +21,7 @@ router.post('/users/:id/role', requireModerator, authController.updateUserRole);
 
 ## Professional Practices
 
-- **Documentation:** Auth responsibilities and migration steps are captured in `scripts/migrate-user-to-auth-user.sql`, keeping the operational handover clear.
+- **Documentation:** Auth responsibilities and migration steps are captured in `user-service/scripts/migrate-user-to-auth-user.sql`, keeping the operational handover clear.
 - **Consistency:** Reused shared utilities (`logger`, `metrics`, `rateLimiter`) to align with existing service standards.
 - **Testing Readiness:** Service endpoints consume validated DTOs, easing future test coverage and reducing runtime risk.
 

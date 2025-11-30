@@ -6,9 +6,9 @@ Design a repeatable procedure for splitting user authentication data from profil
 
 ## Migration Plan
 
-- Authored `scripts/migrate-user-to-auth-user.sql`, providing step-by-step SQL commands to copy credential records into the new auth schema and profile records into the dedicated user schema.
+- Authored `user-service/scripts/migrate-user-to-auth-user.sql`, providing step-by-step SQL commands to copy credential records into the new auth schema and profile records into the dedicated user schema.
 
-```15:33:scripts/migrate-user-to-auth-user.sql
+```15:33:user-service/scripts/migrate-user-to-auth-user.sql
 INSERT INTO auth_service.users (id, email, password_hash, created_at, updated_at)
 SELECT id, email, password_hash, created_at, updated_at
 FROM user_service.users;

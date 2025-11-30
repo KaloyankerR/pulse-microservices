@@ -51,8 +51,3 @@ SELECT * FROM auth_service.user_sessions;
 
 
 
-
-
-
-
-

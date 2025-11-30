@@ -41,7 +41,7 @@ router.post('/:id/unban', authenticateToken, requireModerator, userController.un
 
 - Data migration is documented to keep auth credentials and profiles in sync after the split.
 
-```15:48:scripts/migrate-user-to-auth-user.sql
+```15:48:user-service/scripts/migrate-user-to-auth-user.sql
 INSERT INTO auth_service.users (id, email, password_hash, created_at, updated_at)
 SELECT id, email, password_hash, created_at, updated_at
 FROM user_service.users;

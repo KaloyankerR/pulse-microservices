@@ -7,7 +7,7 @@ Lead the restructuring effort that separated authentication into its own service
 ## Key Actions
 
 - **Scope Definition:** Broke down the split into backend, frontend, and data migration milestones and tracked them in the weekly plan.
-- **Documentation:** Authored supporting guides (`scripts/migrate-user-to-auth-user.sql`, updated `docs/weekly/Progress.md`) so contributors could follow the plan without direct supervision.
+- **Documentation:** Authored supporting guides (`user-service/scripts/migrate-user-to-auth-user.sql`, updated `docs/weekly/Progress.md`) so contributors could follow the plan without direct supervision.
 - **Frontend Alignment:** Partnered with the frontend workstream to adapt the Next.js clients to the new auth endpoints and normalised responses in `frontend/lib/api/auth.ts`.
 
 ```12:28:frontend/lib/api/auth.ts
