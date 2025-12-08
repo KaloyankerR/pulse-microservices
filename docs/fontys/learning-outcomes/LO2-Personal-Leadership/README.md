@@ -18,10 +18,12 @@ At the start of the project, I established clear learning objectives:
 5. Build a production-ready social media platform
 
 **Success Metrics**:
-- ✅ Successfully deployed 6 independent microservices
+- ✅ Successfully deployed 7 independent microservices (including auth-service)
 - ✅ Implemented JWT authentication across all services
-- ✅ Set up CI/CD pipeline with GitHub Actions
+- ✅ Set up CI/CD pipeline with GitHub Actions (including auth-service)
 - ✅ Containerized all services using Docker
+- ✅ Deployed to Kubernetes (Minikube + DigitalOcean production)
+- ✅ Implemented neo-brutalism frontend design system
 - ✅ Achieved 80%+ test coverage
 
 ### 1.2 Project-Specific Goals
@@ -74,16 +76,19 @@ At the start of the project, I established clear learning objectives:
 ### 3.1 Independent Learning
 
 **Technologies Self-Taught**:
-- **Kubernetes**: Studied pods, services, deployments through online courses
+- **Kubernetes**: Studied pods, services, deployments through online courses and hands-on practice
 - **RabbitMQ**: Learned message queuing patterns through documentation
 - **MongoDB**: Mastered document databases through hands-on practice
 - **Docker**: Achieved proficiency in containerization
+- **Kubernetes Production Deployment**: Self-directed learning of cloud Kubernetes deployment (DigitalOcean)
+- **Design Systems**: Researched and implemented neo-brutalism design principles
 
 **Learning Resources**:
 - Online courses (Youtube)
 - Official documentation
 - Technical books and blogs
 - Hands-on experimentation
+- Production deployment experience
 
 ### 3.2 Proactive Problem Solving
 
@@ -98,6 +103,14 @@ At the start of the project, I established clear learning objectives:
 **Challenge**: Database connection pooling in production  
 **Action**: Researched connection pooling best practices, tested configurations  
 **Result**: Optimized database performance
+
+**Challenge**: Deploying microservices to production Kubernetes  
+**Action**: Self-directed learning of Kubernetes, created manifests, deployed to DigitalOcean  
+**Result**: Successfully deployed all 7 services to production with comprehensive documentation
+
+**Challenge**: Frontend design needed modernization  
+**Action**: Researched design systems, implemented neo-brutalism design principles  
+**Result**: Created cohesive, modern UI design system (`frontend/design.json`)
 
 ### 3.3 Initiative in Project Management
 
@@ -225,18 +238,65 @@ At the start of the project, I established clear learning objectives:
 - Seek internship opportunities in backend/DevOps
 - Continue building portfolio with complex projects
 
-## 9. Conclusion
+## 9. Self-Directed Production Deployment
+
+### 9.1 Kubernetes Deployment Initiative
+
+**Self-Directed Action**:
+- Independently researched Kubernetes deployment strategies
+- Created comprehensive Kubernetes manifests for all services
+- Set up Minikube local development environment
+- Migrated to DigitalOcean Kubernetes for production deployment
+- Documented entire deployment process for reproducibility
+
+**Evidence**:
+- `k8s/README.md` - Comprehensive deployment guide
+- `k8s/*.yaml` - Production-ready Kubernetes manifests
+- `pulse-cluster-kubeconfig.yaml` - DigitalOcean cluster configuration
+- Successfully running production deployment
+
+### 9.2 Frontend Design System Initiative
+
+**Self-Directed Action**:
+- Researched modern design systems and trends
+- Chose neo-brutalism design philosophy for bold, modern UI
+- Implemented comprehensive design system (`frontend/design.json`)
+- Applied design principles across entire frontend application
+- Created cohesive visual identity
+
+**Evidence**:
+- `frontend/design.json` - Complete design system specification
+- `frontend/app/globals.css` - Design system implementation
+- Consistent neo-brutalism styling across all components
+
+### 9.3 Pipeline Enhancement Initiative
+
+**Self-Directed Action**:
+- Identified need to include auth-service in CI/CD pipeline
+- Updated GitHub Actions workflow to include auth-service
+- Ensured consistent deployment process for all services
+- Validated pipeline with successful builds and deployments
+
+**Evidence**:
+- `.github/workflows/pipeline.yml` - Updated pipeline configuration
+- Successful automated builds and deployments
+
+## 10. Conclusion
 
 Through the Pulse microservices project, I have demonstrated personal leadership by:
 
 1. **Setting Clear Goals**: Established and tracked both technical and professional objectives
 2. **Seeking Feedback**: Regularly engaged with supervisors, peers, and stakeholders
-3. **Taking Initiative**: Proactively solved problems and improved the project
+3. **Taking Initiative**: Proactively solved problems and improved the project, including self-directed production deployment
 4. **Self-Reflection**: Consistently evaluated progress and identified areas for improvement
 5. **Professional Attitude**: Maintained commitment, integrity, and accountability throughout
 6. **Long-Term Planning**: Developed clear vision for continued professional growth
+7. **Self-Directed Learning**: Independently mastered Kubernetes deployment and production operations
+8. **Initiative**: Led frontend redesign and pipeline improvements without external direction
 
-This project has been instrumental in developing my leadership capabilities and confidence as an ICT professional.
+This project has been instrumental in developing my leadership capabilities and confidence as an ICT professional. The successful self-directed deployment to production Kubernetes and frontend redesign demonstrate proficiency in taking ownership and driving initiatives independently.
+
+**Self-Assessment**: **Proficient** - Demonstrated strong personal leadership through self-directed learning, proactive problem-solving, and successful execution of complex initiatives including production deployment and frontend redesign.
 
 ---
 

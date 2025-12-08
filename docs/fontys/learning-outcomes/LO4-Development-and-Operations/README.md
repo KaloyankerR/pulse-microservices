@@ -43,7 +43,7 @@ CMD ["node", "app.js"]
 
 **Services Orchestrated**:
 - Kong API Gateway
-- 6 microservices (user, post, social, messaging, notification, event)
+- 7 microservices (auth, user, post, social, messaging, notification, event)
 - Infrastructure services (PostgreSQL, MongoDB, Redis, RabbitMQ)
 - Monitoring stack (Prometheus, Grafana)
 
@@ -84,10 +84,19 @@ CMD ["node", "app.js"]
 4. **Monitoring**: Track pipeline success/failure
 
 **Matrix Strategy**:
-- Parallel testing of all services
+- Parallel testing of all services (including auth-service)
 - Multiple Node.js versions (18.x, 20.x)
 - Multiple Go versions (1.21, 1.22)
 - Automatic dependency caching
+
+**Services in Pipeline**:
+- Auth Service (newly added)
+- User Service
+- Post Service
+- Social Service
+- Messaging Service
+- Notification Service
+- Event Service
 
 **Configuration**: `.github/workflows/pipeline.yml`
 
@@ -363,19 +372,78 @@ docker-compose up -d
 - Automated scaling
 - Efficient use of cloud resources
 
-## 9. Conclusion
+## 9. Kubernetes Deployment and Operations
+
+### 9.1 Kubernetes Deployment Strategy
+
+**Local Development (Minikube)**:
+- Set up Minikube cluster with required addons (ingress, storage)
+- Created comprehensive Kubernetes manifests for all services
+- Implemented ConfigMaps for environment configuration
+- Set up PersistentVolumeClaims for database storage
+- Configured health checks and readiness probes
+
+**Production Deployment (DigitalOcean)**:
+- Deployed to DigitalOcean Kubernetes cluster
+- Production-ready configuration with secrets management
+- Network policies for service isolation
+- Resource limits and requests for optimal performance
+- Monitoring stack deployment (Prometheus, Grafana)
+
+**Deployment Process**:
+- Infrastructure as Code: All Kubernetes manifests versioned in Git
+- Automated deployment via Makefile targets (`make k8s-deploy`)
+- Comprehensive documentation in `k8s/README.md`
+- Migration guide for transitioning from Docker Compose
+
+**Evidence**: `k8s/README.md`, `k8s/*.yaml` manifests, `pulse-cluster-kubeconfig.yaml`
+
+### 9.2 CI/CD Pipeline Enhancement
+
+**Auth-Service Integration**:
+- Added auth-service to GitHub Actions pipeline
+- Updated change detection to include auth-service
+- Configured build, test, and deployment for auth-service
+- Ensured consistent CI/CD process across all services
+
+**Pipeline Improvements**:
+- Service-specific build and test jobs
+- Parallel execution for faster feedback
+- Automated Docker image builds and pushes
+- Deployment readiness validation
+
+**Evidence**: `.github/workflows/pipeline.yml`
+
+### 9.3 Production Operations
+
+**Deployment Automation**:
+- Makefile targets for common operations (`k8s-start`, `k8s-deploy`, `k8s-status`)
+- Port-forwarding for local access
+- Log aggregation and monitoring
+- Health check validation
+
+**Operational Excellence**:
+- Comprehensive deployment documentation
+- Troubleshooting guides
+- Monitoring and alerting setup
+- Disaster recovery procedures
+
+## 10. Conclusion
 
 The DevOps implementation for Pulse demonstrates:
 
 1. **Containerization**: All services containerized with Docker
-2. **Orchestration**: Docker Compose for local, Kubernetes for production
-3. **CI/CD**: Automated pipeline with GitHub Actions
+2. **Orchestration**: Docker Compose for local, Kubernetes for production (Minikube + DigitalOcean)
+3. **CI/CD**: Automated pipeline with GitHub Actions (including auth-service)
 4. **Monitoring**: Prometheus and Grafana for observability
 5. **Testing**: Automated tests at multiple levels
 6. **Security**: Automated security scanning and quality gates
 7. **Reliability**: Health checks, monitoring, and auto-recovery
+8. **Production Deployment**: Successfully deployed to Kubernetes with comprehensive operations
 
-These practices enable continuous software development with high quality, reliability, and efficiency.
+These practices enable continuous software development with high quality, reliability, and efficiency. The successful Kubernetes deployment demonstrates proficiency in production-grade DevOps practices.
+
+**Self-Assessment**: **Proficient** - Demonstrated DevOps proficiency through Kubernetes deployment, enhanced CI/CD pipeline, and comprehensive production operations.
 
 ---
 

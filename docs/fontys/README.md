@@ -7,7 +7,7 @@ This directory contains all documentation for the Fontys Complex Software System
 **Project**: Pulse - Twitter Clone with Events Features  
 **Student**: Kaloyan Kulov  
 **Semester**: Complex Software Systems (2024-2025)  
-**Architecture**: Microservices (6 services)  
+**Architecture**: Microservices (7 services)  
 **Technologies**: Node.js, Go, PostgreSQL, MongoDB, Redis, RabbitMQ  
 
 ## Documentation Structure
@@ -33,10 +33,12 @@ Comprehensive documentation demonstrating achievement of all seven learning outc
 
 ## Key Achievements
 
-✅ **6 Independent Microservices** successfully deployed and integrated  
+✅ **7 Independent Microservices** successfully deployed and integrated (including auth-service)  
 ✅ **80%+ Test Coverage** across all services  
-✅ **Automated CI/CD Pipeline** with GitHub Actions  
+✅ **Automated CI/CD Pipeline** with GitHub Actions (including auth-service)  
 ✅ **Containerization** with Docker and Docker Compose  
+✅ **Kubernetes Deployment** on Minikube and DigitalOcean production cluster  
+✅ **Neo-Brutalism Frontend Design** - Modern, bold UI design system  
 ✅ **Security Implementation** addressing OWASP Top 10  
 ✅ **Performance Targets** met (<200ms response, 1000 concurrent users)  
 ✅ **Monitoring Stack** with Prometheus and Grafana  
@@ -45,22 +47,23 @@ Comprehensive documentation demonstrating achievement of all seven learning outc
 ## Technology Stack
 
 **Backend Services**:  
-- User Service (Node.js + PostgreSQL)
-- Post Service (Go + PostgreSQL)
-- Social Service (Node.js + PostgreSQL)
-- Messaging Service (Go + MongoDB)
-- Notification Service (Node.js + MongoDB)
-- Event Service (Go + PostgreSQL)
+- Auth Service (Node.js + PostgreSQL) - Authentication and authorization
+- User Service (Node.js + PostgreSQL) - User profiles and management
+- Post Service (Go + PostgreSQL) - Posts, comments, and interactions
+- Social Service (Node.js + PostgreSQL) - Following relationships
+- Messaging Service (Go + MongoDB) - Real-time messaging
+- Notification Service (Node.js + MongoDB) - Push notifications
+- Event Service (Go + PostgreSQL) - Event management and RSVPs
 
 **Infrastructure**:  
 - API Gateway: Kong
 - Message Broker: RabbitMQ
 - Cache: Redis
 - Monitoring: Prometheus + Grafana
-- Container Orchestration: Docker Compose, Kubernetes-ready
+- Container Orchestration: Docker Compose, Kubernetes (Minikube + DigitalOcean)
 
 **Frontend**:  
-- Next.js application
+- Next.js application with Neo-Brutalism design system
 
 ## Documentation Methodology
 
@@ -76,4 +79,5 @@ Where applicable, detailed concept documents provide in-depth coverage of specif
 ---
 
 **Last Updated**: January 2025  
-**Status**: Complete and Ready for Submission
+**Status**: Complete and Ready for Submission  
+**Deployment**: Production-ready on DigitalOcean Kubernetes
