@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: user-service
-        image: pulse-user-service:latest
-        imagePullPolicy: Never
+        image: kal0yan/pulse-user-service:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8081
           name: http
@@ -46,11 +46,11 @@ spec:
               key: session-secret
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
+            memory: "96Mi"
+            cpu: "30m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "192Mi"
+            cpu: "150m"
         livenessProbe:
           httpGet:
             path: /health

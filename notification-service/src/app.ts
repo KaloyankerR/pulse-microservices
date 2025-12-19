@@ -48,8 +48,12 @@ const corsOptions: cors.CorsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
+    // Parse CORS_ORIGIN env var (can be comma-separated list)
+    const corsOriginEnv = process.env.CORS_ORIGIN || 'http://localhost:3000';
+    const corsOriginsFromEnv = corsOriginEnv.split(',').map(o => o.trim()).filter(Boolean);
+    
     const allowedOrigins = [
-      process.env.CORS_ORIGIN || 'http://localhost:3000',
+      ...corsOriginsFromEnv,
       'http://localhost:8080', // Allow Swagger UI direct access
       'http://localhost:8086', // Allow service direct access
       'http://localhost:8000', // Allow Kong Gateway

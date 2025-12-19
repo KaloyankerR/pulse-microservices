@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/zap"
@@ -54,10 +55,10 @@ func createIndexes(ctx context.Context, db *mongo.Database, logger *zap.Logger) 
 	messagesCol := db.Collection("messages")
 	_, err := messagesCol.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys: map[string]interface{}{"conversation_id": 1, "created_at": -1},
+			Keys: bson.D{{Key: "conversation_id", Value: 1}, {Key: "created_at", Value: -1}},
 		},
 		{
-			Keys: map[string]interface{}{"sender_id": 1},
+			Keys: bson.D{{Key: "sender_id", Value: 1}},
 		},
 	})
 	if err != nil {
@@ -68,10 +69,10 @@ func createIndexes(ctx context.Context, db *mongo.Database, logger *zap.Logger) 
 	conversationsCol := db.Collection("conversations")
 	_, err = conversationsCol.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys: map[string]interface{}{"participants": 1},
+			Keys: bson.D{{Key: "participants", Value: 1}},
 		},
 		{
-			Keys: map[string]interface{}{"last_message.timestamp": -1},
+			Keys: bson.D{{Key: "last_message.timestamp", Value: -1}},
 		},
 	})
 	if err != nil {
@@ -81,7 +82,7 @@ func createIndexes(ctx context.Context, db *mongo.Database, logger *zap.Logger) 
 	// User presence collection
 	presenceCol := db.Collection("user_presence")
 	_, err = presenceCol.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys:    map[string]interface{}{"user_id": 1},
+		Keys:    bson.D{{Key: "user_id", Value: 1}},
 		Options: options.Index().SetUnique(true),
 	})
 
@@ -92,5 +93,3 @@ func createIndexes(ctx context.Context, db *mongo.Database, logger *zap.Logger) 
 func (m *MongoDB) Close(ctx context.Context) error {
 	return m.Client.Disconnect(ctx)
 }
-
-

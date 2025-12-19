@@ -44,3 +44,6 @@ SELECT * FROM auth_service.user_sessions;
 -- 2. Always have a backup before running migrations
 -- 3. Test rollback in staging environment first
 -- 4. Verify data integrity after rollback
+
+
+

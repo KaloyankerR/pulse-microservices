@@ -1,21 +1,36 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
-import { config } from '../config';
+import { getConfig } from '../config';
 
 class ApiClient {
   private client: AxiosInstance;
 
   constructor() {
+    // Create axios instance with a placeholder baseURL - will be updated dynamically
     this.client = axios.create({
-      baseURL: config.apiUrl,
+      baseURL: getConfig().apiUrl, // Initial value, but will be updated per-request
       headers: {
         'Content-Type': 'application/json',
       },
       timeout: 30000,
     });
 
-    // Request interceptor to add auth token
+    // Request interceptor to add auth token and update baseURL dynamically
     this.client.interceptors.request.use(
       (config) => {
+        // Update baseURL from current config (ensures runtime config is always used)
+        // This is called on EVERY request, so we always get the latest config value
+        const currentConfig = getConfig();
+        const apiUrl = currentConfig.apiUrl;
+        
+        // Ensure baseURL is always set to the current config
+        if (apiUrl) {
+          config.baseURL = apiUrl;
+          // Debug log (can be removed in production)
+          if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+            console.log('[ApiClient] Using API URL:', apiUrl);
+          }
+        }
+        
         const token = this.getToken();
         
         if (token && config.headers) {

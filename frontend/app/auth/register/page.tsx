@@ -100,7 +100,7 @@ export default function RegisterPage() {
               }
               showPasswordToggle={true}
               required
-              helperText="Must be at least 8 characters"
+              helperText="Must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)"
             />
 
             <Button

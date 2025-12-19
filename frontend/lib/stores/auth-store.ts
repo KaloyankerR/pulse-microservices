@@ -78,7 +78,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         throw new Error('Invalid registration response');
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error?.message || error.message || 'Registration failed';
+      // Extract validation errors from backend response
+      let errorMessage = error.response?.data?.error?.message || error.message || 'Registration failed';
+      
+      // If there are validation details, format them nicely
+      if (error.response?.data?.error?.details && Array.isArray(error.response.data.error.details)) {
+        const validationErrors = error.response.data.error.details
+          .map((detail: any) => `${detail.field}: ${detail.message}`)
+          .join(', ');
+        if (validationErrors) {
+          errorMessage = validationErrors;
+        }
+      }
+      
       set({
         error: errorMessage,
         isLoading: false,
@@ -105,21 +117,33 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   checkAuth: async () => {
-    // Only check auth if there's a token in localStorage
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        set({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
-        return;
-      }
+    // Only check auth if we're on the client-side and have a token
+    if (typeof window === 'undefined') {
+      // Server-side: don't check auth
+      set({ isLoading: false });
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+      return;
     }
 
     try {
       set({ isLoading: true });
+      
+      // Wait a bit for config to be loaded if it's not ready yet
+      let retries = 0;
+      while (retries < 10 && typeof window !== 'undefined' && !(window as any).__APP_CONFIG__) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+      
       const user = await authApi.getCurrentUser();
       
       // Validate user data
@@ -133,16 +157,27 @@ export const useAuthStore = create<AuthState>((set) => ({
         isLoading: false,
       });
     } catch (error: any) {
-      // Clear tokens on auth check failure
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+      console.error('[AuthStore] checkAuth failed:', error);
+      // Only clear tokens on actual auth errors (401, 403), not network errors
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+        }
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      } else {
+        // For other errors (network, etc.), keep tokens but mark as not authenticated
+        // This prevents logout on temporary network issues
+        set({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
       }
-      set({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
     }
   },
 

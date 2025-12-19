@@ -9,7 +9,7 @@ data:
   MONGODB_URI: "mongodb://pulse_user:pulse_user@mongodb:27017/pulse_notifications?authSource=admin"
   REDIS_URL: "redis://redis:6379"
   RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
-  CORS_ORIGIN: "http://localhost:3000"
+  CORS_ORIGIN: "http://134.209.86.116:30000,http://localhost:3000"
   LOG_LEVEL: "info"
 
 

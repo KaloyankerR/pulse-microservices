@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { config } from '../config';
+import { getConfig } from '../config';
 import { useAuthStore } from '../stores/auth-store';
 
 interface WebSocketMessage {
@@ -48,7 +48,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       }
 
       isConnectingRef.current = true;
-      const wsUrl = `${config.wsUrl}/ws?token=${encodeURIComponent(token)}`;
+      const wsUrl = `${getConfig().wsUrl}/ws?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(wsUrl);
       
       ws.onopen = () => {

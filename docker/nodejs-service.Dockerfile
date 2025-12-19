@@ -7,13 +7,17 @@ ARG SERVICE_PORT=8080
 # Stage 1: Base image with common dependencies
 FROM node:18-alpine AS base
 
-# Install system dependencies
-RUN apk add --no-cache \
-    curl \
-    dumb-init \
-    postgresql-client \
-    openssl \
-    ca-certificates
+# Install system dependencies with retry logic for network resilience
+RUN for i in 1 2 3; do \
+    apk update --no-cache && \
+    apk add --no-cache \
+        curl \
+        dumb-init \
+        postgresql-client \
+        openssl \
+        ca-certificates && \
+    break || sleep 5; \
+    done
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

@@ -349,22 +349,36 @@ db-build-all: ## Build all databases (PostgreSQL + MongoDB)
 # =============================================================================
 
 k8s-start: ## Start Minikube cluster
-	@minikube start --memory=4096 --cpus=2 || true
+	@minikube start --memory=4096 --cpus=2 --kubernetes-version=v1.30.0 || true
+	@echo "Waiting for Minikube to be ready..."
+	@kubectl wait --for=condition=Ready node --all --timeout=120s || true
 	@minikube addons enable ingress || true
+	@minikube addons enable storage-provisioner || true
+	@minikube addons enable default-storageclass || true
 
 k8s-stop: ## Stop Minikube cluster
 	@minikube stop
 
 k8s-build: ## Build all Docker images
+	@echo "Setting up Minikube Docker environment..."
 	@eval $$(minikube docker-env) && \
-	docker build -t pulse-auth-service:latest ./auth-service && \
-	docker build -t pulse-user-service:latest ./user-service && \
+	echo "Building auth-service..." && \
+	docker build -f docker/nodejs-service.Dockerfile --build-arg SERVICE_PORT=8080 -t pulse-auth-service:latest ./auth-service && \
+	echo "Building user-service..." && \
+	docker build -f docker/nodejs-service.Dockerfile --build-arg SERVICE_PORT=8081 -t pulse-user-service:latest ./user-service && \
+	echo "Building post-service..." && \
 	docker build -t pulse-post-service:latest ./post-service && \
+	echo "Building social-service..." && \
 	docker build -t pulse-social-service:latest ./social-service && \
+	echo "Building messaging-service..." && \
 	docker build -t pulse-messaging-service:latest ./messaging-service && \
+	echo "Building notification-service..." && \
 	docker build -t pulse-notification-service:latest ./notification-service && \
+	echo "Building event-service..." && \
 	docker build -t pulse-event-service:latest ./event-service && \
-	docker build -t pulse-frontend:latest ./frontend
+	echo "Building frontend..." && \
+	docker build -t pulse-frontend:latest ./frontend && \
+	echo "All images built successfully!"
 
 k8s-deploy: ## Deploy all services
 	@kubectl apply -f k8s/namespaces/ && \
@@ -397,8 +411,9 @@ k8s-logs-%: ## View logs for a service (e.g., k8s-logs-auth-service)
 k8s-status: ## Show pod status
 	@kubectl get pods -n pulse
 
-k8s-port-forward: ## Port forward services (frontend:3000, kong:8000)
+k8s-port-forward: ## Port forward services (frontend:3000, kong:8000, messaging:8084)
 	@pkill -f "kubectl port-forward" || true
 	@kubectl port-forward -n pulse service/frontend 3000:3000 & \
 	kubectl port-forward -n pulse service/kong 8000:8000 8001:8001 & \
+	kubectl port-forward -n pulse service/messaging-service 8084:8084 & \
 	wait

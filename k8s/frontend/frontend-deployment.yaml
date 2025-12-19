@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: pulse-frontend:latest
-        imagePullPolicy: Never
+        image: kal0yan/pulse-frontend:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
           name: http
@@ -31,11 +31,11 @@ spec:
               key: jwt-secret
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "100m"
+            memory: "96Mi"
+            cpu: "30m"
           limits:
-            memory: "512Mi"
-            cpu: "500m"
+            memory: "192Mi"
+            cpu: "150m"
         livenessProbe:
           httpGet:
             path: /

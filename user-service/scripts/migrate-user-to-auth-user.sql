@@ -61,3 +61,6 @@ FROM user_service.users;
 --    - Original: users, user_sessions, user_follows
 --    - Auth DB: users, user_sessions
 --    - User DB: user_profiles, user_follows
+
+
+

@@ -9,7 +9,7 @@ spec:
   resources:
     requests:
       storage: 2Gi
-  storageClassName: standard
+  storageClassName: do-block-storage
 
 
 
