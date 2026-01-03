@@ -1,4 +1,4 @@
-# Week 9 – Load Testing Automation
+# Load Testing Automation
 
 ## Purpose
 

@@ -1,4 +1,4 @@
-# Week 9 – Moderator Architecture Enhancements
+# Moderator Architecture Enhancements
 
 ## Overview
 

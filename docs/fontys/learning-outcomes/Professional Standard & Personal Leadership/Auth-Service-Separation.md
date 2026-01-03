@@ -1,4 +1,4 @@
-# Week 9 – Auth Service Separation
+# Auth Service Separation
 
 ## Overview
 

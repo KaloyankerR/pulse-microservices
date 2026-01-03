@@ -1,4 +1,4 @@
-# Week 9 – Service Split Coordination
+# Service Split Coordination
 
 ## Objective
 

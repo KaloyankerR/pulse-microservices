@@ -1,4 +1,4 @@
-# Week 9 – Auth/User Data Migration
+# Auth/User Data Migration
 
 ## Goal
 

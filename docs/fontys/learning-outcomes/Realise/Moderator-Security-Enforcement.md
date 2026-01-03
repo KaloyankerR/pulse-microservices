@@ -1,4 +1,4 @@
-# Week 9 – Moderator Security Enforcement
+# Moderator Security Enforcement
 
 ## Objective
 

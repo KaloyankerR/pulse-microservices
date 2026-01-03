@@ -1,450 +1,107 @@
 # Learning Outcome 4: Development and Operations (DevOps)
 
-## Executive Summary
-
-This document demonstrates the implementation of DevOps practices including CI/CD pipelines, containerization, automated testing, monitoring, and infrastructure as code for the Pulse microservices platform.
-
-## 1. Containerization and Orchestration
-
-### 1.1 Docker Containerization
-
-**Container Strategy**:
-- Every microservice containerized independently
-- Multi-stage Dockerfile builds for optimization
-- Non-root user execution for security
-- Health checks in all containers
-
-**Example Dockerfile** (User Service):
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-USER nodejs
-
-HEALTHCHECK --interval=30s CMD curl -f http://localhost:8081/health
-EXPOSE 8081
-
-CMD ["node", "app.js"]
-```
-
-**Benefits**:
-- Consistent environments across development and production
-- Isolation of services and dependencies
-- Easy deployment and scaling
-- Reproducible builds
-
-### 1.2 Docker Compose Orchestration
-
-**Configuration**: `docker-compose.yml`
-
-**Services Orchestrated**:
-- Kong API Gateway
-- 7 microservices (auth, user, post, social, messaging, notification, event)
-- Infrastructure services (PostgreSQL, MongoDB, Redis, RabbitMQ)
-- Monitoring stack (Prometheus, Grafana)
-
-**Networking**:
-- Custom bridge network (`pulse-network`)
-- Service discovery via DNS
-- Service-to-service communication via service names
-
-**Volumes**:
-- Persistent data storage for databases
-- Log directories mounted for debugging
-
-### 1.3 Infrastructure as Code
-
-**Approach**: Configuration-driven infrastructure
-
-**Benefits**:
-- Version control of infrastructure changes
-- Reproducible environments
-- Easy backup and restoration
-- Transferable to stakeholders
-
-**Configuration Files**:
-- `docker-compose.yml`: Complete infrastructure definition
-- `config/kong.yml`: API Gateway configuration
-- `config/prometheus.yml`: Monitoring configuration
-- `config/grafana/datasources.yml`: Grafana configuration
-
-## 2. CI/CD Pipeline Implementation
-
-### 2.1 GitHub Actions Workflow
-
-**Pipeline Stages**:
-
-1. **Build**: Compile and build all services
-2. **Test**: Run unit and integration tests
-3. **Deploy**: Push Docker images to Docker Hub
-4. **Monitoring**: Track pipeline success/failure
-
-**Matrix Strategy**:
-- Parallel testing of all services (including auth-service)
-- Multiple Node.js versions (18.x, 20.x)
-- Multiple Go versions (1.21, 1.22)
-- Automatic dependency caching
-
-**Services in Pipeline**:
-- Auth Service (newly added)
-- User Service
-- Post Service
-- Social Service
-- Messaging Service
-- Notification Service
-- Event Service
-
-**Configuration**: `.github/workflows/pipeline.yml`
-
-### 2.2 Automated Testing
-
-**Test Levels**:
-
-1. **Unit Tests**:
-   - Target: 80% code coverage
-   - Node.js: Jest framework
-   - Go: Built-in testing
-   - Run on every commit
-
-2. **Integration Tests**:
-   - Service-to-service communication
-   - Database integration
-   - API contract testing
-
-3. **End-to-End Tests**:
-   - Full user workflows
-   - Cross-service interactions
-   - Load testing
-
-**Automated Execution**:
-- Tests run automatically on pull requests
-- Failing tests block deployment
-- Test results published in GitHub Actions
-
-### 2.3 Deployment Strategy
-
-**Docker Hub Deployment**:
-- Automatic builds on push to `main` branch
-- Tagged images (latest, version, commit SHA)
-- Multi-platform builds (AMD64, ARM64)
-
-**Deployment Triggers**:
-1. Push to `main` branch → Automatic deployment
-2. Version tags (`v1.0.0`) → Production release
-3. Manual workflow dispatch → Selective deployment
-
-**Rolling Deployment**:
-- Zero-downtime updates
-- Health checks during deployment
-- Automatic rollback on failure
-
-## 3. Monitoring and Logging
-
-### 3.1 Prometheus Metrics Collection
-
-**Metrics Exposed**:
-- HTTP request duration
-- Request count by endpoint
-- Error rate by service
-- Database query performance
-- Memory and CPU usage
-
-**Implementation**:
-- Prometheus client libraries in all services
-- Custom middleware for metric collection
-- Scrape interval: 15 seconds
-
-**Metrics Endpoint**: `/metrics` on all services
-
-### 3.2 Grafana Dashboards
-
-**Dashboard Configuration**:
-- Pre-configured dashboards in `config/grafana/`
-- Datasource: Prometheus
-- Visualization of key metrics
-- Alert thresholds
-
-**Metrics Visualized**:
-- Request rate and latency
-- Error rates by service
-- Database connection pool usage
-- Message queue depth
-- Service health status
-
-### 3.3 Logging Strategy
-
-**Structured Logging**:
-- JSON format for all logs
-- Correlation IDs for request tracing
-- Log levels: debug, info, warn, error
-- Contextual logging with request metadata
-
-**Tools**:
-- Node.js: Winston logger
-- Go: Logrus with JSON formatter
-- Centralized log collection via Docker volumes
-
-## 4. Development Environments
-
-### 4.1 Local Development Setup
-
-**Requirements**:
-- Docker and Docker Compose
-- Local PostgreSQL installation
-- Git for version control
-
-**Setup Process**:
-```bash
-# 1. Clone repository
-git clone <repository-url>
-
-# 2. Start infrastructure
-docker-compose up -d
-
-# 3. Run database migrations
-npm run db:migrate
-
-# 4. Start services
-docker-compose up -d
-```
-
-**Hot Reload**:
-- Volume mounts for source code
-- Node.js: nodemon for auto-restart
-- Go: Air for live reloading
-- Frontend: Next.js dev server
-
-### 4.2 Testing Environment
-
-**CI/CD Environment**:
-- GitHub Actions runners
-- Isolated test environments
-- Test databases per test run
-- Cleanup after tests complete
-
-**Local Testing**:
-- Docker Compose test profile
-- Dedicated test databases
-- Mock external services
-- Test data fixtures
-
-### 4.3 Production-Like Environment
-
-**Staging Environment**:
-- Kubernetes cluster
-- Production configuration
-- Monitoring and alerting
-- Load balancing
-- SSL certificates
-
-## 5. Quality Assurance
-
-### 5.1 Code Quality Tools
-
-**SonarQube Integration**:
-- Static code analysis
-- Code smell detection
-- Security vulnerability scanning
-- Technical debt tracking
-
-**Configuration**: `config/sonarqube.yml`
-
-**Metrics**:
-- Code coverage
-- Duplication rate
-- Maintainability rating
-- Security rating
-
-### 5.2 Automated Code Quality Checks
-
-**Pre-commit Hooks**:
-- Linting (ESLint, golangci-lint)
-- Format checking (Prettier, gofmt)
-- Security scans
-- Test execution
-
-**CI/CD Integration**:
-- Quality gates before deployment
-- Block deployment on quality failures
-- Quality reports in pull requests
-
-### 5.3 Security Scanning
-
-**Automated Scans**:
-- Dependency vulnerability scanning (npm audit, go mod vulnerability)
-- Container image scanning
-- Secrets detection
-- OWASP Top 10 checks
-
-**Tools**:
-- Snyk for dependency scanning
-- Trivy for container scanning
-- GitHub Security Advisories
-
-## 6. Performance Validation
-
-### 6.1 Load Testing
-
-**Tools**: Apache JMeter, k6
-
-**Test Scenarios**:
-1. User registration load test
-2. Post creation stress test
-3. Message sending performance
-4. Concurrent user scenarios
-
-**Validation**:
-- Response time <200ms for 95% of requests
-- Error rate <0.1%
-- Throughput: 100 requests/second
-- System stability under load
-
-### 6.2 Scalability Testing
-
-**Auto-scaling Validation**:
-- Horizontal pod autoscaling
-- Database connection pool limits
-- Message queue capacity
-- Redis cache eviction
-
-**Results**:
-- Services scale horizontally as expected
-- No resource exhaustion
-- Graceful degradation under load
-
-## 7. Disaster Recovery
-
-### 7.1 Backup Strategy
-
-**Database Backups**:
-- Daily automated PostgreSQL backups
-- MongoDB replica set backups
-- Retention: 30 days
-- Backup verification
-
-**Configuration Backups**:
-- Infrastructure as code in Git
-- Docker images in Docker Hub
-- Configuration files versioned
-
-### 7.2 Recovery Procedures
-
-**Database Recovery**:
-- Point-in-time recovery capability
-- Backup restoration procedures
-- Failover to replica database
-
-**Service Recovery**:
-- Automatic container restart
-- Health check monitoring
-- Alert on service failure
-
-## 8. Automation Benefits
-
-### 8.1 Development Velocity
-
-**Time Savings**:
-- Automated testing saves 2-3 hours per day
-- Automated deployment saves 1 hour per deployment
-- CI/CD catches issues before production
-
-**Developer Experience**:
-- Consistent environments
-- Fast feedback on changes
-- Easy rollback capabilities
-- Simplified onboarding
-
-### 8.2 Operational Benefits
-
-**Reliability**:
-- Consistent deployments
-- Reduced human error
-- Automatic health monitoring
-- Proactive issue detection
-
-**Cost Savings**:
-- Reduced manual operations
-- Optimized resource usage
-- Automated scaling
-- Efficient use of cloud resources
-
-## 9. Kubernetes Deployment and Operations
-
-### 9.1 Kubernetes Deployment Strategy
-
-**Local Development (Minikube)**:
-- Set up Minikube cluster with required addons (ingress, storage)
-- Created comprehensive Kubernetes manifests for all services
-- Implemented ConfigMaps for environment configuration
-- Set up PersistentVolumeClaims for database storage
-- Configured health checks and readiness probes
-
-**Production Deployment (DigitalOcean)**:
-- Deployed to DigitalOcean Kubernetes cluster
-- Production-ready configuration with secrets management
-- Network policies for service isolation
-- Resource limits and requests for optimal performance
-- Monitoring stack deployment (Prometheus, Grafana)
-
-**Deployment Process**:
-- Infrastructure as Code: All Kubernetes manifests versioned in Git
-- Automated deployment via Makefile targets (`make k8s-deploy`)
-- Comprehensive documentation in `k8s/README.md`
-- Migration guide for transitioning from Docker Compose
-
-**Evidence**: `k8s/README.md`, `k8s/*.yaml` manifests, `pulse-cluster-kubeconfig.yaml`
-
-### 9.2 CI/CD Pipeline Enhancement
-
-**Auth-Service Integration**:
-- Added auth-service to GitHub Actions pipeline
-- Updated change detection to include auth-service
-- Configured build, test, and deployment for auth-service
-- Ensured consistent CI/CD process across all services
-
-**Pipeline Improvements**:
-- Service-specific build and test jobs
-- Parallel execution for faster feedback
-- Automated Docker image builds and pushes
-- Deployment readiness validation
-
-**Evidence**: `.github/workflows/pipeline.yml`
-
-### 9.3 Production Operations
-
-**Deployment Automation**:
-- Makefile targets for common operations (`k8s-start`, `k8s-deploy`, `k8s-status`)
-- Port-forwarding for local access
-- Log aggregation and monitoring
-- Health check validation
-
-**Operational Excellence**:
-- Comprehensive deployment documentation
-- Troubleshooting guides
-- Monitoring and alerting setup
-- Disaster recovery procedures
-
-## 10. Conclusion
-
-The DevOps implementation for Pulse demonstrates:
-
-1. **Containerization**: All services containerized with Docker
-2. **Orchestration**: Docker Compose for local, Kubernetes for production (Minikube + DigitalOcean)
-3. **CI/CD**: Automated pipeline with GitHub Actions (including auth-service)
-4. **Monitoring**: Prometheus and Grafana for observability
-5. **Testing**: Automated tests at multiple levels
-6. **Security**: Automated security scanning and quality gates
-7. **Reliability**: Health checks, monitoring, and auto-recovery
-8. **Production Deployment**: Successfully deployed to Kubernetes with comprehensive operations
-
-These practices enable continuous software development with high quality, reliability, and efficiency. The successful Kubernetes deployment demonstrates proficiency in production-grade DevOps practices.
-
-**Self-Assessment**: **Proficient** - Demonstrated DevOps proficiency through Kubernetes deployment, enhanced CI/CD pipeline, and comprehensive production operations.
-
----
-
-**Evidence**: CI-CD-Pipeline.md
+# Summary
+
+Implemented comprehensive DevOps practices including CI/CD pipelines, containerization, automated testing, monitoring, and infrastructure as code for the Pulse microservices platform. Successfully deployed all 7 services to Kubernetes (Minikube and DigitalOcean), enhanced CI/CD pipeline to include auth-service, and established production-ready operations with monitoring and observability.
+
+## Self-assessment
+
+> **Proficient**
+
+Demonstrated DevOps proficiency through Kubernetes deployment, enhanced CI/CD pipeline, and comprehensive production operations.
+
+## Reflection
+
+The DevOps implementation enabled continuous software development with high quality and reliability. The CI/CD pipeline with GitHub Actions automated testing and deployment, catching issues before production. Containerization with Docker ensured consistent environments, while Kubernetes orchestration provided production-grade scalability and reliability.
+
+Key challenges included setting up Kubernetes manifests for all services, configuring persistent storage for databases, and ensuring the CI/CD pipeline covered all services including the newly separated auth-service. The migration from Docker Compose to Kubernetes required careful planning and validation, but ultimately provided a more robust production environment.
+
+The monitoring stack (Prometheus and Grafana) provided valuable insights into system performance and health. Load testing automation validated that the system meets performance requirements. The comprehensive documentation and Makefile targets made operations straightforward and reproducible.
+
+# Implementation Details
+
+- **Containerization**:
+  - Dockerized all 7 microservices independently
+  - Multi-stage Dockerfile builds for optimization
+  - Non-root user execution for security
+  - Health checks in all containers
+
+- **Docker Compose Orchestration**:
+  - Complete infrastructure definition in `docker-compose.yml`
+  - Service discovery via DNS
+  - Persistent data storage for databases
+  - Custom bridge network for service communication
+
+- **CI/CD Pipeline Implementation**:
+  - GitHub Actions workflow for automated builds and tests
+  - Matrix strategy for parallel testing (Node.js 18.x/20.x, Go 1.21/1.22)
+  - Automated Docker image builds and pushes to Docker Hub
+  - Enhanced pipeline to include auth-service
+
+- **Automated Testing**:
+  - Unit tests targeting 80% code coverage (Jest for Node.js, built-in testing for Go)
+  - Integration tests for service-to-service communication
+  - End-to-end tests for full user workflows
+  - Load testing with Apache JMeter and k6
+
+- **Monitoring and Logging**:
+  - Prometheus metrics collection from all services
+  - Grafana dashboards for visualization (`config/grafana/`)
+  - Structured JSON logging with correlation IDs
+  - Winston logger for Node.js, Logrus for Go
+
+- **Kubernetes Deployment**:
+  - Created comprehensive Kubernetes manifests for all services
+  - Deployed to Minikube for local development
+  - Migrated to DigitalOcean Kubernetes for production
+  - ConfigMaps for environment configuration, Secrets for sensitive data
+  - PersistentVolumeClaims for database storage
+
+- **Quality Assurance**:
+  - SonarQube integration for static code analysis
+  - Automated security scanning (npm audit, go mod, Snyk, Trivy)
+  - Pre-commit hooks for linting and formatting
+  - Quality gates before deployment
+
+- **Load Testing Automation**:
+  - Automated load testing scenarios
+  - Performance validation (<200ms response time, <0.1% error rate)
+  - Scalability testing for auto-scaling validation
+  - Results documented in `load-tests/`
+
+# Research Applied
+
+- **DevOps Best Practices**:
+  - Infrastructure as Code principles
+  - Continuous Integration and Continuous Deployment
+  - Automated testing at multiple levels
+  - Monitoring and observability patterns
+
+- **Container Orchestration Research**:
+  - Evaluated Kubernetes vs Docker Swarm vs Nomad
+  - Compared local development options (Minikube, Kind, K3s)
+  - Assessed cloud providers (DigitalOcean, AWS EKS, Azure AKS, GCP GKE)
+  - Decision: Kubernetes with Minikube (local) and DigitalOcean (production)
+
+- **CI/CD Pipeline Design**:
+  - Matrix builds for parallel execution
+  - Change detection for efficient builds
+  - Automated Docker image versioning
+  - Deployment strategy (rolling updates, zero-downtime)
+
+- **Monitoring Strategy**:
+  - Prometheus metrics collection patterns
+  - Grafana dashboard design
+  - Log aggregation and correlation
+  - Alerting thresholds and rules
+
+# Supporting Evidences
+
+@Realise/CI-CD-Pipeline.md
+@Realise/Load-Testing-Automation.md
+@Manage and Control/Monitoring-and-Observability-Strategy.md
+@.github/workflows/pipeline.yml
+@k8s/README.md
+@docker-compose.yml
+@config/prometheus.yml
+@config/grafana/

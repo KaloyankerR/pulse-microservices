@@ -1,4 +1,4 @@
-# Week 9 – Kubernetes Baseline Deployment
+# Kubernetes Baseline Deployment
 
 ## Goal
 
