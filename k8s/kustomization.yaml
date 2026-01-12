@@ -19,7 +19,7 @@ resources:
   - configmaps/notification-service-config.yaml
   - configmaps/event-service-config.yaml
   - configmaps/frontend-config.yaml
-  - configmaps/kong-config.yaml
+  # Note: kong-config is in gateway/kong-configmap.yaml, not in configmaps/
   
   # Databases
   - databases/postgres-pvc.yaml
