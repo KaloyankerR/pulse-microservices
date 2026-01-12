@@ -1,0 +1,78 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: pulse
+
+resources:
+  # Namespaces
+  - namespaces/pulse-namespace.yaml
+  
+  # Secrets
+  - secrets/pulse-secrets.yaml
+  
+  # ConfigMaps
+  - configmaps/auth-service-config.yaml
+  - configmaps/user-service-config.yaml
+  - configmaps/post-service-config.yaml
+  - configmaps/social-service-config.yaml
+  - configmaps/messaging-service-config.yaml
+  - configmaps/notification-service-config.yaml
+  - configmaps/event-service-config.yaml
+  - configmaps/frontend-config.yaml
+  - configmaps/kong-config.yaml
+  
+  # Databases
+  - databases/postgres-pvc.yaml
+  - databases/postgres-statefulset.yaml
+  - databases/postgres-service.yaml
+  - databases/mongodb-pvc.yaml
+  - databases/mongodb-deployment.yaml
+  - databases/mongodb-service.yaml
+  - databases/redis-deployment.yaml
+  - databases/redis-pvc.yaml
+  - databases/redis-service.yaml
+  - databases/rabbitmq-pvc.yaml
+  - databases/rabbitmq-deployment.yaml
+  - databases/rabbitmq-service.yaml
+  
+  # Services
+  - services/auth-service-deployment.yaml
+  - services/auth-service-service.yaml
+  - services/user-service-deployment.yaml
+  - services/user-service-service.yaml
+  - services/post-service-deployment.yaml
+  - services/post-service-service.yaml
+  - services/social-service-deployment.yaml
+  - services/social-service-service.yaml
+  - services/messaging-service-deployment.yaml
+  - services/messaging-service-service.yaml
+  - services/notification-service-deployment.yaml
+  - services/notification-service-service.yaml
+  - services/event-service-deployment.yaml
+  - services/event-service-service.yaml
+  
+  # Gateway
+  - gateway/kong-configmap.yaml
+  - gateway/kong-deployment.yaml
+  - gateway/kong-service.yaml
+  
+  # Frontend
+  - frontend/frontend-deployment.yaml
+  - frontend/frontend-service.yaml
+  
+  # Monitoring
+  - monitoring/prometheus-configmap.yaml
+  - monitoring/prometheus-pvc.yaml
+  - monitoring/prometheus-deployment.yaml
+  - monitoring/prometheus-service.yaml
+  - monitoring/grafana-configmap.yaml
+  - monitoring/grafana-pvc.yaml
+  - monitoring/grafana-deployment.yaml
+  - monitoring/grafana-service.yaml
+  - monitoring/node-exporter-daemonset.yaml
+  - monitoring/node-exporter-service.yaml
+  - monitoring/redis-exporter-deployment.yaml
+  - monitoring/redis-exporter-service.yaml
+  
+  # Ingress
+  - ingress/pulse-ingress.yaml
