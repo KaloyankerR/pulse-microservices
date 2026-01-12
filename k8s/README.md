@@ -58,10 +58,15 @@ kubectl get pods -n pulse
 4. **Check Status**: `make k8s-status`
 5. **Access Services**: `make k8s-port-forward`
 
+**Optional - ArgoCD (GitOps):**
+- Install separately: `make k8s-argocd-install` (after starting cluster)
+- Or install together: `make k8s-start-with-argocd`
+
 ## Commands Reference
 
 ### Cluster Management
 - `make k8s-start` - Start Minikube cluster (Kubernetes v1.30.0)
+- `make k8s-start-with-argocd` - Start Minikube cluster and install ArgoCD
 - `make k8s-stop` - Stop Minikube cluster
 
 ### Docker Build
@@ -77,6 +82,47 @@ kubectl get pods -n pulse
 - `make k8s-status` - Show status of all pods in pulse namespace
 - `make k8s-logs-<service>` - View logs for a specific service
 
+### ArgoCD (GitOps)
+- `make k8s-argocd-install` - Install ArgoCD in argocd namespace
+- `make k8s-argocd-port-forward` - Port forward ArgoCD UI (http://localhost:8080)
+- `make k8s-argocd-get-password` - Get admin password for ArgoCD UI
+- `make k8s-argocd-create-app` - Create ArgoCD Application for Pulse microservices
+- `make k8s-argocd-uninstall` - Uninstall ArgoCD
+
+## ArgoCD (GitOps)
+
+ArgoCD provides GitOps-based continuous deployment for Kubernetes. It monitors your Git repository and automatically syncs changes to the cluster.
+
+### Quick Start
+
+1. **Install ArgoCD**: `make k8s-argocd-install`
+2. **Get Admin Password**: `make k8s-argocd-get-password`
+3. **Access UI**: `make k8s-argocd-port-forward` (opens http://localhost:8080)
+4. **Create Application**: `make k8s-argocd-create-app` (after configuring repository URL)
+
+### Accessing ArgoCD
+
+**Via Port-Forwarding:**
+```bash
+make k8s-argocd-port-forward
+# Access at http://localhost:8080
+# Username: admin
+# Password: (run make k8s-argocd-get-password)
+```
+
+**Default Credentials:**
+- Username: `admin`
+- Password: Retrieve via `make k8s-argocd-get-password`
+
+### GitOps Workflow
+
+1. **Configure Repository**: Update `k8s/argocd/pulse-app.yaml` with your Git repository URL
+2. **Create Application**: Run `make k8s-argocd-create-app`
+3. **Auto-Sync**: ArgoCD will automatically sync changes from the Git repository to the cluster
+4. **Manual Sync**: Use the ArgoCD UI or CLI to manually trigger syncs
+
+For detailed ArgoCD documentation, see [k8s/argocd/README.md](argocd/README.md).
+
 ## Access URLs (Minikube)
 
 After `make k8s-port-forward`:
@@ -84,6 +130,9 @@ After `make k8s-port-forward`:
 - **API Gateway**: http://localhost:8000
 - **Kong Admin**: http://localhost:8001
 - **WebSocket**: ws://localhost:8084/ws
+
+After `make k8s-argocd-port-forward`:
+- **ArgoCD UI**: http://localhost:8080
 
 ## Architecture
 

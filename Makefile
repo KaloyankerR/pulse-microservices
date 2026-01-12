@@ -349,12 +349,18 @@ db-build-all: ## Build all databases (PostgreSQL + MongoDB)
 # =============================================================================
 
 k8s-start: ## Start Minikube cluster
-	@minikube start --memory=4096 --cpus=2 --kubernetes-version=v1.30.0 || true
+	@echo "Checking Docker daemon..."
+	@docker info > /dev/null 2>&1 || (echo "❌ Error: Docker daemon is not running. Please start Docker Desktop and try again." && exit 1)
+	@echo "Starting Minikube cluster..."
+	@minikube start --memory=4096 --cpus=2 --kubernetes-version=v1.30.0 || (echo "❌ Error: Failed to start Minikube cluster" && exit 1)
 	@echo "Waiting for Minikube to be ready..."
-	@kubectl wait --for=condition=Ready node --all --timeout=120s || true
-	@minikube addons enable ingress || true
-	@minikube addons enable storage-provisioner || true
-	@minikube addons enable default-storageclass || true
+	@kubectl wait --for=condition=Ready node --all --timeout=120s || (echo "❌ Error: Cluster nodes not ready" && exit 1)
+	@minikube addons enable ingress || echo "⚠️  Warning: Failed to enable ingress addon (may already be enabled)"
+	@minikube addons enable storage-provisioner || echo "⚠️  Warning: Failed to enable storage-provisioner addon (may already be enabled)"
+	@minikube addons enable default-storageclass || echo "⚠️  Warning: Failed to enable default-storageclass addon (may already be enabled)"
+	@kubectl cluster-info > /dev/null 2>&1 || (echo "❌ Error: Cannot verify cluster connection" && exit 1)
+	@echo "✅ Minikube cluster is ready!"
+	@echo "💡 To install ArgoCD (optional): make k8s-argocd-install"
 
 k8s-stop: ## Stop Minikube cluster
 	@minikube stop
@@ -417,3 +423,45 @@ k8s-port-forward: ## Port forward services (frontend:3000, kong:8000, messaging:
 	kubectl port-forward -n pulse service/kong 8000:8000 8001:8001 & \
 	kubectl port-forward -n pulse service/messaging-service 8084:8084 & \
 	wait
+
+# =============================================================================
+# ArgoCD Operations
+# =============================================================================
+
+k8s-argocd-install: ## Install ArgoCD in argocd namespace (requires cluster to be running)
+	@echo "Checking cluster connection..."
+	@kubectl cluster-info > /dev/null 2>&1 || (echo "❌ Error: Cannot connect to cluster. Make sure minikube is running: make k8s-start" && exit 1)
+	@echo "Installing ArgoCD..."
+	@kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+	@kubectl apply -n argocd --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml || \
+	kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+	@echo "Waiting for ArgoCD to be ready..."
+	@kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-server -n argocd --timeout=300s || true
+	@echo "✅ ArgoCD installed successfully!"
+	@echo "📝 Get admin password: make k8s-argocd-get-password"
+	@echo "🌐 Access UI: make k8s-argocd-port-forward"
+
+k8s-argocd-uninstall: ## Uninstall ArgoCD
+	@echo "Uninstalling ArgoCD..."
+	@kubectl delete namespace argocd --ignore-not-found=true
+	@echo "✅ ArgoCD uninstalled"
+
+k8s-argocd-get-password: ## Get ArgoCD admin password
+	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d; echo
+
+k8s-argocd-port-forward: ## Port forward ArgoCD UI (http://localhost:8080)
+	@echo "Port-forwarding ArgoCD UI to http://localhost:8080..."
+	@echo "Username: admin"
+	@echo "Password: Run 'make k8s-argocd-get-password' to get the password"
+	@kubectl port-forward -n argocd svc/argocd-server 8080:443
+
+k8s-argocd-create-app: ## Create ArgoCD Application for Pulse microservices
+	@kubectl apply -f k8s/argocd/pulse-app.yaml
+	@echo "✅ ArgoCD Application created"
+	@echo "📝 Update k8s/argocd/pulse-app.yaml with your Git repository URL"
+
+k8s-start-with-argocd: ## Start Minikube cluster and install ArgoCD
+	@$(MAKE) k8s-start
+	@echo ""
+	@echo "Installing ArgoCD..."
+	@$(MAKE) k8s-argocd-install
