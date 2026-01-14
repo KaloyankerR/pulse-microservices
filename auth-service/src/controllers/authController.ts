@@ -26,9 +26,15 @@ class AuthController {
 
   async login(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/a4396fcc-f0a9-4a0d-b201-c34d196a149e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authController.ts:27',message:'Login controller entry',data:{ip:req.ip,forwardedFor:req.get('X-Forwarded-For'),email:req.body?.email,hasPassword:!!req.body?.password},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       const { email, password } = req.body;
       const result = await authService.login(email, password);
 
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/a4396fcc-f0a9-4a0d-b201-c34d196a149e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authController.ts:32',message:'Login success',data:{ip:req.ip,forwardedFor:req.get('X-Forwarded-For'),email,userId:result.user?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       res.status(200).json({
         success: true,
         data: {
@@ -43,6 +49,9 @@ class AuthController {
         },
       });
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/a4396fcc-f0a9-4a0d-b201-c34d196a149e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'authController.ts:45',message:'Login error',data:{ip:req.ip,forwardedFor:req.get('X-Forwarded-For'),email:req.body?.email,errorMessage:error instanceof Error ? error.message : String(error),errorStatus:(error as any)?.statusCode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       next(error);
     }
   }

@@ -126,6 +126,7 @@ The event-driven architecture with RabbitMQ enabled reliable cross-service data 
 @Analyse/Polyglot-Persistence.md
 @Realise/Auth-User-Data-Migration.md
 @Design/Data-Consistency-Patterns.md
+@LO7-Distributed-Data/Saga-Pattern-Implementation.md
 @Realise/GDPR-Compliance-Implementation.md
 @k8s/databases/*.yaml
 @user-service/prisma/schema.prisma

@@ -28,6 +28,9 @@ const createRateLimiter = (
     legacyHeaders: false,
     skipSuccessfulRequests,
     handler: (req, res) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/a4396fcc-f0a9-4a0d-b201-c34d196a149e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rateLimiter.ts:30',message:'Rate limit exceeded handler triggered',data:{ip:req.ip,forwardedFor:req.get('X-Forwarded-For'),endpoint:req.path,method:req.method,skipSuccessfulRequests},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       logger.warn('Rate limit exceeded', {
         ip: req.ip,
         userAgent: req.get('User-Agent'),
@@ -55,7 +58,7 @@ export const generalLimiter = createRateLimiter(
 // Strict rate limiter for authentication endpoints
 export const authLimiter = createRateLimiter(
   15 * 60 * 1000, // 15 minutes
-  20, // 20 requests per window
+  50, // 50 failed requests per window (increased from 20 to reduce false positives)
   'Too many authentication attempts, please try again later.',
   true, // Skip successful requests
 );
